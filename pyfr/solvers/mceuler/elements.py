@@ -1,15 +1,14 @@
 import numpy as np
 
 from pyfr.solvers.baseadvec import BaseAdvectionElements
-from multicomp import BaseProperties
+from pyfr.multicomp import BaseProperties, ThermoProperties
 
 
 class BaseMCFluidElements:
     @staticmethod
     def privars(ndims, cfg):
-        species = cfg.get("multi-component", "species")
-        thermotrans = BaseProperties(species)
-        species_names = thermotrans.species_names[0:-1]
+        props = BaseProperties(cfg.get("multi-component", "species"))
+        species_names = props.species_names[0:-1]
 
         if ndims == 2:
             return ['rho', 'u', 'v', 'p'] + species_names
@@ -18,9 +17,8 @@ class BaseMCFluidElements:
 
     @staticmethod
     def convars(ndims, cfg):
-        species = cfg.get("multi-component", "species")
-        thermotrans = BaseProperties(species)
-        species_names = thermotrans.species_names[0:-1]
+        props = BaseProperties(cfg.get("multi-component", "species"))
+        species_names = props.species_names[0:-1]
         if ndims == 2:
             return ['rho', 'rhou', 'rhov', 'E'] + species_names
         elif ndims == 3:
@@ -30,9 +28,8 @@ class BaseMCFluidElements:
 
     @staticmethod
     def visvars(ndims, cfg):
-        species = cfg.get("multi-component", "species")
-        thermotrans = BaseProperties(species)
-        species_names = thermotrans.species_names[0:-1]
+        props = BaseProperties(cfg.get("multi-component", "species"))
+        species_names = props.species_names[0:-1]
         if ndims == 2:
             varmap = {
                 'density': ['rho'],
@@ -45,39 +42,49 @@ class BaseMCFluidElements:
                 'velocity': ['u', 'v', 'w'],
                 'pressure': ['p']
             }
-        for dim in varmap.keys():
-            varmap[dim] += list(
-                zip(
-                    species[0:-1],
-                    ([i] for i in species_names),
-                )
-            )
+        for sn in species_names:
+            varmap[sn] = [sn]
+
+        return varmap
 
     @staticmethod
     def pri_to_con(pris, cfg):
-        rho, p = pris[0], pris[-1]
+        props = BaseProperties(cfg.get("multi-component", "species"))
+        ns = props.ns
+        ndims = len(pris)-ns-1-2
 
+        rho, p = pris[0], pris[ndims+1]
         # Multiply velocity components by rho
-        rhovs = [rho*c for c in pris[1:-1]]
+        rhovs = [rho * c for c in pris[1 : ndims + 1]]
 
         # Compute the energy
-        gamma = cfg.getfloat('constants', 'gamma')
-        E = p/(gamma - 1) + 0.5*rho*sum(c*c for c in pris[1:-1])
+        gamma = cfg.getfloat("constants", "gamma")
+        E = p / (gamma - 1) + 0.5 * rho * sum(c * c for c in pris[1 : ndims + 1])
 
-        return [rho, *rhovs, E]
+        # Species mass
+        species = [rho * c for c in pris[ndims + 2 : :]]
+
+        return [rho, *rhovs, E, *species]
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        rho, E = cons[0], cons[-1]
+        props = BaseProperties(cfg.get("multi-component", "species"))
+        ns = props.ns
+        ndims = len(cons)-ns-1-2
+
+        rho, E = cons[0], cons[ndims + 1]
 
         # Divide momentum components by rho
-        vs = [rhov/rho for rhov in cons[1:-1]]
+        vs = [rhov / rho for rhov in cons[1 : ndims + 1]]
 
         # Compute the pressure
-        gamma = cfg.getfloat('constants', 'gamma')
-        p = (gamma - 1)*(E - 0.5*rho*sum(v**2 for v in vs))
+        gamma = cfg.getfloat("constants", "gamma")
+        p = (gamma - 1) * (E - 0.5 * rho * sum(v * v for v in vs))
 
-        return [rho, *vs, p]
+        # Species Mass Fraction
+        species = [rhoY / rho for rhoY in cons[ndims + 2 : :]]
+
+        return [rho, *vs, p, *species]
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
@@ -196,8 +203,9 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         super().__init__(*args, **kwargs)
 
         species = self.cfg.get("multi-component", "species")
-        self.thermotrans = ThermoTransportProperties(species)
-        self.ns = self.thermotrans.ns
+        self.properties = ThermoProperties(species)
+        self.ns = self.properties.ns
+        self.eos = self.cfg.get("multi-component","eos")
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -216,7 +224,8 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
             'ns': self.ns,
             'nverts': len(self.basis.linspts),
             'c': self.cfg.items_as('constants', float),
-            'thermotrans': self.thermotrans,
+            'props': self.properties.data,
+            'eos': self.eos,
             'jac_exprs': self.basis.jac_exprs
         }
 

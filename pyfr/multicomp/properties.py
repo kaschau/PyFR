@@ -9,11 +9,11 @@ class BaseProperties:
             self.species_names = path_or_list.split(",")
 
         self.ns = len(self.species_names)
-        self.properties = dict()
+        self.data = dict()
 
 class ThermoProperties(BaseProperties):
     def __init__(self, path_or_list):
-        super().__init__()
+        super().__init__(path_or_list)
 
 class TransportProperties(BaseProperties):
     def __init__(self, path_or_list):
