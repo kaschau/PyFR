@@ -1,0 +1,1 @@
+from multicomp.properties import BaseProperties, ThermoProperties, TransportProperties, ChemistyProperties
