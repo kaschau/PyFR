@@ -575,7 +575,10 @@ class VTKWriter(BaseWriter):
         comps = ['3', '', '', '', '1']
 
         for fname, varnames in vvars.items():
-            names.append(fname.title())
+            try:
+                names.append(fname[0].upper()+fname[1::])
+            except IndexError:
+                names.append(fname.title())
             types.append(dtype)
             comps.append(str(len(varnames)))
 
