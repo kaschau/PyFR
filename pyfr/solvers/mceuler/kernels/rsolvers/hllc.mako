@@ -59,4 +59,4 @@
 % endfor
 </%pyfr:macro>
 
-<%include file='pyfr.solvers.euler.kernels.rsolvers.rsolve1d'/>
+<%include file='pyfr.solvers.mceuler.kernels.rsolvers.rsolve1d'/>

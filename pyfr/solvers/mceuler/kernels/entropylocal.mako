@@ -1,6 +1,6 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.euler.kernels.entropy'/>
+<%include file='pyfr.solvers.mceuler.kernels.entropy'/>
 
 <%pyfr:kernel name='entropylocal' ndim='1'
               u='in fpdtype_t[${str(nupts)}][${str(nvars)}]'

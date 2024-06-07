@@ -1,6 +1,6 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.euler.kernels.entropy'/>
+<%include file='pyfr.solvers.mceuler.kernels.entropy'/>
 
 <%pyfr:macro name='get_minima' params='u, dmin, pmin, emin'>
     fpdtype_t d, p, e;
