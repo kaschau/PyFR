@@ -64,7 +64,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        ns = BaseProperties.get_number_species(cfg)
+        ns = BaseProperties.get_num_species(cfg)
         ndims = len(cons)-(ns-1)-2
 
         rho, E = cons[0], cons[ndims + 1]
@@ -198,8 +198,6 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         super().__init__(*args, **kwargs)
 
         self.properties = ThermoProperties(self.cfg)
-        self.ns = self.properties.ns
-        self.eos = self.cfg.get("multi-component","eos")
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -215,11 +213,11 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
-            'ns': self.ns,
+            'ns': self.properties.ns,
             'nverts': len(self.basis.linspts),
             'c': self.cfg.items_as('constants', float),
             'props': self.properties.data,
-            'eos': self.eos,
+            'eos': self.properties.eos,
             'jac_exprs': self.basis.jac_exprs
         }
 

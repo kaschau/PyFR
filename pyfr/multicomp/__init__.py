@@ -1,1 +1,1 @@
-from pyfr.multicomp.properties import BaseProperties, ThermoProperties, TransportProperties, ChemistyProperties
+from pyfr.multicomp.properties import BaseProperties, ThermoProperties, TransportProperties
