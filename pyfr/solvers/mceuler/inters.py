@@ -1,6 +1,7 @@
 from pyfr.solvers.baseadvec import (BaseAdvectionIntInters,
                                     BaseAdvectionMPIInters,
                                     BaseAdvectionBCInters)
+from pyfr.multicomp.properties import BaseProperties
 
 
 class MCFluidIntIntersMixin:
@@ -27,8 +28,12 @@ class TplargsMixin:
         else:
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
+        props = BaseProperties(self.cfg.get("multi-component", "species"))
+        self.eos = self.cfg.get('multi-component', 'eos')
+        self.ns = props.ns
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
+                             ns=self.ns, eos=self.eos,
                              rsolver=rsolver, c=self.c, p_min=self.p_min)
 
 
