@@ -1,8 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mceuler.kernels.eos.${eos}.p_from_rho_E'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.p_from_rho_E'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.compute_Yk'/>
 
 <%pyfr:macro name='inviscid_flux' params='s, f, p, v'>
     fpdtype_t invrho = 1.0/s[0], E = s[${ndims + 1}];
+
+    // Compute the species mass fractions
+    fpdtype_t Y[${ns}];
+    ${pyfr.expand('compute_Yk', 'Y', 's', 'invrho')}
 
     // Compute the velocities
     fpdtype_t rhov[${ndims}];
