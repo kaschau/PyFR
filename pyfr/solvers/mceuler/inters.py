@@ -28,12 +28,11 @@ class TplargsMixin:
         else:
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
-        props = BaseProperties(self.cfg.get("multi-component", "species"))
-        self.eos = self.cfg.get('multi-component', 'eos')
-        self.ns = props.ns
+        eos = self.cfg.get('multi-component', 'eos')
+        ns = BaseProperties.get_num_species(self.cfg)
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
-                             ns=self.ns, eos=self.eos,
+                             ns=ns, eos=eos,
                              rsolver=rsolver, c=self.c, p_min=self.p_min)
 
 
