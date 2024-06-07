@@ -7,8 +7,7 @@ from pyfr.multicomp import BaseProperties, ThermoProperties
 class BaseMCFluidElements:
     @staticmethod
     def privars(ndims, cfg):
-        props = BaseProperties(cfg.get("multi-component", "species"))
-        species_names = props.species_names[0:-1]
+        species_names = BaseProperties.get_species_names(cfg)[0:-1]
 
         if ndims == 2:
             return ['rho', 'u', 'v', 'p'] + species_names
@@ -17,8 +16,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def convars(ndims, cfg):
-        props = BaseProperties(cfg.get("multi-component", "species"))
-        species_names = props.species_names[0:-1]
+        species_names = BaseProperties.get_species_names(cfg)[0:-1]
         if ndims == 2:
             return ['rho', 'rhou', 'rhov', 'E'] + species_names
         elif ndims == 3:
@@ -28,8 +26,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def visvars(ndims, cfg):
-        props = BaseProperties(cfg.get("multi-component", "species"))
-        species_names = props.species_names[0:-1]
+        species_names = BaseProperties.get_species_names(cfg)[0:-1]
         if ndims == 2:
             varmap = {
                 'density': ['rho'],
@@ -49,8 +46,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def pri_to_con(pris, cfg):
-        props = BaseProperties(cfg.get("multi-component", "species"))
-        ns = props.ns
+        ns = BaseProperties.get_num_species(cfg)
         ndims = len(pris)-(ns-1)-2
 
         rho, p = pris[0], pris[ndims+1]
@@ -68,8 +64,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        props = BaseProperties(cfg.get("multi-component", "species"))
-        ns = props.ns
+        ns = BaseProperties.get_number_species(cfg)
         ndims = len(cons)-(ns-1)-2
 
         rho, E = cons[0], cons[ndims + 1]
@@ -202,8 +197,7 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        species = self.cfg.get("multi-component", "species")
-        self.properties = ThermoProperties(species)
+        self.properties = ThermoProperties(self.cfg)
         self.ns = self.properties.ns
         self.eos = self.cfg.get("multi-component","eos")
 
