@@ -1,5 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mceuler.kernels.eos.cpg.p_from_rho_E'/>
+<%include file='pyfr.solvers.mceuler.kernels.eos.${eos}.p_from_rho_E'/>
 
 <%pyfr:macro name='inviscid_flux' params='s, f, p, v'>
     fpdtype_t invrho = 1.0/s[0], E = s[${ndims + 1}];
@@ -41,7 +41,7 @@
 % endfor
 
     // Compute the pressure
-    ${pyfr.expand('p_from_rho_E', 'p', 'rhoE', 'invrho', 'rhov')};
+    ${pyfr.expand('p_from_rho_E', 'p', 'E', 'invrho', 'rhov')};
 
     // Density and energy fluxes
     f[0] = s[1];
