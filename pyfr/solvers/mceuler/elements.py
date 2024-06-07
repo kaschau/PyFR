@@ -51,7 +51,7 @@ class BaseMCFluidElements:
     def pri_to_con(pris, cfg):
         props = BaseProperties(cfg.get("multi-component", "species"))
         ns = props.ns
-        ndims = len(pris)-ns-1-2
+        ndims = len(pris)-(ns-1)-2
 
         rho, p = pris[0], pris[ndims+1]
         # Multiply velocity components by rho
@@ -70,7 +70,7 @@ class BaseMCFluidElements:
     def con_to_pri(cons, cfg):
         props = BaseProperties(cfg.get("multi-component", "species"))
         ns = props.ns
-        ndims = len(cons)-ns-1-2
+        ndims = len(cons)-(ns-1)-2
 
         rho, E = cons[0], cons[ndims + 1]
 

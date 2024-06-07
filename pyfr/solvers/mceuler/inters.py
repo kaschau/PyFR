@@ -50,7 +50,7 @@ class MCEulerIntInters(TplargsMixin, MCFluidIntIntersMixin,
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._be.pointwise.register('pyfr.solvers.euler.kernels.intcflux')
+        self._be.pointwise.register('pyfr.solvers.mceuler.kernels.intcflux')
 
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'intcflux', tplargs=self._tplargs, dims=[self.ninterfpts],

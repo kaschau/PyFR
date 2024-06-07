@@ -73,4 +73,4 @@
     nf[${nvars - 1}] = 0.5*(fl[${nvars - 1}] + fr[${nvars - 1}]) - (l1*v1 + l2*v2 + l3*v3);
 </%pyfr:macro>
 
-<%include file='pyfr.solvers.euler.kernels.rsolvers.rsolve1d'/>
+<%include file='pyfr.solvers.mceuler.kernels.rsolvers.rsolve1d'/>
