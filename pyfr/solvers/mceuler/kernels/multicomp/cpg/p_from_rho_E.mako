@@ -3,9 +3,8 @@
 <%pyfr:macro name='p_from_rho_E' params='p, E, invrho, rhov'>
     // Internal energy (per mass)
     fpdtype_t e = (E - 0.5*invrho*${pyfr.dot('rhov[{i}]', i=ndims)})*invrho;
-    // Update mixture properties
 
-
+    // Compute mixture properties
     fpdtype_t Rmix = 0.0;
     fpdtype_t cp = 0.0;
 % for k in range(ns):
