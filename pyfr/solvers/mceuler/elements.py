@@ -10,9 +10,9 @@ class BaseMCFluidElements:
         species_names = BaseProperties.get_species_names(cfg)[0:-1]
 
         if ndims == 2:
-            return ['rho', 'u', 'v', 'p'] + species_names
+            return ['p', 'u', 'v', 'T'] + species_names
         elif ndims == 3:
-            return ['rho', 'u', 'v', 'w', 'p'] + species_names
+            return ['p', 'u', 'v', 'w', 'T'] + species_names
 
     @staticmethod
     def convars(ndims, cfg):
@@ -29,15 +29,15 @@ class BaseMCFluidElements:
         species_names = BaseProperties.get_species_names(cfg)[0:-1]
         if ndims == 2:
             varmap = {
-                'density': ['rho'],
+                'pressure': ['p'],
                 'velocity': ['u', 'v'],
-                'pressure': ['p']
+                'temperature': ['T']
             }
         elif ndims == 3:
             varmap = {
-                'density': ['rho'],
+                'pressure': ['p'],
                 'velocity': ['u', 'v', 'w'],
-                'pressure': ['p']
+                'temperature': ['T']
             }
         for sn in species_names:
             varmap[sn] = [sn]
@@ -46,40 +46,74 @@ class BaseMCFluidElements:
 
     @staticmethod
     def pri_to_con(pris, cfg):
-        ns = BaseProperties.get_num_species(cfg)
-        ndims = len(pris)-(ns-1)-2
 
-        rho, p = pris[0], pris[ndims+1]
+        props = ThermoProperties(cfg)
+        ns = props.ns
+        ndims = len(pris) - (ns - 1) - 2
+        data = props.data
+
+        # Append ns species to pris
+        pris.append(1.0 - sum(pris[ndims+2::]))
+
+        # Compute mixture properties
+        Rmix = np.zeros(pris[0].shape,pris[0].dtype)
+        cp = np.zeros(pris[0].shape,pris[0].dtype)
+        for k,Y in enumerate(pris[ndims+2::]):
+            Rmix += Y*data['MWinv'][k]
+            cp += Y*data['cp0'][k]
+        Rmix *= data['Ru']
+
+        # Compute density
+        p, T = pris[0], pris[ndims + 1]
+        rho = p/(Rmix*T)
+
         # Multiply velocity components by rho
         rhovs = [rho * c for c in pris[1 : ndims + 1]]
 
-        # Compute the energy
-        gamma = cfg.getfloat("constants", "gamma")
-        E = p / (gamma - 1) + 0.5 * rho * sum(c * c for c in pris[1 : ndims + 1])
+        # Compute the total energy
+        rhok = 0.5 * rho * sum(c * c for c in pris[1 : ndims + 1])
+        rhoe = rho*T*(cp-Rmix)
+        rhoE = rhoe + rhok
 
         # Species mass
-        species = [rho * c for c in pris[ndims + 2 : :]]
+        rhoYk = [rho * c for c in pris[ndims + 2:-1]]
 
-        return [rho, *rhovs, E, *species]
+        return [rho, *rhovs, rhoE, *rhoYk]
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        ns = BaseProperties.get_num_species(cfg)
+        # HACK: cons should be a list like pris
+        cons = [cons[i] for i in range(cons.shape[0])]
+        props = ThermoProperties(cfg)
+        ns = props.ns
         ndims = len(cons)-(ns-1)-2
+        data = props.data
 
-        rho, E = cons[0], cons[ndims + 1]
+        rho, rhoE = cons[0], cons[ndims + 1]
+
+        # Append ns species to pris
+        cons.append(rho - sum(cons[ndims+2::]))
 
         # Divide momentum components by rho
         vs = [rhov / rho for rhov in cons[1 : ndims + 1]]
 
-        # Compute the pressure
-        gamma = cfg.getfloat("constants", "gamma")
-        p = (gamma - 1) * (E - 0.5 * rho * sum(v * v for v in vs))
-
         # Species Mass Fraction
-        species = [rhoY / rho for rhoY in cons[ndims + 2 : :]]
+        Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
 
-        return [rho, *vs, p, *species]
+        # Compute mixture properties
+        Rmix = np.zeros(cons[0].shape,cons[0].dtype)
+        cp = np.zeros(cons[0].shape,cons[0].dtype)
+        for k,Y in enumerate(Yk):
+            Rmix += Y*data['MWinv'][k]
+            cp += Y*data['cp0'][k]
+        Rmix *= data['Ru']
+
+        # Compute the temperature, pressure
+        e = (rhoE - 0.5 * rho * sum(v * v for v in vs))/rho
+        T = e/(cp-Rmix)
+        p = rho*Rmix*T
+
+        return [p, *vs, T, *Yk[0:-1]]
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
