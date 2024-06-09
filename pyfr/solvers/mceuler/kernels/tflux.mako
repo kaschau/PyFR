@@ -2,6 +2,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
 
@@ -17,9 +18,14 @@
     ${pyfr.expand('calc_smats_detj', 'verts', 'upts', smats, 'djac')};
 % endif
 
+    // Mixture state
+    fpdtype_t p, T, Y[${ns}];
+    fpdtype_t Rmix, cpmix;
+    ${pyfr.expand('mixture_state', 'u', 'p', 'T', 'Y', 'Rmix', 'cpmix')};
+
     // Compute the flux
     fpdtype_t ftemp[${ndims}][${nvars}];
-    fpdtype_t p, v[${ndims}];
+    fpdtype_t v[${ndims}];
     ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'p', 'v')};
 
     // Transform the fluxes
