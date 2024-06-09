@@ -3,19 +3,23 @@
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
 <%pyfr:macro name='rsolve' params='ul, ur, n, nf'>
-    // Compute the left and right fluxes + velocities and pressures
-    fpdtype_t fl[${ndims}][${nvars}], fr[${ndims}][${nvars}];
 
     // Left Mixture state
-    fpdtype_t pl, vl[${ndims}], Tl, Yl[${ns}];
+    fpdtype_t pl, Tl, Yl[${ns}];
     fpdtype_t Rmixl, cpmixl;
     ${pyfr.expand('mixture_state', 'ul', 'pl', 'Tl', 'Yl', 'Rmixl', 'cpmixl')};
+
+    // Compute left fluxes + velocities
+    fpdtype_t fl[${ndims}][${nvars}], vl[${ndims}];
     ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'pl', 'vl')};
 
     // Right Mixture state
-    fpdtype_t pr, vr[${ndims}], Tr, Yr[${ns}];
+    fpdtype_t pr, Tr, Yr[${ns}];
     fpdtype_t Rmixr, cpmixr;
     ${pyfr.expand('mixture_state', 'ur', 'pr', 'Tr', 'Yr', 'Rmixr', 'cpmixr')};
+
+    // Compute right fluxes + velocities
+    fpdtype_t fr[${ndims}][${nvars}], vr[${ndims}];
     ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'pr', 'vr')};
 
     // Sum the left and right velocities and take the normal
