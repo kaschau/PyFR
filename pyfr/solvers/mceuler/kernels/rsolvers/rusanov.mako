@@ -1,21 +1,30 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
 <%pyfr:macro name='rsolve' params='ul, ur, n, nf'>
     // Compute the left and right fluxes + velocities and pressures
     fpdtype_t fl[${ndims}][${nvars}], fr[${ndims}][${nvars}];
-    fpdtype_t vl[${ndims}], vr[${ndims}];
-    fpdtype_t pl, pr;
 
+    // Left Mixture state
+    fpdtype_t pl, vl[${ndims}], Tl, Yl[${ns}];
+    fpdtype_t Rmixl, cpmixl;
+    ${pyfr.expand('mixture_state', 'ul', 'pl', 'Tl', 'Yl', 'Rmixl', 'cpmixl')};
     ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'pl', 'vl')};
+
+    // Right Mixture state
+    fpdtype_t pr, vr[${ndims}], Tr, Yr[${ns}];
+    fpdtype_t Rmixr, cpmixr;
+    ${pyfr.expand('mixture_state', 'ur', 'pr', 'Tr', 'Yr', 'Rmixr', 'cpmixr')};
     ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'pr', 'vr')};
 
     // Sum the left and right velocities and take the normal
     fpdtype_t nv = ${pyfr.dot('n[{i}]', 'vl[{i}] + vr[{i}]', i=ndims)};
 
     // Estimate the maximum wave speed / 2
-    fpdtype_t a = sqrt(${0.25*c['gamma']}*(pl + pr)/(ul[0] + ur[0]))
-                + 0.25*fabs(nv);
+    fpdtype_t gammal = cpmixl/(cpmixl-Rmixl);
+    fpdtype_t gammar = cpmixr/(cpmixr-Rmixr);
+    fpdtype_t a = 0.25*(sqrt(gammal*Rmixl*Tl)+sqrt(gammar*Rmixr*Tr))+ 0.25*fabs(nv);
 
     // Output
 % for i in range(nvars):
