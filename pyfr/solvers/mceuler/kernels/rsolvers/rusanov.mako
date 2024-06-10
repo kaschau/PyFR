@@ -28,7 +28,7 @@
     // Estimate the maximum wave speed / 2
     fpdtype_t gammal = cpmixl/(cpmixl-Rmixl);
     fpdtype_t gammar = cpmixr/(cpmixr-Rmixr);
-    fpdtype_t a = 0.25*(sqrt(gammal*Rmixl*Tl)+sqrt(gammar*Rmixr*Tr))+ 0.25*fabs(nv);
+    fpdtype_t a = sqrt(0.25*(gammal*Rmixl*Tl+gammar*Rmixr*Tr)) + fabs(nv);
 
     // Output
 % for i in range(nvars):

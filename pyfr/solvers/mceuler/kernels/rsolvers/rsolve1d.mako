@@ -1,4 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
 <%include file='pyfr.solvers.baseadvec.kernels.transform'/>
 
@@ -7,11 +8,22 @@
 
     utl[0] = ul[0];
     utr[0] = ur[0];
-    utl[${nvars - 1}] = ul[${nvars - 1}];
-    utr[${nvars - 1}] = ur[${nvars - 1}];
+    utl[${ndims + 1}] = ul[${ndims + 1}];
+    utr[${ndims + 1}] = ur[${ndims + 1}];
 
     ${pyfr.expand('transform_to', 'n', 'ul', 'utl', off=1)};
     ${pyfr.expand('transform_to', 'n', 'ur', 'utr', off=1)};
+
+
+    // Left Mixture state
+    fpdtype_t pl, Tl, Yl[${ns}];
+    fpdtype_t Rmixl, cpmixl;
+    ${pyfr.expand('mixture_state', 'ul', 'pl', 'Tl', 'Yl', 'Rmixl', 'cpmixl')};
+
+    // Right Mixture state
+    fpdtype_t pr, Tr, Yr[${ns}];
+    fpdtype_t Rmixr, cpmixr;
+    ${pyfr.expand('mixture_state', 'ur', 'pr', 'Tr', 'Yr', 'Rmixr', 'cpmixr')};
 
     ${pyfr.expand('rsolve_1d', 'utl', 'utr', 'ntf')};
 
