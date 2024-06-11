@@ -18,15 +18,15 @@
     ${pyfr.expand('calc_smats_detj', 'verts', 'upts', smats, 'djac')};
 % endif
 
-    // Mixture state
-    fpdtype_t p, T, Y[${ns}];
-    fpdtype_t Rmix, cpmix;
-    ${pyfr.expand('mixture_state', 'u', 'p', 'T', 'Y', 'Rmix', 'cpmix')};
+    // Compute thermodynamic properties
+    fpdtype_t q[${ns+2}];
+    fpdtype_t qh[${3}];
+    ${pyfr.expand('mixture_state', 'u', 'q', 'qh')};
 
     // Compute the flux
     fpdtype_t ftemp[${ndims}][${nvars}];
     fpdtype_t v[${ndims}];
-    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'p', 'v')};
+    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q[0]', 'v')};
 
     // Transform the fluxes
 % for i, j in pyfr.ndrange(ndims, nvars):

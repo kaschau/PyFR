@@ -52,14 +52,13 @@ class BaseMCFluidElements:
         ndims = len(pris) - (ns - 1) - 2
         data = props.data
 
-        # Append ns species to pris
-        pris.append(1.0 - sum(pris[ndims+2::]))
-
+        # Compute ns species
+        Yns = 1.0 - sum(pris[ndims+2::])
         # Compute mixture properties
-        Rmix = np.zeros(pris[0].shape,pris[0].dtype)
-        cp = np.zeros(pris[0].shape,pris[0].dtype)
-        for k,Y in enumerate(pris[ndims+2::]):
-            Rmix += Y*data['MWinv'][k]
+        Rmix = 0.0
+        cp = 0.0
+        for k,Y in enumerate(pris[ndims+2::]+[Yns]):
+            Rmix += Y/data['MW'][k]
             cp += Y*data['cp0'][k]
         Rmix *= data['Ru']
 
@@ -76,14 +75,12 @@ class BaseMCFluidElements:
         rhoE = rhoe + rhok
 
         # Species mass
-        rhoYk = [rho * c for c in pris[ndims + 2:-1]]
+        rhoYk = [rho * c for c in pris[ndims + 2::]]
 
         return [rho, *rhovs, rhoE, *rhoYk]
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        # HACK: cons should be a list like pris
-        cons = [cons[i] for i in range(cons.shape[0])]
         props = ThermoProperties(cfg)
         ns = props.ns
         ndims = len(cons)-(ns-1)-2
@@ -91,20 +88,19 @@ class BaseMCFluidElements:
 
         rho, rhoE = cons[0], cons[ndims + 1]
 
-        # Append ns species to pris
-        cons.append(rho - sum(cons[ndims+2::]))
-
         # Divide momentum components by rho
         vs = [rhov / rho for rhov in cons[1 : ndims + 1]]
 
         # Species Mass Fraction
         Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
 
+        # Compute ns species
+        Yns = 1.0 - sum(Yk[ndims+2::])
         # Compute mixture properties
-        Rmix = np.zeros(cons[0].shape,cons[0].dtype)
-        cp = np.zeros(cons[0].shape,cons[0].dtype)
-        for k,Y in enumerate(Yk):
-            Rmix += Y*data['MWinv'][k]
+        Rmix = 0.0
+        cp = 0.0
+        for k,Y in enumerate(Yk+[Yns]):
+            Rmix += Y/data['MW'][k]
             cp += Y*data['cp0'][k]
         Rmix *= data['Ru']
 
@@ -113,7 +109,7 @@ class BaseMCFluidElements:
         T = e/(cp-Rmix)
         p = rho*Rmix*T
 
-        return [p, *vs, T, *Yk[0:-1]]
+        return [p, *vs, T, *Yk]
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
