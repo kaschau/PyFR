@@ -41,10 +41,10 @@
     fpdtype_t Tl_y = grad_ul[1][3] - (rcprho*grad_ul[1][0]*ul[3]
                                       + u*u_y + v*v_y);
 
-    fpdtype_t Yl_x[{ns-1}];
-    fpdtype_t Yl_y[{ns-1}];
-    fpdtype_t rhol_x = grad_ul[0];
-    fpdtype_t rhor_x = grad_ul[0];
+    fpdtype_t Yl_x[${ns-1}];
+    fpdtype_t Yl_y[${ns-1}];
+    fpdtype_t rhol_x = grad_ul[0][0];
+    fpdtype_t rhol_y = grad_ul[1][0];
     // Compute species derivative (rho*dY/d[x,y])
 <% Yix = ndims + 2 %>
 %   for n in range(ns-1):

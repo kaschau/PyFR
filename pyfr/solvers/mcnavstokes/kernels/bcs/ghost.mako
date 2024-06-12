@@ -2,7 +2,9 @@
 
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 
 <% tau = c['ldg-tau'] %>
 
@@ -26,7 +28,7 @@
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
     fpdtype_t qtr[${nvars+1}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
-    ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'fvr')};
+    ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qtr', 'fvr')};
     ## ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscl')};
 
     // Inviscid (Riemann solve) state
