@@ -6,5 +6,8 @@
 % for i in range(ndims):
     ur[${i + 1}] = ul[${i + 1}] - 2*nor*nl[${i}];
 % endfor
-    ur[${nvars - 1}] = ul[${nvars - 1}];
+    ur[${ndims + 1}] = ul[${ndims + 1}];
+% for n in range(ns-1):
+    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+% endfor
 </%pyfr:macro>
