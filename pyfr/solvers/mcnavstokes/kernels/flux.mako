@@ -1,11 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 % if ndims == 2:
-<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, fout'>
+<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qt, fout'>
     fpdtype_t rho = uin[0], rhou = uin[1], rhov = uin[2], E = uin[3];
 
     fpdtype_t rcprho = 1.0/rho;
     fpdtype_t u = rcprho*rhou, v = rcprho*rhov;
+    fpdtype_t mu = qt[0];
+    fpdtype_t kappa = qt[1];
 
     fpdtype_t rho_x = grad_uin[0][0];
     fpdtype_t rho_y = grad_uin[1][0];
@@ -19,30 +21,38 @@
     fpdtype_t E_x = grad_uin[0][3];
     fpdtype_t E_y = grad_uin[1][3];
 
-% if visc_corr == 'sutherland':
-    // Compute the temperature and viscosity
-    fpdtype_t cpT = ${c['gamma']}*(rcprho*E - 0.5*(u*u + v*v));
-    fpdtype_t Trat = ${1/c['cpTref']}*cpT;
-    fpdtype_t mu_c = ${c['mu']*(c['cpTref'] + c['cpTs'])}*Trat*sqrt(Trat)
-                   / (cpT + ${c['cpTs']});
-% else:
-    fpdtype_t mu_c = ${c['mu']};
-% endif
-
-    // Compute temperature derivatives (c_v*dT/d[x,y])
+    // Compute temperature derivatives (dT/d[x,y])
+    ## TODO: Derive these
     fpdtype_t T_x = rcprho*(E_x - (rcprho*rho_x*E + u*u_x + v*v_x));
     fpdtype_t T_y = rcprho*(E_y - (rcprho*rho_y*E + u*u_y + v*v_y));
 
     // Negated stress tensor elements
-    fpdtype_t t_xx = -2*mu_c*rcprho*(u_x - ${1.0/3.0}*(u_x + v_y));
-    fpdtype_t t_yy = -2*mu_c*rcprho*(v_y - ${1.0/3.0}*(u_x + v_y));
-    fpdtype_t t_xy = -mu_c*rcprho*(v_x + u_y);
+    fpdtype_t t_xx = -2*mu*rcprho*(u_x - ${1.0/3.0}*(u_x + v_y));
+    fpdtype_t t_yy = -2*mu*rcprho*(v_y - ${1.0/3.0}*(u_x + v_y));
+    fpdtype_t t_xy = -mu*rcprho*(v_x + u_y);
 
     fout[0][1] += t_xx;     fout[1][1] += t_xy;
     fout[0][2] += t_xy;     fout[1][2] += t_yy;
 
-    fout[0][3] += u*t_xx + v*t_xy + -mu_c*${c['gamma']/c['Pr']}*T_x;
-    fout[1][3] += u*t_xy + v*t_yy + -mu_c*${c['gamma']/c['Pr']}*T_y;
+    // Thermal diffusion
+    fout[0][3] += u*t_xx + v*t_xy + -kappa*T_x;
+    fout[1][3] += u*t_xy + v*t_yy + -kappa*T_y;
+
+    // Species diffusion
+<% Yix = ndims + 2 %>
+    fpdtype_t Y_x, Y_y;
+    ## TODO diffusion correction term
+%   for n in range(ns-1):
+    // Species derivative (rho*dY/d[x,y])
+    Y_x =  grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
+    Y_y =  grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
+
+    fout[0][{ndims+2+n}] += -qt[2+n] * Y_x;
+    fout[1][{ndims+2+n}] += -qt[2+n] * Y_y;
+
+    ## TODO species thermal diffusion
+%   endfor
+
 </%pyfr:macro>
 % elif ndims == 3:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, fout'>

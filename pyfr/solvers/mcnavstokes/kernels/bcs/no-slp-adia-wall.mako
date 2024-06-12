@@ -6,7 +6,10 @@
 % for i in range(ndims):
     ur[${i + 1}] = -ul[${i + 1}];
 % endfor
-    ur[${nvars - 1}] = ul[${nvars - 1}];
+    ur[${ndims + 1}] = ul[${ndims + 1}];
+% for n in range(ns-1):
+    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+% endfor
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_state' params='ul, nl, ur' externs='ploc, t'>
@@ -14,8 +17,11 @@
 % for i in range(ndims):
     ur[${i + 1}] = 0.0;
 % endfor
-    ur[${nvars - 1}] = ul[${nvars - 1}]
+    ur[${ndims+1}] = ul[${ndims+1}]
                      - (0.5/ul[0])*${pyfr.dot('ul[{i}]', i=(1, ndims + 1))};
+% for n in range(ns-1):
+    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+% endfor
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_grad_state' params='ul, nl, grad_ul, grad_ur'>
@@ -35,12 +41,29 @@
     fpdtype_t Tl_y = grad_ul[1][3] - (rcprho*grad_ul[1][0]*ul[3]
                                       + u*u_y + v*v_y);
 
+    fpdtype_t Yl_x[{ns-1}];
+    fpdtype_t Yl_y[{ns-1}];
+    fpdtype_t rhol_x = grad_ul[0];
+    fpdtype_t rhor_x = grad_ul[0];
+    // Compute species derivative (rho*dY/d[x,y])
+<% Yix = ndims + 2 %>
+%   for n in range(ns-1):
+    Yl_x[${n}] =  grad_uin[0][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_x;
+    Yl_y[${n}] =  grad_uin[1][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_y;
+%   endfor
+
     // Copy all fluid-side gradients across to wall-side gradients
     ${pyfr.expand('bc_common_grad_copy', 'ul', 'nl', 'grad_ul', 'grad_ur')};
 
     // Correct copied across in-fluid temp gradients to in-wall gradients
     grad_ur[0][3] -= nl[0]*nl[0]*Tl_x + nl[0]*nl[1]*Tl_y;
     grad_ur[1][3] -= nl[1]*nl[0]*Tl_x + nl[1]*nl[1]*Tl_y;
+
+    // Correct copied across in-fluid species gradients to in-wall gradients
+%   for n in range(ns-1):
+    grad_ur[0][${ndims+n}] -= nl[0]*nl[0]*Yl_x[${n}] + nl[0]*nl[1]*Yl_y[${n}];
+    grad_ur[1][${ndims+n}] -= nl[1]*nl[0]*Tl_x[${n}] + nl[1]*nl[1]*Yl_y[${n}];
+%   endfor
 
 % elif ndims == 3:
     fpdtype_t u = rcprho*ul[1], v = rcprho*ul[2], w = rcprho*ul[3];

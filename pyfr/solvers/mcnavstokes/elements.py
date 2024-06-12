@@ -2,6 +2,7 @@ import numpy as np
 
 from pyfr.solvers.baseadvecdiff import BaseAdvectionDiffusionElements
 from pyfr.solvers.mceuler.elements import BaseMCFluidElements
+from pyfr.multicomp import TransportProperties
 
 
 class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements):
@@ -31,12 +32,14 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
+        self.properties = TransportProperties(self.cfg)
+
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
             return
 
         # Register our flux kernels
-        kprefix = 'pyfr.solvers.navstokes.kernels'
+        kprefix = 'pyfr.solvers.mcnavstokes.kernels'
         self._be.pointwise.register(f'{kprefix}.tflux')
 
         # Handle shock capturing and Sutherland's law
@@ -49,11 +52,14 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
+            'ns': self.properties.ns,
             'nverts': len(self.basis.linspts),
             'c': self.cfg.items_as('constants', float),
+            'props': self.properties.data,
+            'eos': self.properties.eos,
+            'trans': self.properties.trans,
             'jac_exprs': self.basis.jac_exprs,
             'shock_capturing': shock_capturing,
-            'visc_corr': visc_corr
         }
 
         # Helpers

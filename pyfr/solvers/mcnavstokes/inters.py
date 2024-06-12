@@ -5,6 +5,7 @@ from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionMPIInters)
 from pyfr.solvers.mceuler.inters import (MCFluidIntIntersMixin,
                                          MCFluidMPIIntersMixin)
+from pyfr.multicomp.properties import TransportProperties
 
 
 class TplargsMixin:
@@ -20,9 +21,12 @@ class TplargsMixin:
         else:
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
+        props = TransportProperties(self.cfg)
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              rsolver=rsolver, visc_corr=visc_corr,
+                             ns = props.ns, eos=props.eos, trans=props.trans,
+                             props=props.data,
                              shock_capturing=shock_capturing, c=self.c,
                              p_min=self.p_min)
 
