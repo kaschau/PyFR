@@ -145,9 +145,12 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['rho', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.props.species_names[::-1]
+
+        default = {spn: 0 for spn in self.props.species_names[::-1]}
+
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
 
 
 class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
@@ -157,9 +160,12 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['rho', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.props.species_names[::-1]
+
+        default = {spn: 0 for spn in self.props.species_names[::-1]}
+
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
 
 
 class MCNavierStokesSupOutflowBCInters(MCNavierStokesBaseBCInters):
@@ -174,10 +180,14 @@ class MCNavierStokesSubInflowFrvBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs,
-            default={'u': 0, 'v': 0, 'w': 0}
-        )
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.props.species_names[::-1]
+
+        default = {spn: 0 for spn in self.props.species_names[::-1]}
+        for u in "uvw":
+            default[u] = 0.0
+
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
 
 
 class MCNavierStokesSubInflowFtpttangBCInters(MCNavierStokesBaseBCInters):
