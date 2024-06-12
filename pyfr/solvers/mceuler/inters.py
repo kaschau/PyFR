@@ -28,10 +28,11 @@ class TplargsMixin:
         else:
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
-        props = ThermoProperties(self.cfg)
+        self.props = ThermoProperties(self.cfg)
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
-                             ns=props.ns, eos=props.eos, props=props.data,
+                             ns=self.props.ns, eos=self.props.eos,
+                             props=self.props.data,
                              rsolver=rsolver, c=self.c, p_min=self.p_min)
 
 
@@ -106,9 +107,11 @@ class EulerSupInflowBCInters(MCEulerBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['rho', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.props.species_names[::-1]
+        default = {spn: 0 for spn in self.props.species_names[::-1]}
+
+        self.c |= self._exp_opts(bcvars, lhs, default)
 
 
 class EulerSupOutflowBCInters(MCEulerBaseBCInters):
@@ -122,9 +125,11 @@ class EulerCharRiemInvBCInters(MCEulerBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['rho', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.props.species_names[::-1]
+        default = {spn: 0 for spn in self.props.species_names[::-1]}
+
+        self.c |= self._exp_opts(bcvars, lhs, default)
 
 
 class EulerSlpAdiaWallBCInters(MCEulerBaseBCInters):
