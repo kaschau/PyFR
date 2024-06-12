@@ -37,7 +37,7 @@
     qh[1] = cp;
 
     // Internal energy (per mass)
-    fpdtype_t e = (rhoE - 0.5*invrho*${pyfr.dot('u[{i}]', i=(1,ndims+1))})*invrho;
+    fpdtype_t e = (rhoE - 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))})*invrho;
 
     // Equilibrium T, p
     q[${ndims + 1}] = e / (cp - R);
