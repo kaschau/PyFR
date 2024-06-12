@@ -19,14 +19,14 @@
 % endif
 
     // Compute thermodynamic properties
-    fpdtype_t q[${ns+2}];
+    fpdtype_t q[${nvars+1}];
     fpdtype_t qh[${3}];
     ${pyfr.expand('mixture_state', 'u', 'q', 'qh')};
 
     // Compute the flux
     fpdtype_t ftemp[${ndims}][${nvars}];
     fpdtype_t v[${ndims}];
-    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q[0]', 'v')};
+    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q')};
 
     // Transform the fluxes
 % for i, j in pyfr.ndrange(ndims, nvars):

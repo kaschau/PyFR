@@ -1,28 +1,18 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
-<%pyfr:macro name='rsolve' params='ul, ur, n, nf'>
+<%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
 
-    fpdtype_t q[${ns+2}];
-    // Compute left thermodynamic properties
-    fpdtype_t qhl[${3}];
-    ${pyfr.expand('mixture_state', 'ul', 'q', 'qhl')};
+    // Compute left fluxes
+    fpdtype_t fl[${ndims}][${nvars}];
+    ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'ql')};
 
-    // Compute left fluxes + velocities
-    fpdtype_t fl[${ndims}][${nvars}], vl[${ndims}];
-    ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'q[0]', 'vl')};
-
-    // Right Mixture state
-    fpdtype_t qhr[${3}];
-    ${pyfr.expand('mixture_state', 'ur', 'q', 'qhr')};
-
-    // Compute right fluxes + velocities
-    fpdtype_t fr[${ndims}][${nvars}], vr[${ndims}];
-    ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'q[0]', 'vr')};
+    // Compute right fluxes
+    fpdtype_t fr[${ndims}][${nvars}];
+    ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'qr')};
 
     // Sum the left and right velocities and take the normal
-    fpdtype_t nv = ${pyfr.dot('n[{i}]', 'vl[{i}] + vr[{i}]', i=ndims)};
+    fpdtype_t nv = ${pyfr.dot('n[{i}]', 'ql[{i}] + qr[{i}]', i=(1,ndims+1))};
 
     // Estimate the maximum wave speed / 2
     fpdtype_t a = 0.25*(qhl[2]+qhr[2]) + 0.5*fabs(nv);
