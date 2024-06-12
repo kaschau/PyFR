@@ -3,6 +3,7 @@
 
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 
