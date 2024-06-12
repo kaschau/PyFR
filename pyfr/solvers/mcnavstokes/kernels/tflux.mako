@@ -4,7 +4,9 @@
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.transform_grad'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 
 <% gradu = 'gradu' if 'fused' in ktype else 'f' %>
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
@@ -32,11 +34,20 @@
 % endif
 
     // Compute the flux (F = Fi + Fv)
+    // Compute thermodynamic properties
+    fpdtype_t q[${nvars+1}];
+    fpdtype_t qh[${3}];
+    ${pyfr.expand('mixture_state', 'u', 'q', 'qh')};
+
     fpdtype_t ftemp[${ndims}][${nvars}];
-    fpdtype_t p, v[${ndims}];
-    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'p', 'v')};
-    ${pyfr.expand('viscous_flux_add', 'u', gradu, 'ftemp')};
-    ${pyfr.expand('artificial_viscosity_add', gradu, 'ftemp', 'artvisc')};
+    fpdtype_t v[${ndims}];
+    ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q')};
+
+    // Compute transport properties
+    fpdtype_t qt[${nvars+1}];
+    ${pyfr.expand('mixture_transport', 'u', 'q', 'qh', 'qt')};
+    ${pyfr.expand('viscous_flux_add', 'u', gradu, 'q', 'qt', 'ftemp')};
+    ## ${pyfr.expand('artificial_viscosity_add', gradu, 'ftemp', 'artvisc')};
 
     // Transform the fluxes
 % for i, j in pyfr.ndrange(ndims, nvars):
