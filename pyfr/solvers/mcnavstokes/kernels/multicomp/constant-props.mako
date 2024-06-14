@@ -58,6 +58,5 @@
 % for n in range(ns):
   qt[${2+n}] = kappa/(rho*qh[1]*${props['Le'][n]});
 % endfor
-  printf("%f %f %f %f \n", qt[0], qt[1], qt[2], qt[3]);
 
 </%pyfr:macro>
