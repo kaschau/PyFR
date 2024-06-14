@@ -28,7 +28,7 @@
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
     fpdtype_t qtr[${nvars+1}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
-    ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qtr', 'fvr')};
+    ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
     ## ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscl')};
 
     // Inviscid (Riemann solve) state
