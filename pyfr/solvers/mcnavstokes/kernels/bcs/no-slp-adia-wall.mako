@@ -48,8 +48,8 @@
     // Compute species derivative (rho*dY/d[x,y])
 <% Yix = ndims + 2 %>
 %   for n in range(ns-1):
-    Yl_x[${n}] =  grad_uin[0][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_x;
-    Yl_y[${n}] =  grad_uin[1][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_y;
+    Yl_x[${n}] =  grad_ul[0][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_x;
+    Yl_y[${n}] =  grad_ul[1][${Yix+n}] - rcprho*ul[${Yix+n}]*rhol_y;
 %   endfor
 
     // Copy all fluid-side gradients across to wall-side gradients

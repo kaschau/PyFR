@@ -48,8 +48,8 @@
     Y_x =  grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
     Y_y =  grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
 
-    fout[0][{ndims+2+n}] += -qt[2+n] * Y_x;
-    fout[1][{ndims+2+n}] += -qt[2+n] * Y_y;
+    fout[0][${Yix+n}] += -qt[${2+n}] * Y_x;
+    fout[1][${Yix+n}] += -qt[${2+n}] * Y_y;
 
     ## TODO species thermal diffusion
 %   endfor
