@@ -1,8 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 % if ndims == 2:
-<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qt, fout'>
-    fpdtype_t rho = uin[0], rhou = uin[1], rhov = uin[2], E = uin[3];
+<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
+    fpdtype_t rho = uin[0], rhou = uin[1], rhov = uin[2], rhoE = uin[3];
 
     fpdtype_t rcprho = 1.0/rho;
     fpdtype_t u = rcprho*rhou, v = rcprho*rhov;
@@ -12,7 +12,7 @@
     fpdtype_t rho_x = grad_uin[0][0];
     fpdtype_t rho_y = grad_uin[1][0];
 
-    // Velocity derivatives (rho*grad[u,v])
+    // Velocity derivatives (rho*d[u,v]/d[x,y])
     fpdtype_t u_x = grad_uin[0][1] - u*rho_x;
     fpdtype_t u_y = grad_uin[1][1] - u*rho_y;
     fpdtype_t v_x = grad_uin[0][2] - v*rho_x;
@@ -22,9 +22,10 @@
     fpdtype_t E_y = grad_uin[1][3];
 
     // Compute temperature derivatives (dT/d[x,y])
-    ## TODO: Derive these
-    fpdtype_t T_x = rcprho*(E_x - (rcprho*rho_x*E + u*u_x + v*v_x));
-    fpdtype_t T_y = rcprho*(E_y - (rcprho*rho_y*E + u*u_y + v*v_y));
+    fpdtype_t rcpcv = qh[0]/qh[1];
+    fpdtype_t E = rhoE*rcprho;
+    fpdtype_t T_x = rcprho*rcpcv*(grad_uin[0][${ndims+1}] - E*grad_uin[0][0]);
+    fpdtype_t T_y = rcprho*rcpcv*(grad_uin[1][${ndims+1}] - E*grad_uin[1][0]);
 
     // Negated stress tensor elements
     fpdtype_t t_xx = -2*mu*rcprho*(u_x - ${1.0/3.0}*(u_x + v_y));

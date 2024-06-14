@@ -55,15 +55,10 @@
     // Copy all fluid-side gradients across to wall-side gradients
     ${pyfr.expand('bc_common_grad_copy', 'ul', 'nl', 'grad_ul', 'grad_ur')};
 
+    ## TODO: Not sure what math is happening here
     // Correct copied across in-fluid temp gradients to in-wall gradients
     grad_ur[0][3] -= nl[0]*nl[0]*Tl_x + nl[0]*nl[1]*Tl_y;
     grad_ur[1][3] -= nl[1]*nl[0]*Tl_x + nl[1]*nl[1]*Tl_y;
-
-    // Correct copied across in-fluid species gradients to in-wall gradients
-%   for n in range(ns-1):
-    grad_ur[0][${ndims+n}] -= nl[0]*nl[0]*Yl_x[${n}] + nl[0]*nl[1]*Yl_y[${n}];
-    grad_ur[1][${ndims+n}] -= nl[1]*nl[0]*Tl_x[${n}] + nl[1]*nl[1]*Yl_y[${n}];
-%   endfor
 
 % elif ndims == 3:
     fpdtype_t u = rcprho*ul[1], v = rcprho*ul[2], w = rcprho*ul[3];
