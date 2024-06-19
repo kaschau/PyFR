@@ -18,7 +18,7 @@
     // Viscous states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
     ${pyfr.expand('bc_ldg_state', 'ul', 'nl', 'ur')};
-    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'nl', 'gradul', 'gradur')};
+    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'nl', 'ql', 'gradul', 'gradur')};
 
     // Compute right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];

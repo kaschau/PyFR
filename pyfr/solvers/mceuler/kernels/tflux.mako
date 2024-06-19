@@ -25,7 +25,6 @@
 
     // Compute the flux
     fpdtype_t ftemp[${ndims}][${nvars}];
-    fpdtype_t v[${ndims}];
     ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q')};
 
     // Transform the fluxes
