@@ -95,7 +95,7 @@ class BaseMCFluidElements:
         Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
 
         # Compute ns species
-        Yns = 1.0 - sum(Yk[ndims+2::])
+        Yns = 1.0 - sum(Yk)
         # Compute mixture properties
         Rmix = 0.0
         cp = 0.0
@@ -105,7 +105,7 @@ class BaseMCFluidElements:
         Rmix *= data['Ru']
 
         # Compute the temperature, pressure
-        e = (rhoE - 0.5 * rho * sum(v * v for v in vs))/rho
+        e = rhoE/rho - 0.5 *sum(v * v for v in vs)
         T = e/(cp-Rmix)
         p = rho*Rmix*T
 

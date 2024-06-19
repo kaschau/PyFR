@@ -46,8 +46,8 @@
 % if beta != 0.5:
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
     // Compute transport properties
-    fpdtype_t qtl[${ns+2}];
-    ${pyfr.expand('mixture_transport', 'ul', 'ql', 'qhl', 'qtl')};
+    fpdtype_t qtr[${ns+2}];
+    ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
     ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
     ##${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscr')};
 % endif
