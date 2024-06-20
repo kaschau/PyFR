@@ -17,6 +17,7 @@ class MCFluid:
 
         # Save the prims <-> cons functions
         self.pri_to_con = eos_data.pri_to_con
+        self.con_to_pri = eos_data.con_to_pri
 
         # Merge the lists of required data
         self.input_props = eos_data.input_props
@@ -59,6 +60,8 @@ class MCFluid:
         eos_data.compute_consts(self.input_props, self.consts)
         if self.trans != 'None':
             trans_data.compute_consts(self.input_props, self.consts)
+
+        eos_data.validate_data(self.consts)
 
     @staticmethod
     def get_species_names(cfg):
