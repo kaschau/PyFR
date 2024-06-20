@@ -1,3 +1,4 @@
+from lzma import MF_BT2
 import numpy as np
 
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
@@ -5,7 +6,7 @@ from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionMPIInters)
 from pyfr.solvers.mceuler.inters import (MCFluidIntIntersMixin,
                                          MCFluidMPIIntersMixin)
-from pyfr.multicomp.properties import TransportProperties
+from pyfr.multicomp.mcfluid import MCFluid
 
 
 class TplargsMixin:
@@ -21,12 +22,12 @@ class TplargsMixin:
         else:
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
-        props = TransportProperties(self.cfg)
+        mcfluid = MCFluid(self.cfg)
+        self.c |= mcfluid.consts
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              rsolver=rsolver, visc_corr=visc_corr,
-                             ns = props.ns, eos=props.eos, trans=props.trans,
-                             props=props.data,
+                             eos = mcfluid.eos, trans = mcfluid.trans,
                              shock_capturing=shock_capturing, c=self.c,
                              p_min=self.p_min)
 

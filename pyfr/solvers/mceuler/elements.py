@@ -1,13 +1,13 @@
 import numpy as np
 
 from pyfr.solvers.baseadvec import BaseAdvectionElements
-from pyfr.multicomp import BaseProperties, ThermoProperties
+from pyfr.multicomp.mcfluid import MCFluid
 
 
 class BaseMCFluidElements:
     @staticmethod
     def privars(ndims, cfg):
-        species_names = BaseProperties.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)[0:-1]
 
         if ndims == 2:
             return ['p', 'u', 'v', 'T'] + species_names
@@ -16,7 +16,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def convars(ndims, cfg):
-        species_names = BaseProperties.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)[0:-1]
         if ndims == 2:
             return ['rho', 'rhou', 'rhov', 'E'] + species_names
         elif ndims == 3:
@@ -26,7 +26,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def visvars(ndims, cfg):
-        species_names = BaseProperties.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)[0:-1]
         if ndims == 2:
             varmap = {
                 'pressure': ['p'],
@@ -47,10 +47,10 @@ class BaseMCFluidElements:
     @staticmethod
     def pri_to_con(pris, cfg):
 
-        props = ThermoProperties(cfg)
-        ns = props.ns
+        fluid = MCFluid(cfg)
+        ns = fluid.consts['ns']
         ndims = len(pris) - (ns - 1) - 2
-        data = props.data
+        consts = fluid.consts
 
         # Compute ns species
         Yns = 1.0 - sum(pris[ndims+2::])
@@ -58,9 +58,9 @@ class BaseMCFluidElements:
         Rmix = 0.0
         cp = 0.0
         for k,Y in enumerate(pris[ndims+2::]+[Yns]):
-            Rmix += Y/data['MW'][k]
-            cp += Y*data['cp0'][k]
-        Rmix *= data['Ru']
+            Rmix += Y/consts['MW'][k]
+            cp += Y*consts['cp0'][k]
+        Rmix *= consts['Ru']
 
         # Compute density
         p, T = pris[0], pris[ndims + 1]
@@ -81,10 +81,10 @@ class BaseMCFluidElements:
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        props = ThermoProperties(cfg)
-        ns = props.ns
+        fluid = MCFluid(cfg)
+        ns = fluid.consts['ns']
         ndims = len(cons)-(ns-1)-2
-        data = props.data
+        consts = fluid.consts
 
         rho, rhoE = cons[0], cons[ndims + 1]
 
@@ -100,9 +100,9 @@ class BaseMCFluidElements:
         Rmix = 0.0
         cp = 0.0
         for k,Y in enumerate(Yk+[Yns]):
-            Rmix += Y/data['MW'][k]
-            cp += Y*data['cp0'][k]
-        Rmix *= data['Ru']
+            Rmix += Y/consts['MW'][k]
+            cp += Y*consts['cp0'][k]
+        Rmix *= consts['Ru']
 
         # Compute the temperature, pressure
         e = rhoE/rho - 0.5 *sum(v * v for v in vs)
@@ -227,7 +227,7 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.properties = ThermoProperties(self.cfg)
+        self.mcfluid = MCFluid(self.cfg)
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -239,15 +239,15 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         # Register our flux kernels
         self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
 
+        c = self.cfg.items_as('constants', float)
+        c |= self.mcfluid.consts
         # Template parameters for the flux kernels
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
-            'ns': self.properties.ns,
             'nverts': len(self.basis.linspts),
-            'c': self.cfg.items_as('constants', float),
-            'props': self.properties.data,
-            'eos': self.properties.eos,
+            'c': c,
+            'eos': self.mcfluid.eos,
             'jac_exprs': self.basis.jac_exprs
         }
 

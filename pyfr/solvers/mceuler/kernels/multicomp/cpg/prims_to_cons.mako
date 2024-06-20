@@ -7,15 +7,16 @@
     ## p, u,v(,w),   T    ,   Y0    ...  Yns
 
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
 
     // Compute mixture properties
     fpdtype_t R = 0.0;
     fpdtype_t cp = 0.0;
 % for n in range(ns):
-    R += q[${Yix+n}]*${1.0/props['MW'][n]};
-    cp += q[${Yix+n}]*${props['cp0'][n]};
+    R += q[${Yix+n}]*${1.0/c['MW'][n]};
+    cp += q[${Yix+n}]*${c['cp0'][n]};
 % endfor
-    R *= ${props['Ru']};
+    R *= ${c['Ru']};
 
     // Compute density
     fpdtype_t rho = q[0]/(R*q[{ndims+1}]);
