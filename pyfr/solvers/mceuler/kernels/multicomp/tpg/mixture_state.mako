@@ -1,4 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.tpg.T_iter'/>
 
 <%pyfr:macro name='mixture_state' params='u, q, qh'>
     ## q is an array of length nvars + 1
@@ -30,30 +31,32 @@
 
     // Compute mixture properties
     fpdtype_t R = 0.0;
-    fpdtype_t cp = 0.0;
 % for n in range(ns):
     R += q[${Yix+n}]*${1.0/c['MW'][n]};
-    cp += q[${Yix+n}]*${c['cp0'][n]};
 % endfor
     R *= ${c['Ru']};
+
+    // Internal energy (per mass)
+    fpdtype_t e = rhoE*invrho - 0.5*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
+
+    // Iterate on T
+    fpdtype_t h;
+    fpdtype_t cp;
+    fpdtype_t T = 300.0; // Initial guess
+    ${pyfr.expand('T_iter', 'e', 'h', 'cp', 'R', 'T', 'q', 'qh')};
+
+    // Equilibrium T, p
+    q[0] = rho * R * T;
+    q[${ndims + 1}] = T;
 
     // Mixture gamma, cp
     qh[0] = cp / (cp - R);
     qh[1] = cp;
 
-    // Internal energy (per mass)
-    fpdtype_t e = (rhoE - 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))})*invrho;
-
-    // Equilibrium T, p
-    q[${ndims + 1}] = e / (cp - R);
-    q[0] = rho * R * q[${ndims + 1}];
-
     // Mixture speed of sound
     qh[2] = sqrt(qh[0] * R * q[${ndims + 1}]);
 
     // Store species enthalpy (per mass)
-% for n in range(ns):
-    qh[${3+n}] = q[${ndims+1}]*${c['cp0'][n]};
-% endfor
+    // ^ done in T_iter
 
 </%pyfr:macro>

@@ -10,9 +10,10 @@
 
 <%pyfr:macro name='bc_common_flux_state' params='ul, gradul, artviscl, nl, magnl'>
 
+<% ns = c['ns'] %>
     // Compute left thermodynamic quantities
     fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3}];
+    fpdtype_t qhl[${3+ns}];
     ${pyfr.expand('mixture_state', 'ul', 'ql', 'qhl')};
 
     // Viscous states
@@ -22,7 +23,7 @@
 
     // Compute right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];
-    fpdtype_t qhr[${3}];
+    fpdtype_t qhr[${3+ns}];
     ${pyfr.expand('mixture_state', 'ur', 'qr', 'qhr')};
 
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};

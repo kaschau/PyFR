@@ -28,13 +28,13 @@ class cpgEOS(BaseEOS):
         ndims = len(pris) - (ns - 1) - 2
 
         # Compute ns species
-        Yns = 1.0 - np.sum(pris[ndims+2::])
+        Yns = 1.0 - sum(pris[ndims+2::])
         # Compute mixture properties
         Rmix = 0.0
         cp = 0.0
-        for k,Y in enumerate(pris[ndims+2::]+[Yns]):
-            Rmix += Y/consts['MW'][k]
-            cp += Y*consts['cp0'][k]
+        for n,Y in enumerate(pris[ndims+2::]+[Yns]):
+            Rmix += Y/consts['MW'][n]
+            cp += Y*consts['cp0'][n]
         Rmix *= consts['Ru']
 
         # Compute density
@@ -45,7 +45,7 @@ class cpgEOS(BaseEOS):
         rhovs = [rho * c for c in pris[1 : ndims + 1]]
 
         # Compute the total energy
-        rhok = 0.5 * rho * np.sum(c * c for c in pris[1 : ndims + 1])
+        rhok = 0.5 * rho * sum(c * c for c in pris[1 : ndims + 1])
         rhoe = rho*T*(cp-Rmix)
         rhoE = rhoe + rhok
 
@@ -68,17 +68,17 @@ class cpgEOS(BaseEOS):
         Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
 
         # Compute ns species
-        Yns = 1.0 - np.sum(Yk)
+        Yns = 1.0 - sum(Yk)
         # Compute mixture properties
         Rmix = 0.0
         cp = 0.0
-        for k,Y in enumerate(Yk+[Yns]):
-            Rmix += Y/consts['MW'][k]
-            cp += Y*consts['cp0'][k]
+        for n,Y in enumerate(Yk+[Yns]):
+            Rmix += Y/consts['MW'][n]
+            cp += Y*consts['cp0'][n]
         Rmix *= consts['Ru']
 
         # Compute the temperature, pressure
-        e = rhoE/rho - 0.5 * np.sum(v * v for v in vs)
+        e = rhoE/rho - 0.5 * sum(v * v for v in vs)
         T = e/(cp-Rmix)
         p = rho*Rmix*T
 
