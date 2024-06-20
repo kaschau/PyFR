@@ -20,7 +20,7 @@
 
     // Compute thermodynamic properties
     fpdtype_t q[${nvars+1}];
-    fpdtype_t qh[${3}];
+    fpdtype_t qh[${3+c['ns']}];
     ${pyfr.expand('mixture_state', 'u', 'q', 'qh')};
 
     // Compute the flux
