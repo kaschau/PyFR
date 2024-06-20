@@ -140,7 +140,7 @@ class tpgEOS(BaseEOS):
             # Newtons Method
             T = T - error / (-cp - Rmix)
             niter += 1
-            print(niter, np.max(T), np.max(np.abs(error)))
+            # print(niter, np.max(T), np.max(np.abs(error)))
 
         p = rho*Rmix*T
 
