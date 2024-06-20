@@ -16,10 +16,6 @@
         fpdtype_t T3 = T2*T;
         fpdtype_t T4 = T3*T;
         fpdtype_t T5 = T4*T;
-        fpdtype_t T2o2 = T2 / 2.0;
-        fpdtype_t T3o3 = T3 / 3.0;
-        fpdtype_t T4o4 = T4 / 4.0;
-        fpdtype_t T5o5 = T5 / 5.0;
 
         ixdtype_t m;
         fpdtype_t cps;
@@ -34,12 +30,11 @@
                    ${N7[n, m + 2] * Ru/MW[n]} * T2 +
                    ${N7[n, m + 3] * Ru/MW[n]} * T3 +
                    ${N7[n, m + 4] * Ru/MW[n]} * T4);
-
             qh[${3+n}] = (${N7[n, m + 0] * Ru/MW[n]} * T +
-                          ${N7[n, m + 1] * Ru/MW[n]} * T2o2 +
-                          ${N7[n, m + 2] * Ru/MW[n]} * T3o3 +
-                          ${N7[n, m + 3] * Ru/MW[n]} * T4o4 +
-                          ${N7[n, m + 4] * Ru/MW[n]} * T5o5 +
+                          ${N7[n, m + 1] * Ru/MW[n]/2.0} * T2 +
+                          ${N7[n, m + 2] * Ru/MW[n]/3.0} * T3 +
+                          ${N7[n, m + 3] * Ru/MW[n]/4.0} * T4 +
+                          ${N7[n, m + 4] * Ru/MW[n]/5.0} * T5 +
                           ${N7[n, m + 5] * Ru/MW[n]});
             cp += cps * q[${Yix+n}];
             h += qh[${3+n}] * q[${Yix+n}];
@@ -54,18 +49,18 @@
                    ${N7[n, m + 2] * Ru/MW[n]} * T2 +
                    ${N7[n, m + 3] * Ru/MW[n]} * T3 +
                    ${N7[n, m + 4] * Ru/MW[n]} * T4);
-
             qh[${3+n}] = (${N7[n, m + 0] * Ru/MW[n]} * T +
-                          ${N7[n, m + 1] * Ru/MW[n]} * T2o2 +
-                          ${N7[n, m + 2] * Ru/MW[n]} * T3o3 +
-                          ${N7[n, m + 3] * Ru/MW[n]} * T4o4 +
-                          ${N7[n, m + 4] * Ru/MW[n]} * T5o5 +
+                          ${N7[n, m + 1] * Ru/MW[n]/2.0} * T2 +
+                          ${N7[n, m + 2] * Ru/MW[n]/3.0} * T3 +
+                          ${N7[n, m + 3] * Ru/MW[n]/4.0} * T4 +
+                          ${N7[n, m + 4] * Ru/MW[n]/5.0} * T5 +
                           ${N7[n, m + 5] * Ru/MW[n]});
             cp += cps * q[${Yix+n}];
             h += qh[${3+n}] * q[${Yix+n}];
 % endfor
         }
     fpdtype_t error = e - (h - Rmix * T);
+    // Newton's Method
     T = T - error / (-cp - Rmix);
     }
 </%pyfr:macro>
