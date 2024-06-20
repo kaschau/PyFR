@@ -650,6 +650,12 @@ class VTKWriter(BaseWriter):
 
         return np.hstack(vspts), np.dstack(vsoln), np.hstack(part)
 
+    def write(self, fname):
+        if Path(fname).suffix == '.vtu':
+            self.write_vtu(fname)
+        else:
+            self.write_pvtu(fname)
+
     def write_vtu(self, fname):
         comm, rank, root = get_comm_rank_root()
 
@@ -733,11 +739,13 @@ class VTKWriter(BaseWriter):
             for etype, neles in self.einfo:
                 off = self._write_serial_header(write_s, etype, neles, off)
 
+            write_s('</UnstructuredGrid>\n<AppendedData encoding="raw">\n_')
+
             # Followed by the data
             for etype, *_ in self.einfo:
                 self._write_data(lambda b: fh.write(b), etype)
 
-            write_s('</UnstructuredGrid>\n<AppendedData encoding="raw">\n_')
+            write_s('\n</AppendedData>\n</VTKFile>')
 
         # Also have the root rank write out the PVTU file itself
         if rank == root:
