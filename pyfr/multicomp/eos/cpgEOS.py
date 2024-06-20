@@ -18,6 +18,10 @@ class cpgEOS(BaseEOS):
         }
 
     @staticmethod
+    def validate_data(consts):
+        pass
+
+    @staticmethod
     def compute_consts(props, consts):
         consts['MW'] = props['MW']
         consts['cp0'] = props['cp0']
