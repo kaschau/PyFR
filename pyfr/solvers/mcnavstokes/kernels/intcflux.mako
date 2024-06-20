@@ -34,6 +34,7 @@
     fpdtype_t ficomm[${nvars}];
     ${pyfr.expand('rsolve', 'ul', 'ur', 'ql', 'qr', 'qhl', 'qhr', 'norm_nl', 'ficomm')};
 
+<% ns = c['ns'] %>
 % if beta != -0.5:
     fpdtype_t fvl[${ndims}][${nvars}] = {{0}};
     // Compute transport properties

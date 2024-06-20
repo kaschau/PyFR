@@ -25,6 +25,7 @@
 % endfor
 
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
    // Species fluxes
 % for i, n in pyfr.ndrange(ndims,ns-1):
    f[${i}][${Yix+n}] = v[${i}]*u[${Yix+n}];
@@ -53,6 +54,7 @@
 % endfor
 
     // Species fluxes
+<% ns = c['ns'] %>
 % for k in range(ns-1):
     f[${k+3}] = u[${k+3}]*v[0];
 % endfor

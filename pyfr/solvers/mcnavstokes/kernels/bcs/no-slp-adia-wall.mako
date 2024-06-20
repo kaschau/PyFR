@@ -7,6 +7,7 @@
     ur[${i + 1}] = -ul[${i + 1}];
 % endfor
     ur[${ndims + 1}] = ul[${ndims + 1}];
+<% ns = c['ns'] %>
 % for n in range(ns-1):
     ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
 % endfor
@@ -19,6 +20,7 @@
 % endfor
     ur[${ndims+1}] = ul[${ndims+1}]
                      - (0.5/ul[0])*${pyfr.dot('ul[{i}]', i=(1, ndims + 1))};
+<% ns = c['ns'] %>
 % for n in range(ns-1):
     ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
 % endfor
@@ -42,6 +44,7 @@
     grad_ur[1][3] = E*rhol_y;
     // Enforce zero normal species gradient in wall
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
     fpdtype_t Y;
 %   for n in range(ns-1):
     Y = ul[${Yix+n}]*rcprho;
@@ -63,6 +66,7 @@
     grad_ur[2][3] = E*rhol_z;
     // Enforce zero normal species gradient in wall
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
     fpdtype_t Y;
 %   for n in range(ns-1):
     Y = ul[${Yix+n}]*rcprho;

@@ -2,7 +2,7 @@ import numpy as np
 
 from pyfr.solvers.baseadvecdiff import BaseAdvectionDiffusionElements
 from pyfr.solvers.mceuler.elements import BaseMCFluidElements
-from pyfr.multicomp import TransportProperties
+from pyfr.multicomp.mcfluid import MCFluid
 
 
 class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements):
@@ -32,7 +32,7 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
-        self.properties = TransportProperties(self.cfg)
+        self.mcfluid = MCFluid(self.cfg)
 
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
@@ -48,16 +48,16 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
         if visc_corr not in {'sutherland', 'none'}:
             raise ValueError('Invalid viscosity-correction option')
 
+        c = self.cfg.items_as('constants', float)
+        c |= self.mcfluid.consts
         # Template parameters for the flux kernels
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
-            'ns': self.properties.ns,
             'nverts': len(self.basis.linspts),
-            'c': self.cfg.items_as('constants', float),
-            'props': self.properties.data,
-            'eos': self.properties.eos,
-            'trans': self.properties.trans,
+            'c': c,
+            'eos': self.mcfluid.eos,
+            'trans': self.mcfluid.trans,
             'jac_exprs': self.basis.jac_exprs,
             'shock_capturing': shock_capturing,
         }

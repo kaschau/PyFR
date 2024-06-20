@@ -5,11 +5,12 @@
 
   // Mole fraction
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
   fpdtype_t X[${ns}];
   {
     fpdtype_t mass = 0.0;
 % for n in range(ns):
-    X[${n}] = q[${Yix+n}]*${1.0/props['MW'][n]};
+    X[${n}] = q[${Yix+n}]*${1.0/c['MW'][n]};
     mass += X[${n}];
 % endfor
 % for n in range(ns):
@@ -25,13 +26,13 @@
   fpdtype_t phi;
   fpdtype_t phitemp;
 % for n in range(ns):
-    // ${props['names'][n]} viscosity
+    // ${c['names'][n]} viscosity
     phitemp = 0.0;
-    mu_n = ${props['mu0'][n]};
+    mu_n = ${c['mu0'][n]};
 % for n2 in range(ns):
-      mu_n2 = ${props['mu0'][n2]};
+      mu_n2 = ${c['mu0'][n2]};
       phi = pow((1.0 + sqrt(mu_n / mu_n2 * sqrt(mu_n2 / mu_n))), 2.0)
-                     / (sqrt(8.0) * sqrt(1.0 + ${props['MW'][n]}/${props['MW'][n2]}));
+                     / (sqrt(8.0) * sqrt(1.0 + ${c['MW'][n]}/${c['MW'][n2]}));
       phitemp += phi * X[${n2}];
 % endfor
     mu += mu_n * X[${n}] / phitemp;
@@ -46,9 +47,9 @@
     fpdtype_t sum1 = 0.0;
     fpdtype_t sum2 = 0.0;
 % for n in range(ns):
-      // ${props['names'][n]} thermal conductivity
-      sum1 += X[${n}] * ${props['kappa0'][n]};
-      sum2 += X[${n}] / ${props['kappa0'][n]};
+      // ${c['names'][n]} thermal conductivity
+      sum1 += X[${n}] * ${c['kappa0'][n]};
+      sum2 += X[${n}] / ${c['kappa0'][n]};
 % endfor
     kappa = 0.5*(sum1 + 1.0 / sum2);
     qt[1] = kappa;
@@ -56,7 +57,7 @@
 
   // Lewis number approximation
 % for n in range(ns):
-  qt[${2+n}] = kappa/(rho*qh[1]*${props['Le'][n]});
+  qt[${2+n}] = kappa/(rho*qh[1]*${c['Le'][n]});
 % endfor
 
 </%pyfr:macro>

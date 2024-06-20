@@ -16,6 +16,7 @@
 
 ## First species index
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
 
     q[${nvars}] = 1.0;
 % for n in range(ns-1):
@@ -27,10 +28,10 @@
     fpdtype_t R = 0.0;
     fpdtype_t cp = 0.0;
 % for n in range(ns):
-    R += q[${Yix+n}]*${1.0/props['MW'][n]};
-    cp += q[${Yix+n}]*${props['cp0'][n]};
+    R += q[${Yix+n}]*${1.0/c['MW'][n]};
+    cp += q[${Yix+n}]*${c['cp0'][n]};
 % endfor
-    R *= ${props['Ru']};
+    R *= ${c['Ru']};
 
     // Mixture gamma, cp
     qh[0] = cp / (cp - R);

@@ -41,6 +41,7 @@
 
     // Species diffusion
 <% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
     fpdtype_t Y_x, Y_y;
     ## TODO diffusion correction term
 %   for n in range(ns-1):
