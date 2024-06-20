@@ -144,7 +144,7 @@ class tpgEOS(BaseEOS):
             error = e - (h - Rmix * T)
             T = T - error / (-cp - Rmix)
             niter += 1
-            print(niter, np.min(T), np.min(error))
+            # print(niter, np.min(T), np.min(error))
 
         p = rho*Rmix*T
 
