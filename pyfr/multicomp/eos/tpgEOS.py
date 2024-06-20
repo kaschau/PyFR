@@ -103,25 +103,20 @@ class tpgEOS(BaseEOS):
         # Internal energu
         e = rhoE/rho - 0.5 * sum(v * v for v in vs)
 
-        Ru = consts['Ru']
-        MW = consts['MW']
-        N7 = consts['NASA7'] * Ru / MW[:, np.newaxis]
+        N7 = consts['NASA7'] * consts['Ru'] / consts['MW'][:, np.newaxis]
+        N7[:,0] = consts['NASA7'][:,0]
         # Iterate on T, start at 300K
-        T = np.ones(rho.shape)*1000.0
+        T = np.ones(rho.shape)*3000.0
         error = np.ones(rho.shape)
         niter = 0
-        tol = 1e-9
-        while np.max(np.abs(error)) > tol:
+        tol = 1e-8
+        while np.max(np.abs(error)) > tol and niter < 100:
             h = 0.0
             cp = 0.0
             T2 = T*T
             T3 = T2*T
             T4 = T3*T
             T5 = T4*T
-            T2o2 = T2 / 2.0
-            T3o3 = T3 / 3.0
-            T4o4 = T4 / 4.0
-            T5o5 = T5 / 5.0
             for n, Y in enumerate(Yk+[Yns]):
                 m = np.where(T <= N7[n,0], 8, 1)
                 cps = (
@@ -133,18 +128,19 @@ class tpgEOS(BaseEOS):
                 )
                 hns = (
                     N7[n, m + 0] * T
-                    + N7[n, m + 1] * T2o2
-                    + N7[n, m + 2] * T3o3
-                    + N7[n, m + 3] * T4o4
-                    + N7[n, m + 4] * T5o5
+                    + N7[n, m + 1] * T2/2.0
+                    + N7[n, m + 2] * T3/3.0
+                    + N7[n, m + 3] * T4/4.0
+                    + N7[n, m + 4] * T5/5.0
                     + N7[n, m + 5]
                 )
                 cp += cps * Y
                 h += hns * Y
             error = e - (h - Rmix * T)
+            # Newtons Method
             T = T - error / (-cp - Rmix)
             niter += 1
-            # print(niter, np.min(T), np.min(error))
+            print(niter, np.max(T), np.max(np.abs(error)))
 
         p = rho*Rmix*T
 
