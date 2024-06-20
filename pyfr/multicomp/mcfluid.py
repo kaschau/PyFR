@@ -4,7 +4,6 @@ from pyfr.multicomp.eos import BaseEOS
 from pyfr.multicomp.transport import BaseTransport
 from pathlib import Path
 import yaml
-import numpy as np
 
 class MCFluid:
     def __init__(self, cfg):
@@ -15,6 +14,9 @@ class MCFluid:
         eos_data = subclass_where(BaseEOS, name=self.eos)()
         if self.trans != 'None':
             trans_data = subclass_where(BaseTransport, name=self.trans)()
+
+        # Save the prims <-> cons functions
+        self.pri_to_con = eos_data.pri_to_con
 
         # Merge the lists of required data
         self.input_props = eos_data.input_props
