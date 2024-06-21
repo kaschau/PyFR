@@ -13,8 +13,9 @@
     X[${n}] = q[${Yix+n}]*${1.0/c['MW'][n]};
     mass += X[${n}];
 % endfor
+    fpdtype_t invmass = 1.0/mass;
 % for n in range(ns):
-    X[${n}] /= mass;
+    X[${n}] *= invmass;
 % endfor
   }
 
