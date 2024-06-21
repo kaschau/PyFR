@@ -129,6 +129,7 @@
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");
+  printf("MWmix = %.14f\n", MWmix);
   printf("mu = %.14f\n", qt[0]);
   printf("kappa = %.14f\n", qt[1]);
 % for n in range(ns):

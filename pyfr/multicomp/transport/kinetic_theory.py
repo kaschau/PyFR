@@ -60,7 +60,7 @@ class KineticTheory(BaseTransport):
         deg = 4
         # Maximum and minumum temperatures to generate poly'l
         Tmin = 200
-        Tmax = 3500
+        Tmax = 5000
         # Generate range of temperatures
         npts = 50
         Ts = np.linspace(Tmin, Tmax, npts)
