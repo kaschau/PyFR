@@ -19,8 +19,7 @@ class tpgEOS(BaseEOS):
 
     @staticmethod
     def validate_data(consts):
-        breaks = consts['NASA7'][:,0]
-        assert np.all(breaks == breaks[0]), "All NASA poly'l breaks must be equal"
+        pass
 
     @staticmethod
     def compute_consts(props, consts):
@@ -49,7 +48,7 @@ class tpgEOS(BaseEOS):
         T5o5 = T**5 / 5.0
         Ru = consts['Ru']
         MW = consts['MW']
-        N7 = consts['NASA7'] * Ru / MW[:, np.newaxis]
+        N7 = consts['NASA7']
         for n, Y in enumerate(pris[ndims+2::]+[Yns]):
             m = np.where(T <= N7[n,0], 8, 1)
             hns = (
@@ -59,7 +58,7 @@ class tpgEOS(BaseEOS):
                 + N7[n, m + 3] * T4o4
                 + N7[n, m + 4] * T5o5
                 + N7[n, m + 5]
-            )
+            ) * Ru/MW[n]
             h += hns * Y
         # Compute density
         rho = p/(Rmix*T)
