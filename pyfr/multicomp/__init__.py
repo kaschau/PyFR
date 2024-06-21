@@ -43,6 +43,8 @@ def find_species_input(file_or_list):
         Path(__file__).parent / 'database',
     ]
     for path in test_paths:
+        if "," in file_or_list:
+            break
         fullpath = path / file_or_list
         if Path(fullpath).exists():
             is_file = True
