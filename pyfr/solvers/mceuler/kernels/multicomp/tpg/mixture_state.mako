@@ -59,4 +59,31 @@
     // Store species enthalpy (per mass)
     // ^ done in T_iter
 
+#ifdef DEBUG
+  printf("*********************************\n");
+  printf("THERMODYNAMIC PROPERTIES\n");
+  printf("INPUT STATE\n");
+  printf("rho = %.14f\n", u[0]);
+  printf("e = %.14f\n", e);
+% for n in range(ns-1):
+  printf("rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
+% endfor
+
+  printf("\nCOMPUTED STATE\n");
+  printf("p = %.14f\n", q[0]);
+  printf("T = %.14f\n", q[${ndims+1}]);
+% for n in range(ns):
+  printf("Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
+% endfor
+
+  printf("\nCOMPUTED PROPERTIES\n");
+  printf("gamma = %.14f\n", qh[0]);
+  printf("cp = %.14f\n", qh[1]);
+  printf("c = %.14f\n", qh[2]);
+% for n in range(ns):
+  printf("h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
+% endfor
+  printf("*********************************\n");
+
+#endif
 </%pyfr:macro>
