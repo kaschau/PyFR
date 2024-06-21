@@ -20,7 +20,7 @@ class ConstantProperties(BaseTransport):
         }
 
     @staticmethod
-    def compute_consts(props, consts):
+    def compute_consts(props, consts, eos):
         consts['mu0'] = props['mu0']
         consts['kappa0'] = props['kappa0']
         consts['Le'] = props['Le']

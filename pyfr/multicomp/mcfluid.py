@@ -59,7 +59,7 @@ class MCFluid:
         # Now we can compute/fill in any constants
         eos_data.compute_consts(self.input_props, self.consts)
         if self.trans != 'None':
-            trans_data.compute_consts(self.input_props, self.consts)
+            trans_data.compute_consts(self.input_props, self.consts, self.eos)
 
         eos_data.validate_data(self.consts)
 

@@ -15,7 +15,7 @@ class KineticTheory(BaseTransport):
     def __init__(self):
         super().__init__()
 
-        self.properties = {
+        self.input_props = {
             'MW': None,
             'well': None,
             'diam': None,
@@ -32,6 +32,7 @@ class KineticTheory(BaseTransport):
             'DPoly' : None,
         }
 
+    @staticmethod
     def compute_consts(props, consts, eos):
         ns = len(consts['names'])
         Ru = consts['Ru']
