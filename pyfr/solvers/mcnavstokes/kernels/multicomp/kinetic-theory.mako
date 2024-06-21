@@ -115,4 +115,26 @@
   qt[${2+n}] = 1.0 / (sum1 + sum2);
 % endfor
   }
+
+#define DEBUG
+#ifdef DEBUG
+  printf("*********************************\n");
+  printf("TRANSPORT PROPERTIES\n");
+  printf("INPUT STATE\n");
+  printf("rho = %.14f\n", u[0]);
+  printf("p = %.14f\n", q[0]);
+  printf("T = %.14f\n", q[${ndims+1}]);
+% for n in range(ns):
+  printf("Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
+% endfor
+
+  printf("\nCOMPUTED PROPERTIES\n");
+  printf("mu = %.14f\n", qt[0]);
+  printf("kappa = %.14f\n", qt[1]);
+% for n in range(ns):
+  printf("D_${c['names'][n]} = %.14f\n", qt[${2+n}]);
+% endfor
+  printf("*********************************\n");
+
+#endif
 </%pyfr:macro>
