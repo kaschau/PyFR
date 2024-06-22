@@ -59,6 +59,12 @@ class KineticTheory(BaseTransport):
 
         deg = 4
         # Maximum and minumum temperatures to generate poly'l
+        # NOTE: These ranges vary by input file in Cantera. It seems to set the
+        # minTemp and maxTemp based on the min/max ranges of the NASA7 poly'l
+        # data. In testing, this seems to explain the errors we sometimes get
+        # in thermodynamic testing against Cantera.
+        # (i.e. takes error from 1% to 0.001%). For now we just use sensible values
+        # here.
         Tmin = 200
         Tmax = 5000
         # Generate range of temperatures
@@ -252,7 +258,7 @@ class KineticTheory(BaseTransport):
 
         # We fit the visc pol'y to the sqrtT as visc is proportional to sqrtT
         # we also reverse the numpy poly'l so lowest order is first
-        visc = visc / sqrtTs[:, None]
+        visc = np.sqrt(visc / sqrtTs[:, None])
         w = 1.0 / (visc**2)
         consts['muPoly'] = np.flip(
             np.array(
