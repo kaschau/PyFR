@@ -59,7 +59,6 @@
     // Store species enthalpy (per mass)
     // ^ done in T_iter
 
-#define DEBUG
 #ifdef DEBUG
   printf("*********************************\n");
   printf("THERMODYNAMIC PROPERTIES\n");
