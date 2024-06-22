@@ -29,8 +29,9 @@
   // Evaluate all property poly'l
 <% deg = 4 %>
   fpdtype_t logT = log(T);
-  fpdtype_t sqrtT = exp(0.5 * logT);
-  fpdtype_t T_3o2 = pow(T,1.5);
+  fpdtype_t sqrtT = sqrt(T);
+  fpdtype_t sqrtsqrtT = sqrt(sqrtT);
+  fpdtype_t T_3o2 = T*sqrtT;
   fpdtype_t logT_n[${deg+1}];
   logT_n[0] = 1.0;
 % for i in range(1,deg+1):
@@ -51,7 +52,8 @@
 % endfor
 % endfor
   // Set to correct dimensions
-  mu_sp[${n}] *= sqrtT;
+  mu_sp[${n}] *= sqrtsqrtT;
+  mu_sp[${n}] *= mu_sp[${n}];
   kappa_sp[${n}] *= sqrtT;
 % for n2 in range(n, ns):
   Dij[${n}][${n2}] *= T_3o2;
@@ -67,17 +69,23 @@
   // Mixture viscosity
   {
   fpdtype_t mu = 0.0;
-  fpdtype_t phi;
-  fpdtype_t phitemp;
 % for n in range(ns):
     // ${c['names'][n]} viscosity
-    phitemp = 0.0;
+    {
+    fpdtype_t phitemp = 0.0;
 % for n2 in range(ns):
-      phi = pow((1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * sqrt(mu_sp[${n2}] / mu_sp[${n}]))), 2.0)
-                    / (sqrt(8.0) * sqrt(1.0 + ${c['MW'][n]}/${c['MW'][n2]}));
+      {
+      fpdtype_t phi = pow(
+                          1.0 + sqrt(
+                                     mu_sp[${n}] / mu_sp[${n2}] *
+                                     ${math.sqrt(c['MW'][n2] / c['MW'][n])}),
+                          2.0) /
+                    (sqrt(8.0) * sqrt(1.0 + ${c['MW'][n]}/${c['MW'][n2]}));
       phitemp += phi * X[${n2}];
+      }
 % endfor
     mu += mu_sp[${n}] * X[${n}] / phitemp;
+    }
 % endfor
     qt[0] = mu;
   }

@@ -68,9 +68,7 @@ class tpgEOS(BaseEOS):
 
         # Compute the total energy
         rhok = 0.5 * rho * sum(c * c for c in pris[1 : ndims + 1])
-        #HERE
         rhoe = rho * h - p
-        #HERE
         rhoE = rhoe + rhok
 
         # Species mass
