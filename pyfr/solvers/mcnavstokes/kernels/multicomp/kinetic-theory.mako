@@ -124,7 +124,6 @@
 % endfor
   }
 
-#define DEBUG
 #ifdef DEBUG
   printf("*********************************\n");
   printf("TRANSPORT PROPERTIES\n");
