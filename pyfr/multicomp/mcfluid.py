@@ -4,6 +4,7 @@ from pyfr.multicomp.eos import BaseEOS
 from pyfr.multicomp.transport import BaseTransport
 from pathlib import Path
 import yaml
+import numpy as np
 
 class MCFluid:
     def __init__(self, cfg):
@@ -35,7 +36,8 @@ class MCFluid:
 
         # Get our species names
         file_or_list = cfg.get('multi-component', 'species')
-        usersp = find_species_input(file_or_list)
+        userdata = find_species_input(file_or_list)
+        usersp = userdata['properties']
 
         # HACK: Default to unity lewis
         if self.trans == 'constant-props':
@@ -61,9 +63,20 @@ class MCFluid:
         if self.trans != 'None':
             trans_data.compute_consts(self.input_props, self.consts, self.eos)
 
+        # Finally, merge reactions data to the consts, make them numpy arrays
+        try:
+            for key in userdata['reactions']:
+                data = userdata['reactions'][key]
+                if not isinstance(data[0], str):
+                    self.consts[key] = np.array(data)
+                else:
+                    self.consts[key] = data
+        except KeyError:
+            pass
+
         eos_data.validate_data(self.consts)
 
     @staticmethod
     def get_species_names(cfg):
         file_or_list = cfg.get('multi-component', 'species')
-        return list(find_species_input(file_or_list).keys())
+        return list(find_species_input(file_or_list)['properties'].keys())
