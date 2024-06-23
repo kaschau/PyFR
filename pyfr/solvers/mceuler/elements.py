@@ -182,14 +182,14 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         # Register our flux kernels
         self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
 
-        c = self.cfg.items_as('constants', float)
-        c |= self.mcfluid.consts
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
         # Template parameters for the flux kernels
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
             'nverts': len(self.basis.linspts),
-            'c': c,
+            'c': consts,
             'eos': self.mcfluid.eos,
             'jac_exprs': self.basis.jac_exprs
         }
@@ -233,11 +233,11 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         else:
             self.kernels['tdisf'] = lambda: slicedk(k() for k in tdisf)
 
-        if self.cfg.getbool('multi-component', 'reacting', default=False):
+        if self.cfg.getbool('multi-component', 'chemistry', default=False):
             chem_tplargs = {
                 'ndims': self.ndims,
                 'nvars': self.nvars,
-                'c': c,
+                'c': consts,
                 'eos': self.mcfluid.eos,
             }
             self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
