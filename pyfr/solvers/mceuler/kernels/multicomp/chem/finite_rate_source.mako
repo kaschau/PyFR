@@ -180,7 +180,6 @@
   src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*q[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
 % endfor
 
-//#define DEBUG
 #ifdef DEBUG
   printf("*********************************\n");
   printf("CHEMICAL SOURCE TERMS\n");
