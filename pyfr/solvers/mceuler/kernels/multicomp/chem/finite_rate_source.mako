@@ -34,11 +34,12 @@
 </%def>\
 
 <%pyfr:macro name='finite_rate_source' params='t, u, ploc, src'>
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
-<% nr = c['Ea_f'].shape[0] %>
-<% MW = c['MW'] %>
-<% N7 = c['NASA7'] %>
+<% Yix = ndims + 2 %>\
+<% ns = c['ns'] %>\
+<% nr = c['Ea_f'].shape[0] %>\
+<% MW = c['MW'] %>\
+<% N7 = c['NASA7'] %>\
+<% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
   fpdtype_t rho = u[0];
 
@@ -61,44 +62,22 @@
   fpdtype_t Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   {
-    fpdtype_t T2 = T*T;
-    fpdtype_t T3 = T2*T;
-    fpdtype_t T4 = T3*T;
-    fpdtype_t T5 = T4*T;
-
 % for n in range(ns):
       // ${c['names'][n]} Properties
       if (T < ${N7[n,0]})
       {
 <% m = 8 %>\
-            fpdtype_t hi = (${N7[n, m + 0] } +
-                            ${N7[n, m + 1]/2.0} * T +
-                            ${N7[n, m + 2]/3.0} * T2 +
-                            ${N7[n, m + 3]/4.0} * T3 +
-                            ${N7[n, m + 4]/5.0} * T4 +
-                            ${N7[n, m + 5]}     * Tinv);
-            fpdtype_t scs = (${N7[n, m + 0]} * logT +
-                             ${N7[n, m + 1]} *    T +
-                             ${N7[n, m + 2]/2.0} * T2 +
-                             ${N7[n, m + 3]/3.0} * T3 +
-                             ${N7[n, m + 4]/4.0} * T4 +
-                             ${N7[n, m + 6]});
+
+            fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
+            fpdtype_t scs = ${N7[n, m + 0]} * logT +
+                            T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
         }else
         {
 <% m = 1 %>\
-            fpdtype_t hi = (${N7[n, m + 0] } +
-                            ${N7[n, m + 1]/2.0} * T +
-                            ${N7[n, m + 2]/3.0} * T2 +
-                            ${N7[n, m + 3]/4.0} * T3 +
-                            ${N7[n, m + 4]/5.0} * T4 +
-                            ${N7[n, m + 5]}/T);
-            fpdtype_t scs = (${N7[n, m + 0]} * logT +
-                             ${N7[n, m + 1]} *    T +
-                             ${N7[n, m + 2]/2.0} * T2 +
-                             ${N7[n, m + 3]/3.0} * T3 +
-                             ${N7[n, m + 4]/4.0} * T4 +
-                             ${N7[n, m + 6]});
+            fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
+            fpdtype_t scs = ${N7[n, m + 0]} * logT +
+                            T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
         }
 % endfor
