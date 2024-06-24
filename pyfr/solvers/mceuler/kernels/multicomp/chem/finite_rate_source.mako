@@ -40,6 +40,8 @@
 <% MW = c['MW'] %>
 <% N7 = c['NASA7'] %>
 
+  fpdtype_t rho = u[0];
+
   // Compute thermodynamic properties
   fpdtype_t prims[${nvars+1}];
   fpdtype_t qh[${3+ns}];
@@ -50,7 +52,7 @@
   // Concentrations
   fpdtype_t cs[${ns}];
 % for n in range(ns):
-  cs[${n}] = u[${Yix+n}]*${1.0/c['MW'][n]};
+  cs[${n}] = rho*prims[${Yix+n}]*${1.0/c['MW'][n]};
 % endfor
 
   // Gibbs energy
@@ -116,17 +118,17 @@
   <% Tsss = c['fall_coeffs'][i][1]%>\
   <% Ts = c['fall_coeffs'][i][2]%>\
   <% Tss = c['fall_coeffs'][i][3]%>\
+  <% nu_sum = c['nu_b'][:,i] - c['nu_f'][:,i] %>\
+
   // Reaction ${i} - ${c['r_type'][i]}
   {
   fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
-  <% nu_sum = c['nu_b'][:,i] - c['nu_f'][:,i] %>\
   fpdtype_t dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
   fpdtype_t K_c = ${eqConst(sum(nu_sum))};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
   fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{j}])" for j,eff in enumerate(c['aij'][i]) if eff != 0.0])};
   % endif
-
   % if c['r_type'][i] == 'three-body-Arrhenius':
     k_f *= cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
@@ -141,7 +143,7 @@
     % if Tss == 0: #Three Parameter Troe form
       fpdtype_t Fcent = (1.0 - (${alpha}))*exp(-T/(${Tsss})) + (${alpha})*exp(-T/({Ts}));
     % else: # Four Parameter Troe form
-      fpdtype_t Fcent = (1.0 - (${alpha}))*exp(-T/(${Tsss})) + (${alpha})*exp(-T/(${Ts})) + exp(-(${Tss}))*Tinv;
+      fpdtype_t Fcent = (1.0 - (${alpha}))*exp(-T/(${Tsss})) + (${alpha})*exp(-T/(${Ts})) + exp(-(${Tss})*Tinv);
     % endif
     fpdtype_t C = -0.4 - 0.67*log10(Fcent);
     fpdtype_t N = 0.75 - 1.27*log10(Fcent);
@@ -155,8 +157,6 @@
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
-
-  // Rates of progress
   fpdtype_t q_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_f'][:,i]) if s != 0.0])};
   % if c['reversible'][i] == 1.0:
   fpdtype_t q_b = -k_f/K_c * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_b'][:,i]) if s != 0.0])};
@@ -180,7 +180,7 @@
   src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*q[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
 % endfor
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
   printf("*********************************\n");
   printf("CHEMICAL SOURCE TERMS\n");
