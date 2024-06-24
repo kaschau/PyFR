@@ -48,14 +48,14 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
         if visc_corr not in {'sutherland', 'none'}:
             raise ValueError('Invalid viscosity-correction option')
 
-        c = self.cfg.items_as('constants', float)
-        c |= self.mcfluid.consts
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
         # Template parameters for the flux kernels
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
             'nverts': len(self.basis.linspts),
-            'c': c,
+            'c': consts,
             'eos': self.mcfluid.eos,
             'trans': self.mcfluid.trans,
             'jac_exprs': self.basis.jac_exprs,
@@ -113,3 +113,16 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
                 return self._make_sliced_kernel(k() for k in tdisf)
 
             self.kernels['tdisf'] = tdisf_k
+
+        if self.cfg.getbool('multi-component', 'chemistry', default=False):
+            chem_tplargs = {
+                'ndims': self.ndims,
+                'nvars': self.nvars,
+                'c': consts,
+                'eos': self.mcfluid.eos,
+            }
+            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
+                               'finite_rate_source',
+                               chem_tplargs,
+                               False,
+                               True)

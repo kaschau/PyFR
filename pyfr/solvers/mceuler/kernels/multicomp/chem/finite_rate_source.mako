@@ -6,14 +6,14 @@
   ${A}
 % elif m == 0.0 and Ea != 0.0:
   exp(log(${A})-(${Ea}*Tinv))
-% elif int(m) == m and Ea == 0.0:
+% elif abs(int(m) - m) < 1e-14 and Ea == 0.0:
 %   if m < 0:
-  ${A}${"*".join("Tinv" for _ in range(int(m)))};
+  ${A}${"".join("*Tinv" for _ in range(int(abs(m))))}
 %   elif m > 0:
-  ${A}${"*".join("T" for _ in range(int(m)))};
+  ${A}${"".join("*T" for _ in range(int(m)))}
 %   endif
 % elif m != 0.0 and Ea == 0.0:
-  exp(log(${A})-(${m}*logT))
+  exp(log(${A})+(${m}*logT))
 % elif Ea !=0:
   exp(log(${A})+(${m}*logT)-(${Ea}*Tinv))
 % endif
@@ -46,7 +46,7 @@
   fpdtype_t qh[${3+ns}];
   ${pyfr.expand('mixture_state', 'u', 'prims', 'qh')};
 
-  fpdtype_t T = prims[${ndims+2}];
+  fpdtype_t T = prims[${ndims+1}];
 
   // Concentrations
   fpdtype_t cs[${ns}];
@@ -69,7 +69,7 @@
       // ${c['names'][n]} Properties
       if (T < ${N7[n,0]})
       {
-<% m = 8 %>
+<% m = 8 %>\
             fpdtype_t hi = (${N7[n, m + 0] } +
                             ${N7[n, m + 1]/2.0} * T +
                             ${N7[n, m + 2]/3.0} * T2 +
@@ -85,7 +85,7 @@
             gbs[${n}] = hi - scs;
         }else
         {
-<% m = 1 %>
+<% m = 1 %>\
             fpdtype_t hi = (${N7[n, m + 0] } +
                             ${N7[n, m + 1]/2.0} * T +
                             ${N7[n, m + 2]/3.0} * T2 +
@@ -113,14 +113,14 @@
   fpdtype_t q[${nr}];
 
 % for i in range(nr):
-  <% alpha = c['fall_coeffs'][i][0]%>
-  <% Tsss = c['fall_coeffs'][i][1]%>
-  <% Ts = c['fall_coeffs'][i][2]%>
-  <% Tss = c['fall_coeffs'][i][3]%>
+  <% alpha = c['fall_coeffs'][i][0]%>\
+  <% Tsss = c['fall_coeffs'][i][1]%>\
+  <% Ts = c['fall_coeffs'][i][2]%>\
+  <% Tss = c['fall_coeffs'][i][3]%>\
   // Reaction ${i} - ${c['r_type'][i]}
   {
   fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
-  <% nu_sum = c['nu_b'][:,i] - c['nu_f'][:,i] %>
+  <% nu_sum = c['nu_b'][:,i] - c['nu_f'][:,i] %>\
   fpdtype_t dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
   fpdtype_t K_c = ${eqConst(sum(nu_sum))};
   % if sum(c['aij'][i]) > 0.0:
@@ -171,17 +171,25 @@
   // Output source terms
   src[0] = 0.0;
 % for i in range(ndims):
-  src[${i}] = 0.0;
+  src[${i+1}] = 0.0;
 % endfor
   src[${ndims+1}] = 0.0;
   // Chemical source terms
 % for n in range(ns-1):
-<% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>
-% if sum(nu_sum) != 0.0:
+    // ${c['names'][n]}
+<% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
   src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*q[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-% else:
-  src[${Yix+n}];
-% endif
 % endfor
+
+#define DEBUG
+#ifdef DEBUG
+  printf("*********************************\n");
+  printf("CHEMICAL SOURCE TERMS\n");
+% for n in range(ns):
+  printf("omega_${c['names'][n]} = %.14f\n", src[${Yix+n}]);
+% endfor
+  printf("*********************************\n");
+
+#endif
 
 </%pyfr:macro>
