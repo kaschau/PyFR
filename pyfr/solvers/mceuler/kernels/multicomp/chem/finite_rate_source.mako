@@ -40,7 +40,6 @@
 <% MW = c['MW'] %>
 <% N7 = c['NASA7'] %>
 
-  fpdtype_t rho = u[0];
   // Compute thermodynamic properties
   fpdtype_t prims[${nvars+1}];
   fpdtype_t qh[${3+ns}];
@@ -58,7 +57,7 @@
   fpdtype_t gbs[${ns}];
   fpdtype_t logT = log(T);
   fpdtype_t Tinv = 1.0/T;
-  fpdtype_t prefRuT = (101325.0/(${c['Ru']}))*Tinv;
+  fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   {
     fpdtype_t T2 = T*T;
     fpdtype_t T3 = T2*T;
