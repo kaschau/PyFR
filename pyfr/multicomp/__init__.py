@@ -54,6 +54,11 @@ def find_species_input(file_or_list):
         with open(fullpath, "r") as f:
             usersp = yaml.load(f, Loader=yaml.SafeLoader)
     else:
-        usersp = {key: dict() for key in file_or_list.replace(' ','').split(",")}
+        usersp = {
+            "properties": {
+                key: dict() for key in file_or_list.replace(" ", "").split(",")
+            },
+            "chemistry": dict(),
+        }
 
     return usersp
