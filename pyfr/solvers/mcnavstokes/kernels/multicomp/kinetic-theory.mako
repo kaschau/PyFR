@@ -14,7 +14,7 @@
 
   fpdtype_t mu_sp[${ns}] = {0};
   fpdtype_t kappa_sp[${ns}] = {0};
-  fpdtype_t Dij[${int((ns+1)*ns/2)}] = {0};
+  fpdtype_t invDij[${int((ns+1)*ns/2)}] = {0};
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;
@@ -38,11 +38,6 @@
   fpdtype_t sqrtT = sqrt(T);
   fpdtype_t sqrtsqrtT = sqrt(sqrtT);
   fpdtype_t T_3o2 = T*sqrtT;
-  fpdtype_t logT_n[${deg+1}];
-  logT_n[0] = 1.0;
-% for i in range(1,deg+1):
-   logT_n[${i}] = logT * logT_n[${i-1}];
-% endfor
 
 % for n in range(ns):
 // ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
@@ -54,9 +49,7 @@ mu_sp[${n}] *= mu_sp[${n}];
 kappa_sp[${n}] *= sqrtT;
 % for n2 in range(n, ns):
 <% ix = Dijix(n,n2)%>\
-  Dij[${ix}] = ${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4};
-  // Set to correct dimensions
-  Dij[${ix}] *= T_3o2;
+  invDij[${ix}] = 1.0/((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
 % endfor
 % endfor
 
@@ -107,8 +100,8 @@ kappa_sp[${n}] *= sqrtT;
 % for n2 in range(ns):
 % if n != n2:
 <% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
-      sum1 += X[${n2}] / Dij[${ix}];
-      sum2 += X[${n2}] * ${MW[n2]} / Dij[${ix}];
+      sum1 += X[${n2}] * invDij[${ix}];
+      sum2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
 % endif
 % endfor
   // Account for pressure
