@@ -42,14 +42,14 @@ class KineticTheory(BaseTransport):
 
         if eos == "cpg":
             cp0 = props["cp0"]
-            NASA7 = [None for i in range(ns)]
+            NASA7 = [None for n in range(ns)]
 
             def cp_R(cp0, poly, T, MW):
                 return cp0 * T / (Ru * MW)
 
         elif eos in ["tpg", "cubic"]:
             NASA7 = props["NASA7"]
-            cp0 = [None for i in range(ns)]
+            cp0 = [None for n in range(ns)]
 
             def cp_R(cp0, poly, T, MW):
                 if T <= poly[0]:
@@ -278,14 +278,17 @@ class KineticTheory(BaseTransport):
             -1,
         )
 
-        Dij = []
+        Dij = np.empty((int((ns+1)*ns/2), deg+1))
         diff = diff / Ts[:, None, None] ** 1.5
         w = 1.0 / (diff**2)
-        for k in range(ns):
-            for j in range(k, ns):
-                Dij.append(list(np.polyfit(logTs, diff[:, k, j], deg=deg, w=w[:, k, j])))
+        icc = 0
+        for n in range(ns):
+            for n2 in range(n, ns):
+                poly=np.polyfit(logTs, diff[:, n, n2], deg=deg, w=w[:, n, n2])
+                Dij[icc,:] = np.flip(poly)
+                icc += 1
 
-        consts['DijPoly'] = np.flip(np.array(Dij), -1)
+        consts['DijPoly'] = Dij
 
         # MW should already be populated from the eos, but we redo it here anyway
         consts['MW'] = MW
