@@ -163,7 +163,7 @@
   printf("*********************************\n");
   printf("CHEMICAL SOURCE TERMS\n");
 % for n in range(ns):
-  printf("omega_${c['names'][n]} = %.14f\n", src[${Yix+n}]);
+  printf("chem&omega_${c['names'][n]} = %.14f\n", src[${Yix+n}]);
 % endfor
   printf("*********************************\n");
 

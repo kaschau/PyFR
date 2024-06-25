@@ -1,6 +1,6 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='T_iter' params='e, h, cp, Rmix, T, q, qh'>
+<%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
@@ -12,24 +12,26 @@
     fpdtype_t error = 1e100;
     while (abs(error) > tol)
     {
-        h = 0.0;
+        fpdtype_t h = 0.0;
         cp = 0.0;
 % for n in range(ns):
         // ${c['names'][n]} Properties
+        {
+        fpdtype_t cps, hs;
         if (T < ${N7[n,0]})
         {
 <% m = 8 %>
-            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            qh[${3+n}] = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-            cp += cps * q[${Yix+n}];
-            h += qh[${3+n}] * q[${Yix+n}];
+            cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
+            hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
         }else
         {
 <% m = 1 %>
-            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            qh[${3+n}] = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-            cp += cps * q[${Yix+n}];
-            h += qh[${3+n}] * q[${Yix+n}];
+            cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
+            hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
+        }
+        cp += cps * q[${Yix+n}];
+        h += hs * q[${Yix+n}];
+        qh[${3+n}] = hs;
         }
 % endfor
     error = e - (h - Rmix * T);
