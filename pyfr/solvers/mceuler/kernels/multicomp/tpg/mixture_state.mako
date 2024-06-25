@@ -40,10 +40,9 @@
     fpdtype_t e = rhoE*invrho - 0.5*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
 
     // Iterate on T
-    fpdtype_t h;
     fpdtype_t cp;
     fpdtype_t T = 300.0; // Initial guess
-    ${pyfr.expand('T_iter', 'e', 'h', 'cp', 'R', 'T', 'q', 'qh')};
+    ${pyfr.expand('T_iter', 'e', 'cp', 'R', 'T', 'q', 'qh')};
 
     // Equilibrium T, p
     q[0] = rho * R * T;
@@ -63,26 +62,26 @@
   printf("*********************************\n");
   printf("THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
-  printf("rho = %.14f\n", u[0]);
-  printf("e = %.14f\n", e);
+  printf("therm&rho = %.14f\n", u[0]);
+  printf("therm&e = %.14f\n", e);
 % for n in range(ns-1):
-  printf("rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
+  printf("therm&rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
 % endfor
 
   printf("\nCOMPUTED STATE\n");
-  printf("p = %.14f\n", q[0]);
-  printf("T = %.14f\n", q[${ndims+1}]);
+  printf("therm&p = %.14f\n", q[0]);
+  printf("therm&T = %.14f\n", q[${ndims+1}]);
 % for n in range(ns):
-  printf("Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
+  printf("therm&Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");
-  printf("R = %.14f\n", R);
-  printf("gamma = %.14f\n", qh[0]);
-  printf("cp = %.14f\n", qh[1]);
-  printf("c = %.14f\n", qh[2]);
+  printf("therm&R = %.14f\n", R);
+  printf("therm&gamma = %.14f\n", qh[0]);
+  printf("therm&cp = %.14f\n", qh[1]);
+  printf("therm&c = %.14f\n", qh[2]);
 % for n in range(ns):
-  printf("h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
+  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
 % endfor
   printf("*********************************\n");
 #endif
