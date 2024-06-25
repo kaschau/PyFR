@@ -64,15 +64,14 @@ class MCFluid:
             trans_data.compute_consts(self.input_props, self.consts, self.eos)
 
         # Finally, merge reactions data to the consts, make them numpy arrays
-        try:
+        chem = cfg.getbool('multi-component','chemistry', False)
+        if chem:
             for key in userdata['reactions']:
                 data = userdata['reactions'][key]
                 if not isinstance(data[0], str):
                     self.consts[key] = np.array(data)
                 else:
                     self.consts[key] = data
-        except KeyError:
-            pass
 
         eos_data.validate_data(self.consts)
 
