@@ -19,15 +19,15 @@
         if (T < ${N7[n,0]})
         {
 <% m = 8 %>
-            fpdtype_t cps = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            qh[${3+n}] = T*(${f'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
+            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
+            qh[${3+n}] = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
             cp += cps * q[${Yix+n}];
             h += qh[${3+n}] * q[${Yix+n}];
         }else
         {
 <% m = 1 %>
-            fpdtype_t cps = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            qh[${3+n}] = T*(${f'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
+            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
+            qh[${3+n}] = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
             cp += cps * q[${Yix+n}];
             h += qh[${3+n}] * q[${Yix+n}];
         }

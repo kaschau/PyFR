@@ -1,8 +1,12 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 <%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
+<% Yix = ndims + 2 %>\
+<% ns = c['ns'] %>\
+<% MW = c['MW'] %>\
+<% muPoly = c['muPoly'] %>\
+<% kappaPoly = c['kappaPoly'] %>\
+<% DijPoly = c['DijPoly'] %>\
   fpdtype_t p = q[0];
   fpdtype_t T = q[${ndims+1}];
 
@@ -16,13 +20,13 @@
   {
     fpdtype_t mass = 0.0;
 % for n in range(ns):
-    X[${n}] = q[${Yix+n}]*${1.0/c['MW'][n]};
+    X[${n}] = q[${Yix+n}]*${1.0/MW[n]};
     mass += X[${n}];
 % endfor
     fpdtype_t invmass = 1.0/mass;
 % for n in range(ns):
     X[${n}] *= invmass;
-    MWmix += X[${n}] * ${c['MW'][n]};
+    MWmix += X[${n}] * ${MW[n]};
 % endfor
   }
 
@@ -38,15 +42,12 @@
    logT_n[${i}] = logT * logT_n[${i-1}];
 % endfor
 
-<% muPoly = c['muPoly'] %>
-<% kappaPoly = c['kappaPoly'] %>
-<% DijPoly = c['DijPoly'] %>
 % for n in range(ns):
-// ${c['names'][n]} visc, kappa, Dij
-% for i in range(deg+1):
-  mu_sp[${n}] += ${muPoly[n, i]} * logT_n[${i}];
-  kappa_sp[${n}] += ${kappaPoly[n, i]} * logT_n[${i}];
+// ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
+mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n,:])+')'*4};
+kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
 % for n2 in range(n, ns):
+% for i in range(deg+1):
 <% indx = int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>
   Dij[${n}][${n2}] += ${DijPoly[indx, i]} * logT_n[${i}];
 % endfor
@@ -78,9 +79,9 @@
       fpdtype_t phi = pow(
                           1.0 + sqrt(
                                      mu_sp[${n}] / mu_sp[${n2}] *
-                                     ${math.sqrt(c['MW'][n2] / c['MW'][n])}),
+                                     ${math.sqrt(MW[n2] / MW[n])}),
                           2.0) /
-                    (sqrt(8.0) * sqrt(1.0 + ${c['MW'][n]}/${c['MW'][n2]}));
+                    (sqrt(8.0) * sqrt(1.0 + ${MW[n]}/${MW[n2]}));
       phitemp += phi * X[${n2}];
       }
 % endfor
@@ -114,12 +115,12 @@
 % for n2 in range(ns):
 % if n != n2:
       sum1 += X[${n2}] / Dij[${n}][${n2}];
-      sum2 += X[${n2}] * ${c['MW'][n2]} / Dij[${n}][${n2}];
+      sum2 += X[${n2}] * ${MW[n2]} / Dij[${n}][${n2}];
 % endif
 % endfor
   // Account for pressure
   sum1 *= p;
-  sum2 *= p * X[${n}] / (MWmix - ${c['MW'][n]} * X[${n}]);
+  sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
   qt[${2+n}] = 1.0 / (sum1 + sum2);
 % endfor
   }
