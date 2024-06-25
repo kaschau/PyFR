@@ -64,12 +64,8 @@ kappa_sp[${n}] *= sqrtT;
     fpdtype_t phitemp = 0.0;
 % for n2 in range(ns):
       {
-      fpdtype_t phi = pow(
-                          1.0 + sqrt(
-                                     mu_sp[${n}] / mu_sp[${n2}] *
-                                     ${math.sqrt(MW[n2] / MW[n])}),
-                          2.0) /
-                    (sqrt(8.0) * sqrt(1.0 + ${MW[n]}/${MW[n2]}));
+      fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
+      fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
       phitemp += phi * X[${n2}];
       }
 % endfor
