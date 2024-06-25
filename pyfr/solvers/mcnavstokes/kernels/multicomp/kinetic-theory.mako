@@ -6,13 +6,15 @@
 <% MW = c['MW'] %>\
 <% muPoly = c['muPoly'] %>\
 <% kappaPoly = c['kappaPoly'] %>\
+## Dij is a symmetric matrix, so just store half and index appropriately
 <% DijPoly = c['DijPoly'] %>\
+<% Dijix = lambda n,n2 : int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>\
   fpdtype_t p = q[0];
   fpdtype_t T = q[${ndims+1}];
 
   fpdtype_t mu_sp[${ns}] = {0};
   fpdtype_t kappa_sp[${ns}] = {0};
-  fpdtype_t Dij[${ns}][${ns}] = {0};
+  fpdtype_t Dij[${int((ns+1)*ns/2)}] = {0};
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;
@@ -46,22 +48,15 @@
 // ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
 mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n,:])+')'*4};
 kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
+// Set to correct dimensions
+mu_sp[${n}] *= sqrtsqrtT;
+mu_sp[${n}] *= mu_sp[${n}];
+kappa_sp[${n}] *= sqrtT;
 % for n2 in range(n, ns):
-% for i in range(deg+1):
-<% indx = int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>
-  Dij[${n}][${n2}] += ${DijPoly[indx, i]} * logT_n[${i}];
-% endfor
-% endfor
+<% ix = Dijix(n,n2)%>\
+  Dij[${ix}] = ${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4};
   // Set to correct dimensions
-  mu_sp[${n}] *= sqrtsqrtT;
-  mu_sp[${n}] *= mu_sp[${n}];
-  kappa_sp[${n}] *= sqrtT;
-% for n2 in range(n, ns):
-  Dij[${n}][${n2}] *= T_3o2;
-% if n != n2:
-  Dij[${n2}][${n}] = Dij[${n}][${n2}];
-% endif
-
+  Dij[${ix}] *= T_3o2;
 % endfor
 % endfor
 
@@ -92,7 +87,6 @@ kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
   }
 
   // Mixture thermal conductivity
-  fpdtype_t kappa;
   {
     fpdtype_t sum1 = 0.0;
     fpdtype_t sum2 = 0.0;
@@ -101,29 +95,28 @@ kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
       sum1 += X[${n}] * kappa_sp[${n}];
       sum2 += X[${n}] / kappa_sp[${n}];
 % endfor
-    kappa = 0.5*(sum1 + 1.0 / sum2);
+    fpdtype_t kappa = 0.5*(sum1 + 1.0 / sum2);
     qt[1] = kappa;
   }
 
   // mixture species diffusion coefficient
-  {
-    fpdtype_t sum1;
-    fpdtype_t sum2;
 % for n in range(ns):
-    sum1 = 0.0;
-    sum2 = 0.0;
+  {
+    fpdtype_t sum1 = 0.0;
+    fpdtype_t sum2 = 0.0;
 % for n2 in range(ns):
 % if n != n2:
-      sum1 += X[${n2}] / Dij[${n}][${n2}];
-      sum2 += X[${n2}] * ${MW[n2]} / Dij[${n}][${n2}];
+<% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
+      sum1 += X[${n2}] / Dij[${ix}];
+      sum2 += X[${n2}] * ${MW[n2]} / Dij[${ix}];
 % endif
 % endfor
   // Account for pressure
   sum1 *= p;
   sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
   qt[${2+n}] = 1.0 / (sum1 + sum2);
-% endfor
   }
+% endfor
 
 #ifdef DEBUG
   printf("*********************************\n");
