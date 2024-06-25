@@ -33,7 +33,6 @@
   }
 
   // Evaluate all property poly'l
-<% deg = 4 %>
   fpdtype_t logT = log(T);
   fpdtype_t sqrtT = sqrt(T);
   fpdtype_t sqrtsqrtT = sqrt(sqrtT);
@@ -41,20 +40,19 @@
 
 % for n in range(ns):
 // ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
-mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n,:])+')'*4};
-kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
-// Set to correct dimensions
-mu_sp[${n}] *= sqrtsqrtT;
-mu_sp[${n}] *= mu_sp[${n}];
-kappa_sp[${n}] *= sqrtT;
+  mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n,:])+')'*4};
+  kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
+  // Set to correct dimensions
+  mu_sp[${n}] *= sqrtsqrtT;
+  mu_sp[${n}] *= mu_sp[${n}];
+  kappa_sp[${n}] *= sqrtT;
 % for n2 in range(n, ns):
 <% ix = Dijix(n,n2)%>\
-  invDij[${ix}] = 1.0/((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
+    invDij[${ix}] = 1.0/((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
 % endfor
 % endfor
 
   // Now every species' property is computed, generate mixture values
-
   // Mixture viscosity
   {
   fpdtype_t mu = 0.0;
@@ -88,19 +86,20 @@ kappa_sp[${n}] *= sqrtT;
     qt[1] = kappa;
   }
 
-  // mixture species diffusion coefficient
+  // Mixture species diffusion coefficient
 % for n in range(ns):
   {
     fpdtype_t sum1 = 0.0;
     fpdtype_t sum2 = 0.0;
 % for n2 in range(ns):
 % if n != n2:
+##Symmetric
 <% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
       sum1 += X[${n2}] * invDij[${ix}];
       sum2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
 % endif
 % endfor
-  // Account for pressure
+  // account for pressure
   sum1 *= p;
   sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
   qt[${2+n}] = 1.0 / (sum1 + sum2);
