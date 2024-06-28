@@ -30,6 +30,7 @@ class TplargsMixin:
                                            5*self._be.fpdtype_eps)
         self.mcfluid = MCFluid(self.cfg)
         self.c |= self.mcfluid.consts
+
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              eos=self.mcfluid.eos,
                              rsolver=rsolver, c=self.c, p_min=self.p_min)
@@ -100,36 +101,37 @@ class MCEulerBaseBCInters(TplargsMixin, BaseAdvectionBCInters):
             )
 
 
-class EulerSupInflowBCInters(MCEulerBaseBCInters):
+class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
     type = 'sup-in-fa'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.props.species_names[::-1]
-        default = {spn: 0 for spn in self.props.species_names[::-1]}
+        bcvars += self.c['names'][:-1]
+
+        default = {spn: 0 for spn in self.c['names'][:-1]}
 
         self.c |= self._exp_opts(bcvars, lhs, default)
 
 
-class EulerSupOutflowBCInters(MCEulerBaseBCInters):
+class MCEulerSupOutflowBCInters(MCEulerBaseBCInters):
     type = 'sup-out-fn'
     cflux_state = 'ghost'
 
 
-class EulerCharRiemInvBCInters(MCEulerBaseBCInters):
-    type = 'char-riem-inv'
+class EulerSlpAdiaWallBCInters(MCEulerBaseBCInters):
+    type = 'slp-adia-wall'
+
+
+class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
+    type = 'sub-in-mdot'
+    cflux_state = 'ghost'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.props.species_names[::-1]
-        default = {spn: 0 for spn in self.props.species_names[::-1]}
+        bcvars = ['T', 'mdot-per-area']
+        default = {spn: 0 for spn in self.props.species_names[:-1]}
 
-        self.c |= self._exp_opts(bcvars, lhs, default)
-
-
-class EulerSlpAdiaWallBCInters(MCEulerBaseBCInters):
-    type = 'slp-adia-wall'
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
