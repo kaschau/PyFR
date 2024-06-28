@@ -12,7 +12,7 @@
     ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'qr')};
 
     // Sum the left and right velocities and take the normal
-    fpdtype_t nv = ${pyfr.dot('n[{i}]', 'ql[{i}] + qr[{i}]', i=(1,ndims+1))};
+    fpdtype_t nv = ${' + '.join(f'n[{i}]*(ql[{i+1}]+qr[{i+1}])' for i in range(ndims))};
 
     // Estimate the maximum wave speed / 2
     fpdtype_t a = 0.25*(qhl[2]+qhr[2]) + 0.5*fabs(nv);
