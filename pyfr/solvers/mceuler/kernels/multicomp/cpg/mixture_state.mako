@@ -56,4 +56,31 @@
     qh[${3+n}] = q[${ndims+1}]*${c['cp0'][n]};
 % endfor
 
+#ifdef DEBUG
+  printf("*********************************\n");
+  printf("THERMODYNAMIC PROPERTIES\n");
+  printf("INPUT STATE\n");
+  printf("therm&rho = %.14f\n", u[0]);
+  printf("therm&e = %.14f\n", e);
+% for n in range(ns-1):
+  printf("therm&rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
+% endfor
+
+  printf("\nCOMPUTED STATE\n");
+  printf("therm&p = %.14f\n", q[0]);
+  printf("therm&T = %.14f\n", q[${ndims+1}]);
+% for n in range(ns):
+  printf("therm&Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
+% endfor
+
+  printf("\nCOMPUTED PROPERTIES\n");
+  printf("therm&R = %.14f\n", R);
+  printf("therm&gamma = %.14f\n", qh[0]);
+  printf("therm&cp = %.14f\n", qh[1]);
+  printf("therm&c = %.14f\n", qh[2]);
+% for n in range(ns):
+  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
+% endfor
+  printf("*********************************\n");
+#endif
 </%pyfr:macro>
