@@ -1,6 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.prims_to_cons'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur' externs='ploc, t'>
 <% ns = c['ns'] %>

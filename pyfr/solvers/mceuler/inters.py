@@ -120,7 +120,17 @@ class MCEulerSupOutflowBCInters(MCEulerBaseBCInters):
     cflux_state = 'ghost'
 
 
-class EulerSlpAdiaWallBCInters(MCEulerBaseBCInters):
+class MCEulerSubOutflowBCInters(MCEulerBaseBCInters):
+    type = 'sub-out-fp'
+    cflux_state = 'ghost'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg):
+        super().__init__(be, lhs, elemap, cfgsect, cfg)
+
+        self.c |= self._exp_opts(['p'], lhs)
+
+
+class MCEulerSlpAdiaWallBCInters(MCEulerBaseBCInters):
     type = 'slp-adia-wall'
 
 
@@ -132,6 +142,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'mdot-per-area']
-        default = {spn: 0 for spn in self.props.species_names[:-1]}
+        bcvars += self.c['names'][:-1]
+
+        default = {spn: 0 for spn in self.c['names'][:-1]}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)

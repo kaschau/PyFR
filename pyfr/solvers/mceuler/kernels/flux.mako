@@ -36,7 +36,7 @@
 <%pyfr:macro name='inviscid_flux_1d' params='u, f, q'>
     fpdtype_t rho = u[0];
     fpdtype_t invrho = 1.0/rho;
-    fpdtype_t rhoE = u[${nvars - 1}];
+    fpdtype_t rhoE = u[${ndims + 1}];
 
     // Compute the velocities
 % for i in range(ndims):
@@ -45,7 +45,7 @@
 
     // Density and energy fluxes
     f[0] = u[1];
-    f[${nvars - 1}] = (rhoE + p)*v[0];
+    f[${ndims + 1}] = (rhoE + p)*v[0];
 
     // Momentum fluxes
     f[1] = u[1]*v[0] + p;
