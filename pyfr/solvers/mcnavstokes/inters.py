@@ -116,19 +116,6 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
                 nl=self._pnorm_lhs, ul=self._scal_lhs, **self._external_vals
             )
 
-
-class MCNavierStokesNoSlpIsotWallBCInters(MCNavierStokesBaseBCInters):
-    type = 'no-slp-isot-wall'
-    cflux_state = 'ghost'
-
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
-
-        self.c['cpTw'], = self._eval_opts(['cpTw'])
-        self.c |= self._exp_opts('uvw'[:self.ndims], lhs,
-                                 default={'u': 0, 'v': 0, 'w': 0})
-
-
 class MCNavierStokesNoSlpAdiaWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-adia-wall'
     cflux_state = 'ghost'
@@ -139,83 +126,19 @@ class MCNavierStokesSlpAdiaWallBCInters(MCNavierStokesBaseBCInters):
     cflux_state = None
 
 
-class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
-    type = 'char-riem-inv'
+class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
+    type = 'sub-in-mdot'
     cflux_state = 'ghost'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.props.species_names[::-1]
+        bcvars = ['T', 'mdot-per-area']
+        bcvars += self.c['names'][:-1]
 
-        default = {spn: 0 for spn in self.props.species_names[::-1]}
-
-        self.c |= self._exp_opts(bcvars, lhs, default=default)
-
-
-class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
-    type = 'sup-in-fa'
-    cflux_state = 'ghost'
-
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
-
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.props.species_names[::-1]
-
-        default = {spn: 0 for spn in self.props.species_names[::-1]}
+        default = {spn: 0 for spn in self.c['names'][:-1]}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
-
-
-class MCNavierStokesSupOutflowBCInters(MCNavierStokesBaseBCInters):
-    type = 'sup-out-fn'
-    cflux_state = 'ghost'
-
-
-class MCNavierStokesSubInflowFrvBCInters(MCNavierStokesBaseBCInters):
-    type = 'sub-in-frv'
-    cflux_state = 'ghost'
-
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
-
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.props.species_names[::-1]
-
-        default = {spn: 0 for spn in self.props.species_names[::-1]}
-        for u in "uvw":
-            default[u] = 0.0
-
-        self.c |= self._exp_opts(bcvars, lhs, default=default)
-
-
-class MCNavierStokesSubInflowFtpttangBCInters(MCNavierStokesBaseBCInters):
-    type = 'sub-in-ftpttang'
-    cflux_state = 'ghost'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        gamma = self.cfg.getfloat('constants', 'gamma')
-
-        # Pass boundary constants to the backend
-        self.c['cpTt'], = self._eval_opts(['cpTt'])
-        self.c['pt'], = self._eval_opts(['pt'])
-        self.c['Rdcp'] = (gamma - 1.0)/gamma
-
-        # Calculate u, v velocity components from the inflow angle
-        theta = self._eval_opts(['theta'])[0]*np.pi/180.0
-        velcomps = np.array([np.cos(theta), np.sin(theta), 1.0])
-
-        # Adjust u, v and calculate w velocity components for 3-D
-        if self.ndims == 3:
-            phi = self._eval_opts(['phi'])[0]*np.pi/180.0
-            velcomps[:2] *= np.sin(phi)
-            velcomps[2] *= np.cos(phi)
-
-        self.c['vc'] = velcomps[:self.ndims]
 
 
 class MCNavierStokesSubOutflowBCInters(MCNavierStokesBaseBCInters):
@@ -226,3 +149,22 @@ class MCNavierStokesSubOutflowBCInters(MCNavierStokesBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         self.c |= self._exp_opts(['p'], lhs)
+
+
+class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
+    type = 'sup-in-fa'
+    cflux_state = 'ghost'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg):
+        super().__init__(be, lhs, elemap, cfgsect, cfg)
+
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.c['names'][:-1]
+
+        default = {spn: 0 for spn in self.c['names'][:-1]}
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
+
+
+class MCNavierStokesSupOutflowBCInters(MCNavierStokesBaseBCInters):
+    type = 'sup-out-fn'
+    cflux_state = 'ghost'

@@ -42,7 +42,7 @@
     fpdtype_t qtl[${ns+2}];
     ${pyfr.expand('mixture_transport', 'ul', 'ql', 'qhl', 'qtl')};
     ${pyfr.expand('viscous_flux_add', 'ul', 'gradul', 'ql', 'qhl', 'qtl', 'fvl')};
-    ##${pyfr.expand('artificial_viscosity_add', 'gradul', 'fvl', 'artviscl')};
+    ${pyfr.expand('artificial_viscosity_add', 'gradul', 'fvl', 'artviscl')};
 % endif
 
 % if beta != 0.5:
@@ -51,7 +51,7 @@
     fpdtype_t qtr[${ns+2}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
     ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
-    ##${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscr')};
+    ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscr')};
 % endif
 
     fpdtype_t fvcomm;
