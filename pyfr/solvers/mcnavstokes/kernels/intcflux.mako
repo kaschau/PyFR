@@ -1,11 +1,11 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 
 <% beta, tau = c['ldg-beta'], c['ldg-tau'] %>
 

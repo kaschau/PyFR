@@ -26,7 +26,7 @@
 % endfor
 </%pyfr:macro>
 
-<%pyfr:macro name='bc_ldg_grad_state' params='ul, nl, qhl, grad_ul, grad_ur'>
+<%pyfr:macro name='bc_ldg_grad_state' params='ul, nl, grad_ul, grad_ur'>
     fpdtype_t rhoE = ul[${ndims+1}];
     fpdtype_t rho = ul[0];
     fpdtype_t rcprho = 1.0/rho;

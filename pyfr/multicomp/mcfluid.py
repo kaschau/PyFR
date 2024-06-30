@@ -10,7 +10,9 @@ class MCFluid:
     def __init__(self, cfg):
 
         self.eos = cfg.get('multi-component','eos')
-        self.trans = cfg.get('multi-component','transport', None)
+        system = cfg.get('solver', 'system')
+        if system == 'mcnavier-stokes':
+            self.trans = cfg.get('multi-component','transport')
 
         eos_data = subclass_where(BaseEOS, name=self.eos)()
         if self.trans != 'None':

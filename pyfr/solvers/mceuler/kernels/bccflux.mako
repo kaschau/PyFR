@@ -26,6 +26,7 @@
     fpdtype_t qhr[${3+ns}];
     ${pyfr.expand('mixture_state', 'ur', 'qr', 'qhr')};
 
+
     // Perform the Riemann solve
     fpdtype_t fn[${nvars}];
     ${pyfr.expand('rsolve', 'ul', 'ur', 'ql', 'qr', 'qhl', 'qhr', 'norm_nl', 'fn')};

@@ -2,9 +2,7 @@
 
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 
 <% tau = c['ldg-tau'] %>
 
@@ -19,7 +17,7 @@
     // Viscous states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
     ${pyfr.expand('bc_ldg_state', 'ul', 'nl', 'ur')};
-    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'nl', 'ql', 'gradul', 'gradur')};
+    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'nl', 'gradul', 'gradur')};
 
     // Compute right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];
@@ -30,7 +28,7 @@
     fpdtype_t qtr[${nvars+1}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
     ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
-    ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscl')};
+    ##${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscl')};
 
     // Inviscid (Riemann solve) state
     ${pyfr.expand('bc_rsolve_state', 'ul', 'nl', 'ur')};
