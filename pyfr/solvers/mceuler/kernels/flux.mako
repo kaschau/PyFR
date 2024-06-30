@@ -56,7 +56,7 @@
     // Species fluxes
 <% ns = c['ns'] %>
 % for k in range(ns-1):
-    f[${k+3}] = u[${k+3}]*v[0];
+    f[${ndims+2+k}] = u[${ndims+2+k}]*v[0];
 % endfor
 
 </%pyfr:macro>

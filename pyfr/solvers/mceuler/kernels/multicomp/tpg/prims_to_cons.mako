@@ -47,8 +47,8 @@
     h += hs * q[${Yix+n}];
     }
 
-    fpdtype_t e = h - q[0]/rho;
-    u[${ndims+1}] = rho*e + 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
+    fpdtype_t rhoe = rho*h - q[0];
+    u[${ndims+1}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
 
     // Species mass
 % for n in range(ns-1):

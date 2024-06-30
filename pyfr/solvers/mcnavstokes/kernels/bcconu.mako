@@ -1,6 +1,8 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
 
 <%pyfr:kernel name='bcconu' ndim='1'
