@@ -13,9 +13,11 @@ class MCFluid:
         system = cfg.get('solver', 'system')
         if system == 'mcnavier-stokes':
             self.trans = cfg.get('multi-component','transport')
+        else:
+            self.trans = None
 
         eos_data = subclass_where(BaseEOS, name=self.eos)()
-        if self.trans != 'None':
+        if self.trans is not None:
             trans_data = subclass_where(BaseTransport, name=self.trans)()
 
         # Save the prims <-> cons functions
@@ -24,12 +26,12 @@ class MCFluid:
 
         # Merge the lists of required data
         self.input_props = eos_data.input_props
-        if self.trans != 'None':
+        if self.trans is not None:
             self.input_props |= trans_data.input_props
 
         # Merge the constants lists
         self.consts = eos_data.consts
-        if self.trans != 'None':
+        if self.trans is not None:
             self.consts |= trans_data.consts
         self.consts['Ru'] = 8314.46261815324
         self.consts['avogadro'] = 6.02214076e+26
@@ -62,7 +64,7 @@ class MCFluid:
 
         # Now we can compute/fill in any constants
         eos_data.compute_consts(self.input_props, self.consts)
-        if self.trans != 'None':
+        if self.trans is not None:
             trans_data.compute_consts(self.input_props, self.consts, self.eos)
 
         # Finally, merge reactions data to the consts, make them numpy arrays

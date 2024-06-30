@@ -1,6 +1,7 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 
 <%pyfr:kernel name='mpicflux' ndim='1'

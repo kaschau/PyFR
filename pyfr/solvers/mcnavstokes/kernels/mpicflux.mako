@@ -1,6 +1,8 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
@@ -31,7 +33,7 @@
 
     // Perform the Riemann solve
     fpdtype_t ficomm[${nvars}], fvcomm;
-    ${pyfr.expand('rsolve', 'ul', 'ur', 'norm_nl', 'ficomm')};
+    ${pyfr.expand('rsolve', 'ul', 'ur', 'ql', 'qr', 'qhl', 'qhr', 'norm_nl', 'ficomm')};
 
 % if beta != -0.5:
     fpdtype_t fvl[${ndims}][${nvars}] = {{0}};
@@ -45,8 +47,8 @@
 % if beta != 0.5:
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
     // Compute transport properties
-    fpdtype_t qtl[${ns+2}];
-    ${pyfr.expand('mixture_transport', 'ul', 'ql', 'qhl', 'qtl')};
+    fpdtype_t qtr[${ns+2}];
+    ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
     ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
     ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscr')};
 % endif
