@@ -1,5 +1,4 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.prims_to_cons'/>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur' externs='ploc, t'>
 <% ns = c['ns'] %>
@@ -25,11 +24,12 @@
 
     ${pyfr.expand('prims_to_cons', 'qr', 'ur')};
 
-    // We now have a valid density value, set momentums to reach
-    //input mdot
+    // We now have a valid density value, set momentums to reach input mdot
+    fpdtype_t scale = fmin(1.0, t/0.01);
 % for i in range(ndims):
-    ur[${i + 1}] = nl[${i}]*${c['mdot-per-area']};
+    ur[${i + 1}] = -nl[${i}]*${c['mdot-per-area']}*scale;
 % endfor
+
    // We have added ke, so we need to update total energy
     ur[${ndims+1}] += 0.5/ur[0]*${pyfr.dot('ur[{i}]', i=(1,ndims+1))};
 
