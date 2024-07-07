@@ -3,48 +3,54 @@
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur' externs='ploc, t'>
 <% ns = c['ns'] %>
-    // Compute left thermodynamic quantities
-    //HERE
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
-    ${pyfr.expand('mixture_state', 'ul', 'ql', 'qhl')};
-
     // Set right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];
 
-    qr[0] = ql[0];
-% for i, v in enumerate('uvw'[:ndims]):
-    qr[${i + 1}] = -ql[${i + 1}] + 2*${c[v]};
-% endfor
     qr[${ndims+1}] = ${c['T']};
-% for n in range(ns):
-    qr[${ndims + 2 + n}] = ql[${ndims + 2 + n}];
+    qr[${nvars}] = 1.0;
+% for n in range(ns-1):
+    qr[${ndims + 2 + n}] = ul[${ndims + 2 + n}]/ul[0];
+    qr[${nvars}] -= qr[${ndims + 2 + n}];
 % endfor
 
-    ${pyfr.expand('prims_to_cons', 'qr', 'ur')};
+    ur[0] = ul[0];
+% for i, v in enumerate('uvw'[:ndims]):
+    ur[${i + 1}] = -ul[${i + 1}] + 2*${c[v]}*ul[0];
+% endfor
+
+    ${pyfr.expand('rhoe-from-rhoTY', 'qr', 'ur')};
+    ur[${ndims + 1}] += 0.5*(1.0/ur[0])*${pyfr.dot('ur[{i}]', i=(1, ndims + 1))};
+
+% for n in range(ns-1):
+    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+% endfor
 
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_state' params='ul, nl, ur' externs='ploc, t'>
 <% ns = c['ns'] %>
-    // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
-    ${pyfr.expand('mixture_state', 'ul', 'ql', 'qhl')};
-
     // Set right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];
 
-    qr[0] = ql[0];
-% for i, v in enumerate('uvw'[:ndims]):
-    qr[${i + 1}] = ql[${i + 1}];
-% endfor
     qr[${ndims+1}] = ${c['T']};
-% for n in range(ns):
-    qr[${ndims + 2 + n}] = ql[${ndims + 2 + n}];
+    qr[${nvars}] = 1.0;
+% for n in range(ns-1):
+    qr[${ndims + 2 + n}] = ul[${ndims + 2 + n}]/ul[0];
+    qr[${nvars}] -= qr[${ndims + 2 + n}];
 % endfor
 
-    ${pyfr.expand('prims_to_cons', 'qr', 'ur')};
+    ur[0] = ul[0];
+% for i, v in enumerate('uvw'[:ndims]):
+    ur[${i + 1}] = -ul[${i + 1}] + 2*${c[v]}*ul[0];
+% endfor
+
+    ${pyfr.expand('rhoe-from-rhoTY', 'qr', 'ur')};
+    ur[${ndims + 1}] += 0.5*(1.0/ur[0])*${pyfr.dot('ur[{i}]', i=(1, ndims + 1))};
+
+% for n in range(ns-1):
+    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+% endfor
+
 </%pyfr:macro>
 
 <%pyfr:alias name='bc_ldg_grad_state' func='bc_common_grad_copy'/>

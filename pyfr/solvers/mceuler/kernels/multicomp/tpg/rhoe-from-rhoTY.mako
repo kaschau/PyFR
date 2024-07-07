@@ -1,6 +1,6 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='prims_to_cons' params='q, u'>
+<%pyfr:macro name='rhoe-from-rhoTY' params='q, u'>
     ## q is an array of length nvars + 1
     ## storing all primatives
     ## 0, 1:ndims, ndims+1, ndims+2 ... nvars
@@ -20,16 +20,7 @@
 % endfor
     R *= ${Ru};
 
-    // Compute density
-    fpdtype_t rho = q[0]/(R*q[${ndims+1}]);
-    u[0] = rho;
-
-    // Compute momentum
-% for i in range(ndims):
-    u[${i+1}] = q[${i+1}]*rho;
-% endfor
-
-    // Total energy
+    // Internal energy
     fpdtype_t T = q[${ndims+1}];
     fpdtype_t h = 0.0;
 % for n in range(ns):
@@ -49,11 +40,6 @@
     }
 
     fpdtype_t rhoe = rho*h - q[0];
-    u[${ndims+1}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
-
-    // Species mass
-% for n in range(ns-1):
-    u[${Yix+n}] = q[${Yix+n}]*rho;
-% endfor
+    u[${ndims+1}] = rhoe;
 
 </%pyfr:macro>
