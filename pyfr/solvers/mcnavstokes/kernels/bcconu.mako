@@ -2,7 +2,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.prims_to_cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.rhoe-from-rhoTY'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
 

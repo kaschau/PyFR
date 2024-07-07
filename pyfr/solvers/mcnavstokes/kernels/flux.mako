@@ -24,8 +24,8 @@
     // Compute temperature derivatives (dT/d[x,y])
     fpdtype_t rcpcv = qh[0]/qh[1];
     fpdtype_t E = rhoE*rcprho;
-    fpdtype_t T_x = rcprho*rcpcv*(grad_uin[0][${ndims+1}] - E*grad_uin[0][0]);
-    fpdtype_t T_y = rcprho*rcpcv*(grad_uin[1][${ndims+1}] - E*grad_uin[1][0]);
+    fpdtype_t T_x = rcpcv*rcprho*(E_x - (rcprho*rho_x*rhoE + rho*(u*u_x + v*v_x)));
+    fpdtype_t T_y = rcpcv*rcprho*(E_y - (rcprho*rho_y*rhoE + rho*(u*u_y + v*v_y)));
 
     // Negated stress tensor elements
     fpdtype_t t_xx = -2*mu*rcprho*(u_x - ${1.0/3.0}*(u_x + v_y));
