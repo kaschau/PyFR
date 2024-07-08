@@ -60,7 +60,7 @@
 
 #ifdef DEBUG
   printf("*********************************\n");
-  printf("THERMODYNAMIC PROPERTIES\n");
+  printf("TPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
   printf("therm&rho = %.14f\n", u[0]);
   printf("therm&e = %.14f\n", e);
