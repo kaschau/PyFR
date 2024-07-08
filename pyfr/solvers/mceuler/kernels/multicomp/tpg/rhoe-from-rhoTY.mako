@@ -38,8 +38,9 @@
     }
     h += hs * q[${Yix+n}];
     }
+% endfor
 
-    fpdtype_t rhoe = rho*h - q[0];
-    u[${ndims+1}] = rhoe;
+    fpdtype_t e = h - R*q[${ndims+1}];
+    u[${ndims+1}] = u[0]*e;
 
 </%pyfr:macro>
