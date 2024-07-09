@@ -1,10 +1,12 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.rhoe-from-rhoTY'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-rhoTY'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
+
+<% ns = c['ns'] %>
 
 <%pyfr:kernel name='bcconu' ndim='1'
               ulin='in view fpdtype_t[${str(nvars)}]'
@@ -13,5 +15,10 @@
     fpdtype_t mag_nl = sqrt(${pyfr.dot('nlin[{i}]', i=ndims)});
     fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nlin[{i}]', i=ndims)};
 
-    ${pyfr.expand('bc_ldg_state', 'ulin', 'norm_nl', 'ulout')};
+    fpdtype_t qlin[${nvars+1}];
+    fpdtype_t qhlin[${3+ns}];
+    ${pyfr.expand('stateFrom-cons', 'ulin', 'qlin', 'qhlin')};
+    fpdtype_t qlout[${nvars+1}];
+    fpdtype_t qhlout[${3+ns}];
+    ${pyfr.expand('bc_ldg_state', 'ulin', 'ql', 'qhl', 'norm_nl', 'ulout', 'qlout', 'qhlout')};
 </%pyfr:kernel>

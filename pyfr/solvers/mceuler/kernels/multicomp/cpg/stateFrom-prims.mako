@@ -1,13 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='prims_to_cons' params='q, u'>
+<%pyfr:macro name='stateFrom-prims' params='u, q, qh'>
+<% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
+
     ## q is an array of length nvars + 1
     ## storing all primatives
     ## 0, 1:ndims, ndims+1, ndims+2 ... nvars
     ## p, u,v(,w),   T    ,   Y0    ...  Yns
-
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
 
     // Compute mixture properties
     fpdtype_t R = 0.0;
@@ -34,6 +34,14 @@
     // Species mass
 % for n in range(ns-1):
     u[${Yix+n}] = q[${Yix+n}]*rho;
+% endfor
+
+    // Store gamma, cp, c, hs
+    qh[0] = cp/(cp-R);
+    qh[1] = cp;
+    qh[2] = sqrt(qh[0]*R*q[${ndims+1}]);
+% for n in range(ns):
+    qh[${3+n}] = q[${ndims+1}]*${c['cp0'][n]};
 % endfor
 
 #ifdef DEBUG

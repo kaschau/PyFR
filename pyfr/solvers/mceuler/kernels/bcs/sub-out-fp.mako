@@ -1,15 +1,11 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur' externs='ploc, t'>
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 <% ns = c['ns'] %>
 <% Yix = ndims+2 %>
 
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
-    ${pyfr.expand('mixture_state', 'ul', 'ql', 'qhl')};
 
     // set right side primatives
-    fpdtype_t qr[${nvars+1}];
     // fix pressure
     qr[0] = ${c['p']};
 
@@ -21,6 +17,6 @@
     qr[${Yix+n}] = ql[${Yix+n}];
 % endfor
 
-${pyfr.expand('prims_to_cons', 'qr', 'ur')};
+${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 
 </%pyfr:macro>
