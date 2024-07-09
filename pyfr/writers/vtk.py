@@ -575,6 +575,7 @@ class VTKWriter(BaseWriter):
         comps = ['3', '', '', '', '1']
 
         for fname, varnames in vvars.items():
+            names.append(fname.title())
             types.append(dtype)
             comps.append(str(len(varnames)))
 
