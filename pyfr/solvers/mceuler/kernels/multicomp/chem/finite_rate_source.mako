@@ -1,5 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
 <%def name="rateConst(A, m, Ea)">
 % if m == 0.0 and Ea == 0.0:
@@ -44,16 +44,16 @@
   fpdtype_t rho = u[0];
 
   // Compute thermodynamic properties
-  fpdtype_t prims[${nvars+1}];
+  fpdtype_t q[${nvars+1}];
   fpdtype_t qh[${3+ns}];
-  ${pyfr.expand('mixture_state', 'u', 'prims', 'qh')};
+  ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
-  fpdtype_t T = prims[${ndims+1}];
+  fpdtype_t T = q[${ndims+1}];
 
   // Concentrations
   fpdtype_t cs[${ns}];
 % for n in range(ns):
-  cs[${n}] = rho*prims[${Yix+n}]*${1.0/c['MW'][n]};
+  cs[${n}] = rho*q[${Yix+n}]*${1.0/c['MW'][n]};
 % endfor
 
   // Gibbs energy
@@ -136,12 +136,12 @@
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
-  fpdtype_t q_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_f'][:,i]) if s != 0.0])};
+  fpdtype_t rp_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_f'][:,i]) if s != 0.0])};
   % if c['reversible'][i] == 1.0:
-  fpdtype_t q_b = -k_f/K_c * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_b'][:,i]) if s != 0.0])};
-  q[${i}] = q_f + q_b;
+  fpdtype_t rp_b = -k_f/K_c * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_b'][:,i]) if s != 0.0])};
+  rp[${i}] = rp_f + rp_b;
   % else:
-  q[${i}] = q_f;
+  rp[${i}] = rp_f;
   % endif
   }
 % endfor
@@ -156,7 +156,7 @@
 % for n in range(ns-1):
     // ${c['names'][n]}
 <% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
-  src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*q[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+  src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
 % endfor
 
 #ifdef DEBUG

@@ -2,7 +2,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.mixture_state'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
 
@@ -17,11 +17,12 @@
     fpdtype_t ${smats}[${ndims}][${ndims}], djac;
     ${pyfr.expand('calc_smats_detj', 'verts', 'upts', smats, 'djac')};
 % endif
+<% ns = c['ns'] %>
 
     // Compute thermodynamic properties
     fpdtype_t q[${nvars+1}];
-    fpdtype_t qh[${3+c['ns']}];
-    ${pyfr.expand('mixture_state', 'u', 'q', 'qh')};
+    fpdtype_t qh[${3+ns}];
+    ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
     // Compute the flux
     fpdtype_t ftemp[${ndims}][${nvars}];

@@ -1,29 +1,32 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.common'/>
+<% ns = c['ns'] %>
+<% Yix = ndims+2 %>
 
-<%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur' externs='ploc, t'>
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
     ur[0] = ul[0];
 % for i in range(ndims):
     ur[${i + 1}] = -ul[${i + 1}];
 % endfor
     ur[${ndims + 1}] = ul[${ndims + 1}];
-<% ns = c['ns'] %>
 % for n in range(ns-1):
-    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+    ur[${Yix + n}] = ul[${Yix + n}];
 % endfor
+
+    ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 </%pyfr:macro>
 
-<%pyfr:macro name='bc_ldg_state' params='ul, nl, ur' externs='ploc, t'>
+<%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
     ur[0] = ul[0];
 % for i in range(ndims):
     ur[${i + 1}] = 0.0;
 % endfor
     ur[${ndims+1}] = ul[${ndims+1}]
                      - (0.5/ul[0])*${pyfr.dot('ul[{i}]', i=(1, ndims + 1))};
-<% ns = c['ns'] %>
 % for n in range(ns-1):
-    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+    ur[${Yix + n}] = ul[${Yix + n}];
 % endfor
+    ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_grad_state' params='ul, nl, grad_ul, grad_ur'>
@@ -43,8 +46,6 @@
     grad_ur[0][3] = E*rhol_x;
     grad_ur[1][3] = E*rhol_y;
     // Enforce zero normal species gradient in wall
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
     fpdtype_t Y;
 %   for n in range(ns-1):
     Y = ul[${Yix+n}]*rcprho;
@@ -65,8 +66,6 @@
     grad_ur[1][3] = E*rhol_y;
     grad_ur[2][3] = E*rhol_z;
     // Enforce zero normal species gradient in wall
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
     fpdtype_t Y;
 %   for n in range(ns-1):
     Y = ul[${Yix+n}]*rcprho;

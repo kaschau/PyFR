@@ -3,8 +3,10 @@
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.common'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
+<% ns = c['ns'] %>
+<% Yix = ndims + 2 %>
 
-<%pyfr:macro name='bc_rsolve_state' params='ul, nl, ur'>
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr'>
     fpdtype_t nor = ${' + '.join(f'ul[{i + 1}]*nl[{i}]' for i in range(ndims))};
     ur[0] = ul[0];
 % for i in range(ndims):
@@ -12,25 +14,17 @@
 % endfor
     ur[${ndims + 1}] = ul[${ndims + 1}];
 % for n in range(ns-1):
-    ur[${ndims + 2 + n}] = ul[${ndims + 2 + n}];
+    ur[${Yix + n}] = ul[${Yix + n}];
 % endfor
+    ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 </%pyfr:macro>
 
-<%pyfr:macro name='bc_common_flux_state' params='ul, gradul, artviscl, nl, magnl'>
+<%pyfr:macro name='bc_common_flux_state' params='ul, ql, qhl, gradul, artviscl, nl, magnl'>
     // Ghost state r
     fpdtype_t ur[${nvars}];
-    ${pyfr.expand('bc_rsolve_state', 'ul', 'nl', 'ur')};
-
-<% ns = c['ns'] %>
-    // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
-    ${pyfr.expand('mixture_state', 'ul', 'ql', 'qhl')};
-
-    // Compute right thermodynamic quantities
     fpdtype_t qr[${nvars+1}];
     fpdtype_t qhr[${3+ns}];
-    ${pyfr.expand('mixture_state', 'ur', 'qr', 'qhr')};
+    ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve
     fpdtype_t ficomm[${nvars}];
