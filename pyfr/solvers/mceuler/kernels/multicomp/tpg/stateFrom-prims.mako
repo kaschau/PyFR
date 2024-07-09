@@ -52,6 +52,7 @@
     cp += cps * q[${Yix+n}];
     qh[${3+n}] = hs;
     }
+% endfor
 
     fpdtype_t rhoe = rho*h - q[0];
     u[${ndims+1}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
