@@ -2,6 +2,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-prims'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-rhoTY'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
@@ -20,5 +21,5 @@
     ${pyfr.expand('stateFrom-cons', 'ulin', 'qlin', 'qhlin')};
     fpdtype_t qlout[${nvars+1}];
     fpdtype_t qhlout[${3+ns}];
-    ${pyfr.expand('bc_ldg_state', 'ulin', 'ql', 'qhl', 'norm_nl', 'ulout', 'qlout', 'qhlout')};
+    ${pyfr.expand('bc_ldg_state', 'ulin', 'qlin', 'qhlin', 'norm_nl', 'ulout', 'qlout', 'qhlout')};
 </%pyfr:kernel>
