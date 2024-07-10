@@ -35,12 +35,14 @@
     fpdtype_t rcprho = 1.0/rho;
     fpdtype_t E = rhoE*rcprho;
 
+    // Copy non energy/species fluid-side gradients across to wall-side gradients
+% for i, j in pyfr.ndrange(ndims, ndims+1):
+    gradur[${i}][${j}] = gradul[${i}][${j}];
+% endfor
+
 % if ndims == 2:
     fpdtype_t rhol_x = grad_ul[0][0];
     fpdtype_t rhol_y = grad_ul[1][0];
-
-    // Copy all fluid-side gradients across to wall-side gradients
-    ${pyfr.expand('bc_common_grad_copy', 'ul', 'nl', 'grad_ul', 'grad_ur')};
 
     // Enforce zero normal temperature gradient in wall
     grad_ur[0][3] = E*rhol_x;
@@ -57,9 +59,6 @@
     fpdtype_t rhol_x = grad_ul[0][0];
     fpdtype_t rhol_y = grad_ul[1][0];
     fpdtype_t rhol_z = grad_ul[2][0];
-
-    // Copy all fluid-side gradients across to wall-side gradients
-    ${pyfr.expand('bc_common_grad_copy', 'ul', 'nl', 'grad_ul', 'grad_ur')};
 
     // Enforce zero normal temperature gradient in wall
     grad_ur[0][3] = E*rhol_x;
