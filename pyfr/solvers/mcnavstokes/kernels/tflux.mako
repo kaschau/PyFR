@@ -2,6 +2,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${eos}.e_Y_Y_x'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.transform_grad'/>

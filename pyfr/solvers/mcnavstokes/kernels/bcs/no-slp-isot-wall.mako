@@ -1,5 +1,4 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
 <% ns = c['ns'] %>
 <% Yix = ndims+2 %>
 
@@ -49,7 +48,7 @@
 
 </%pyfr:macro>
 
-<%pyfr:macro name='bc_ldg_grad_state' params='ul, nl, grad_ul, grad_ur'>
+<%pyfr:macro name='bc_ldg_grad_state' params='ul, ql, qhl, nl, grad_ul, grad_ur'>
     fpdtype_t rcprho = 1.0/ul[0];
 
     // Copy non species fluid-side gradients across to wall-side gradients
