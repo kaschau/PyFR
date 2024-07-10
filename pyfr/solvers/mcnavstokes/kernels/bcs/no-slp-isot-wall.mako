@@ -18,12 +18,11 @@
     // Set species
     qr[${nvars}] = 1.0;
 % for n in range(ns-1):
-    qr[${Yix + n}] = ul[${Yix + n}]*rhoinv;
+    qr[${Yix + n}] = ul[${Yix + n}]*invrho;
     qr[${nvars}] -= qr[${Yix + n}];
 % endfor
 
-    // Set right density
-    ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
+    ${pyfr.expand('stateFrom-rhoTY', 'ur', 'qr', 'qhr')};
 
     // Have internal energy set, add momentum
 % for i, v in enumerate('uvw'[:ndims]):
@@ -51,7 +50,7 @@
     // Set species
     qr[${nvars}] = 1.0;
 % for n in range(ns-1):
-    qr[${Yix + n}] = ul[${Yix + n}]*rhoinv;
+    qr[${Yix + n}] = ul[${Yix + n}]*invrho;
     qr[${nvars}] -= qr[${Yix + n}];
 % endfor
 
