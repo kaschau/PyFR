@@ -20,6 +20,9 @@
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_common_flux_state' params='ul, ql, qhl, gradul, artviscl, nl, magnl'>
+
+## bc_ldg_state AND bc_rsolve_state must fill in ur, qr, qhr
+
     // Ghost state r
     fpdtype_t ur[${nvars}];
     fpdtype_t qr[${nvars+1}];

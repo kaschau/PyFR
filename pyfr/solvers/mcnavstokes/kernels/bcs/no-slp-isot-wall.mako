@@ -6,8 +6,8 @@
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
     fpdtype_t invrho = 1.0/ul[0];
 
-    // Set right primatives (except pressure)
-
+    // Set right primatives
+    qr[0] = ql[0];
     // Set zero velocity so we only compute internal energy
 % for i in range(ndims):
     qr[${i+1}] = 0.0;
@@ -23,8 +23,7 @@
 % endfor
 
     // Set right density
-    ur[0] = ul[0];
-    ${pyfr.expand('stateFrom-rhoTY', 'ur', 'qr', 'qhr')};
+    ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 
     // Have internal energy set, add momentum
 % for i, v in enumerate('uvw'[:ndims]):
@@ -40,8 +39,8 @@
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
     fpdtype_t invrho = 1.0/ul[0];
 
-    // Set right primatives (except pressure)
-
+    // Set right primatives
+    qr[0] = ql[0];
     // Set zero velocity so we only compute internal energy
 % for i in range(ndims):
     qr[${i+1}] = 0.0;
@@ -56,9 +55,7 @@
     qr[${nvars}] -= qr[${Yix + n}];
 % endfor
 
-    // Set right density
-    ur[0] = ul[0];
-    ${pyfr.expand('stateFrom-rhoTY', 'ur', 'qr', 'qhr')};
+    ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 
     // Have internal energy set, add momentum
 % for i, v in enumerate('uvw'[:ndims]):
