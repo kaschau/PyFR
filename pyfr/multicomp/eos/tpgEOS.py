@@ -1,4 +1,5 @@
 from pyfr.multicomp.eos.baseEOS import BaseEOS
+import itertools as it
 import numpy as np
 
 
@@ -34,9 +35,13 @@ class tpgEOS(BaseEOS):
 
         # Compute ns species
         Yns = 1.0 - sum(pris[ndims+2::])
+
+        # Check mass fractions all 0<Y<1
+        self.validate_Y_ics(it.chain(pris[ndims+2::],[Yns]))
+
         # Compute mixture properties
         Rmix = 0.0
-        for n, Y in enumerate(pris[ndims+2::]+[Yns]):
+        for n, Y in enumerate(it.chain(pris[ndims+2::],[Yns])):
             Rmix += Y/consts['MW'][n]
         Rmix *= consts['Ru']
 
@@ -45,7 +50,7 @@ class tpgEOS(BaseEOS):
         Ru = consts['Ru']
         MW = consts['MW']
         N7 = consts['NASA7'] * Ru/MW[:, np.newaxis]
-        for n, Y in enumerate(pris[ndims+2::]+[Yns]):
+        for n, Y in enumerate(it.chain(pris[ndims+2::],[Yns])):
             m = np.where(T <= N7[n,0], 8, 1)
             h += (  T*(N7[n, m + 0]
                    + T*(N7[n, m + 1] / 2.0
@@ -86,7 +91,7 @@ class tpgEOS(BaseEOS):
         Yns = 1.0 - sum(Yk)
         # Compute mixture properties
         Rmix = 0.0
-        for k,Y in enumerate(Yk+[Yns]):
+        for k,Y in enumerate(it.chain(Yk,[Yns])):
             Rmix += Y/consts['MW'][k]
         Rmix *= consts['Ru']
 
@@ -103,7 +108,7 @@ class tpgEOS(BaseEOS):
         while np.max(np.abs(error)) > tol and niter < 100:
             h = 0.0
             cp = 0.0
-            for n, Y in enumerate(Yk+[Yns]):
+            for n, Y in enumerate(it.chain(Yk,[Yns])):
                 m = np.where(T <= N7[n,0], 8, 1)
                 cp += (     N7[n, m + 0]
                        + T*(N7[n, m + 1]
