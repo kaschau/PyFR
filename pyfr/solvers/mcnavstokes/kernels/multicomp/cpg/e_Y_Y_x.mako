@@ -3,7 +3,7 @@
 <% ns = c['ns'] %>
 
 % if ndims == 2:
-<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, q, u, gradu'>
+<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, u, q, qh, gradu'>
     fpdtype_t invrho = 1.0/u[0];
     fpdtype_t T = q[${ndims+1}];
     fpdtype_t rho_x = gradu[0][0];
@@ -31,7 +31,7 @@
 
 </%pyfr:macro>
 % elif ndims == 3:
-<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, e_Y_Y_z, q, u, gradu'>
+<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, e_Y_Y_z, u, q, qh, gradu'>
     fpdtype_t invrho = 1.0/u[0];
     fpdtype_t T = q[${ndims+1}];
     fpdtype_t rho_x = gradu[0][0];

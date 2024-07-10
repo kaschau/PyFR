@@ -7,7 +7,7 @@
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
 % if ndims == 2:
-<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, q, u, gradu'>
+<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, u, q, qh, gradu'>
     fpdtype_t invrho = 1.0/u[0];
     fpdtype_t T = q[${ndims+1}];
     fpdtype_t rho_x = gradu[0][0];
@@ -19,16 +19,7 @@
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${Yix+n}] - q[${Yix+n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${Yix+n}] - q[${Yix+n}]*rho_y);
-      fpdtype_t hs;
-      if (T < ${N7[n,0]})
-      {
-        <% m = 8 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }else
-      {
-        <% m = 1 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }
+      fpdtype_t hs = qh[${3+n}];
       fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
@@ -37,26 +28,15 @@
     }
 % endfor
     // Compute Yns component
-    fpdtype_t hs;
-    {
-     <% n = ns-1 %>
-      if (T < ${N7[n,0]})
-      {
-        <% m = 8 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }else
-      {
-        <% m = 1 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }
-      fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
-      e_Y_Y_x += e_Y * Yns_x;
-      e_Y_Y_y += e_Y * Yns_y;
-    }
+    <% n = ns-1 %>
+    fpdtype_t hs = qh[${3+n}];
+    fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
+    e_Y_Y_x += e_Y * Yns_x;
+    e_Y_Y_y += e_Y * Yns_y;
 
 </%pyfr:macro>
 % elif ndims == 3:
-<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, e_Y_Y_z, q, u, gradu'>
+<%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, e_Y_Y_z, u, q, qh, gradu'>
     fpdtype_t invrho = 1.0/u[0];
     fpdtype_t T = q[${ndims+1}];
     fpdtype_t rho_x = gradu[0][0];
@@ -71,16 +51,7 @@
       fpdtype_t Y_x =  invrho*(gradu[0][${Yix+n}] - q[${Yix+n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${Yix+n}] - q[${Yix+n}]*rho_y);
       fpdtype_t Y_z =  invrho*(gradu[2][${Yix+n}] - q[${Yix+n}]*rho_z);
-      fpdtype_t hs;
-      if (T < ${N7[n,0]})
-      {
-        <% m = 8 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }else
-      {
-        <% m = 1 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }
+      fpdtype_t hs = qh[${3+n}];
       fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
@@ -91,23 +62,12 @@
     }
 % endfor
     // Compute Yns component
-    fpdtype_t hs;
-    {
-     <% n = ns-1 %>
-      if (T < ${N7[n,0]})
-      {
-        <% m = 8 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }else
-      {
-        <% m = 1 %>
-        hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-      }
-      fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
-      e_Y_Y_x += e_Y * Yns_x;
-      e_Y_Y_y += e_Y * Yns_y;
-      e_Y_Y_z += e_Y * Yns_z;
-    }
+    <% n = ns-1 %>
+    fpdtype_t hs = qh[${3+n}];
+    fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
+    e_Y_Y_x += e_Y * Yns_x;
+    e_Y_Y_y += e_Y * Yns_y;
+    e_Y_Y_z += e_Y * Yns_z;
 
 </%pyfr:macro>
 % endif

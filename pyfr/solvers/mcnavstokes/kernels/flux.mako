@@ -27,7 +27,7 @@
     fpdtype_t E = rhoE*rcprho;
     fpdtype_t e_Y_Y_x = 0.0;
     fpdtype_t e_Y_Y_y = 0.0;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'q', 'uin', 'grad_uin')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'uin', 'q', 'qh', 'grad_uin')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - e_Y_Y_y);
 
@@ -94,7 +94,7 @@
     fpdtype_t e_Y_Y_x = 0.0;
     fpdtype_t e_Y_Y_y = 0.0;
     fpdtype_t e_Y_Y_z = 0.0;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_z', 'q', 'uin', 'grad_uin')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_z', 'uin', 'q', 'qh', 'grad_uin')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - w*w_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - w*w_y - e_Y_Y_y);
     fpdtype_t T_z = rcpcv*(rcprho*(rhoE_z - E*rho_z) - u*u_z - v*v_z - w*w_z - e_Y_Y_z);
