@@ -1,5 +1,4 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${eos}.e_Y_Y_x'/>
 
 % if ndims == 2:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>

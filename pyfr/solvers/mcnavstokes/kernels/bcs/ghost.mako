@@ -17,7 +17,7 @@
     fpdtype_t qhr[${3+ns}];
 
     ${pyfr.expand('bc_ldg_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
-    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'nl', 'gradul', 'gradur')};
+    ${pyfr.expand('bc_ldg_grad_state', 'ul', 'ql', 'qhl', 'nl', 'gradul', 'gradur')};
 
     // Mixture transport properties
     fpdtype_t qtr[${nvars+1}];
