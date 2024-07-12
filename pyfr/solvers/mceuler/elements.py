@@ -103,13 +103,15 @@ class BaseMCFluidElements:
             )
 
             # Template arguments
+            consts = self.cfg.items_as('constants', float)
+            consts |= self.mcfluid.consts
             eftplargs = {
                 'ndims': self.ndims,
                 'nupts': self.nupts,
                 'nfpts': self.nfpts,
                 'nvars': self.nvars,
                 'nfaces': self.nfaces,
-                'c': self.cfg.items_as('constants', float),
+                'c': consts,
                 'order': self.basis.order
             }
 
@@ -127,8 +129,10 @@ class BaseMCFluidElements:
                                  'combination thereof.')
 
             # Minimum density/pressure constraints
-            eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'd-min', 1e-6)
+            eftplargs['Y_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'Y-min', 0.0)
+            eftplargs['Y_max'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'd-min', 1.0)
             eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'p-min', 1e-6)
 
@@ -143,9 +147,9 @@ class BaseMCFluidElements:
                                                     'niters', 20)
             efunc = self.cfg.get('solver-entropy-filter', 'e-func',
                                  'numerical')
-            eftplargs['e_func'] = efunc
-            if efunc not in {'numerical', 'physical'}:
-                raise ValueError(f'Unknown entropy functional: {efunc}')
+            if efunc not in {'physical'}:
+                raise ValueError('Only physical entropy compatible with '
+                                 'multicomponent system.')
 
             # Precompute basis orders for filter
             ubdegs = self.basis.ubasis.degrees
