@@ -3,7 +3,6 @@
 
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-prims'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-rhoTY'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mceuler.kernels.bcs.${bctype}'/>
 
