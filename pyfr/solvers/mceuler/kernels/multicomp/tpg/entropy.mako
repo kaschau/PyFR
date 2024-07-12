@@ -1,17 +1,32 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<% ns = c['ns'] %>
+<% Yix = ndims + 2 %>
+<% div = [1.0, 2.0, 3.0, 4.0] %>
 
-<%pyfr:macro name='compute_entropy' params='u, d, p, e'>
-    d = u[0];
-    fpdtype_t rcpd = 1.0/d;
-    fpdtype_t E = u[${nvars - 1}];
+<%pyfr:macro name='compute_entropy' params='u, q, e'>
 
-    // Compute the pressure
-    p = ${c['gamma'] - 1}*(E - 0.5*rcpd*(${pyfr.dot('u[{i}]', i=(1, ndims + 1))}));
-
-    // Compute numerical or specific physical entropy
-    % if e_func == 'numerical':
-    e = (d > 0 && p > 0) ? d*(log(p) - ${c['gamma']}*log(d)) : ${fpdtype_max};
-    % elif e_func == 'physical':
-    e = (d > 0 && p > 0) ? p*pow(rcpd, ${c['gamma']}) : ${fpdtype_max};
-    % endif
+    fpdtype_t T = q[${ndims + 1}];
+    fpdtype_t lnT = log(T);
+    e = 0.0;
+    // Compute mixture entropy
+% for n in range(ns):
+    // ${c['names'][n]} Entropy
+    {
+      fpdtype_t es;
+      if (T < ${N7[n,0]})
+      {
+      <% m = 8 %>
+          es = ${N7[n,m]*Ru/MW[n]}*lnT;
+          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*4});
+          es += ${N7[n,m+6]*Ru/MW[n]};
+      }else
+      {
+      <% m = 1 %>
+          es = ${N7[n,m]*Ru/MW[n]}*lnT;
+          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*4});
+          es += ${N7[n,m+6]*Ru/MW[n]};
+      }
+      e += es * u[${Yix+n}];
+    }
+% endfor
 </%pyfr:macro>
