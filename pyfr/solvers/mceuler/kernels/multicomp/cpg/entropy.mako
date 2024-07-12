@@ -1,17 +1,16 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<% ns = c['ns'] %>
+<% Yix = ndims + 2 %>
 
-<%pyfr:macro name='compute_entropy' params='u, d, p, e'>
-    d = u[0];
-    fpdtype_t rcpd = 1.0/d;
-    fpdtype_t E = u[${nvars - 1}];
+<%pyfr:macro name='compute_entropy' params='u, q, e'>
 
-    // Compute the pressure
-    p = ${c['gamma'] - 1}*(E - 0.5*rcpd*(${pyfr.dot('u[{i}]', i=(1, ndims + 1))}));
-
-    // Compute numerical or specific physical entropy
-    % if e_func == 'numerical':
-    e = (d > 0 && p > 0) ? d*(log(p) - ${c['gamma']}*log(d)) : ${fpdtype_max};
-    % elif e_func == 'physical':
-    e = (d > 0 && p > 0) ? p*pow(rcpd, ${c['gamma']}) : ${fpdtype_max};
+    fpdtype_t T = q[${ndims + 1}];
+    e = 0.0;
+    // Compute mixture entropy
+    % for n in range(ns):
+    fpdtype_t cvk = ${c['cp0'][n]} - ${c['Ru']/c['MW'][n]};
+    fpdtype_t gammak = ${c['cp0'][n]}/cvk;
+    e += cvk*u[${Yix + n}] * log(pow(fmax(1e-6, u[${Yix+n}]), 1.0 - gammak)*T);
     % endif
+    e = exp(e):
 </%pyfr:macro>
