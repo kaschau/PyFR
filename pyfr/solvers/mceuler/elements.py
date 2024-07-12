@@ -112,6 +112,7 @@ class BaseMCFluidElements:
                 'nvars': self.nvars,
                 'nfaces': self.nfaces,
                 'c': consts,
+                'eos': self.mcfluid.eos,
                 'order': self.basis.order
             }
 
@@ -132,7 +133,7 @@ class BaseMCFluidElements:
             eftplargs['Y_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'Y-min', 0.0)
             eftplargs['Y_max'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'd-min', 1.0)
+                                                   'Y-max', 1.0)
             eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'p-min', 1e-6)
 
@@ -146,7 +147,7 @@ class BaseMCFluidElements:
             eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
                                                     'niters', 20)
             efunc = self.cfg.get('solver-entropy-filter', 'e-func',
-                                 'numerical')
+                                 'physical')
             if efunc not in {'physical'}:
                 raise ValueError('Only physical entropy compatible with '
                                  'multicomponent system.')
