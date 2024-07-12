@@ -173,7 +173,7 @@
 
                 // Regularize constraints to be around zero
                 Y_min_low -= ${Y_min}; Y_min_high -= ${Y_min};
-                Y_max_low -= ${Y_max}; Y_max_high -= ${Y_min};
+                Y_max_low -= ${Y_max}; Y_max_high -= ${Y_max};
                 p_low -= ${p_min}; p_high -= ${p_min};
                 e_low -= entmin - ${e_tol}; e_high -= entmin - ${e_tol};
 
