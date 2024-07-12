@@ -1,26 +1,27 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
 <% ns = c['ns'] %>
 <% Yix = ndims + 2 %>
 
 <%pyfr:macro name='get_minmax_Y' params='q, Ymin, Ymax'>
 
-    Ymini = ${fpdtype_max};
-    Ymaxi = ${fpdtype_min};
+    Ymin = ${fpdtype_max};
+    Ymax = -${fpdtype_max};
 
     % for n in range(ns):
-    Ymin = fmin(Ymini, q[${Yix + n}]);
-    Ymax = fmax(Ymaxi, q[${Yix + n}]);
+    Ymin = fmin(Ymin, q[${Yix + n}]);
+    Ymax = fmax(Ymax, q[${Yix + n}]);
     % endfor
 </%pyfr:macro>
 
 <%pyfr:macro name='get_minima' params='u, Ymin, Ymax, pmin, emin'>
     fpdtype_t ui[${nvars}];
 
-    Ymini = ${fpdtype_max};
-    Ymaxi = ${fpdtype_min};
+    Ymin = ${fpdtype_max};
+    Ymax = -${fpdtype_max};
     pmin = ${fpdtype_max};
     emin = ${fpdtype_max};
 
@@ -38,8 +39,8 @@
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         % for n in range(ns):
-        Ymin = fmin(Ymini, qi[${Yix + n}]);
-        Ymax = fmax(Ymaxi, qi[${Yix + n}]);
+        Ymin = fmin(Ymin, qi[${Yix + n}]);
+        Ymax = fmax(Ymax, qi[${Yix + n}]);
         % endfor
         pmin = fmin(pmin, qi[0]);
         emin = fmin(emin, e);
@@ -75,7 +76,7 @@
     }
 </%pyfr:macro>
 
-<%pyfr:macro name='apply_filter_single' params='ui, qi, qhi, f, e'>
+<%pyfr:macro name='apply_filter_single' params='u, q, qh, f, e'>
     // Apply filter to local value
     fpdtype_t v = 1.0;
     for (int pidx = 1; pidx < ${order+1}; pidx++)
@@ -84,10 +85,10 @@
         v *= f;
 
         % for vidx in range(nvars):
-        ui[${vidx}] += v*v*up[pidx][${vidx}];
+        u[${vidx}] += v*v*up[pidx][${vidx}];
         % endfor
     }
-    ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+    ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 </%pyfr:macro>
 
 <%pyfr:kernel name='entropyfilter' ndim='1'
@@ -148,14 +149,14 @@
                 ui[${vidx}] = up[0][${vidx}];
             % endfor
 
-            ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qh', 'f', 'e')};
-            ${pyfr.expand('get_minmax_Y', 'qi', 'Y_min', 'Y_max')};
+            ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f', 'e')};
+            ${pyfr.expand('get_minmax_Y', 'qi', 'Ymin', 'Ymax')};
             p = qi[0];
-            ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e' )};
+            ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
 
             // Update f if constraints aren't satisfied
-            if (Ymin < ${Y_min} || Ymax > ${Ymax} || p < ${p_min} || e < entmin - ${e_tol})
+            if (Ymin < ${Y_min} || Ymax > ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
             {
                 // Set root-finding interval
                 f_high = f;
@@ -164,11 +165,11 @@
                 // Compute brackets
                 Y_min_high = Ymin; Y_max_high = Ymax;
                 p_high = p; e_high = e;
-                ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f_low')};
+                ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f_low', 'e_low')};
 
-                ${pyfr.expand('minmax_dY', 'ui', 'dYmin_low', 'dYmax_low')};
+                ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min_low', 'Y_max_low')};
                 p_low = qi[0];
-                ${pyfr.expand('compute_entropy', 'ui', 'e_low' )};
+                ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e_low')};
 
                 // Regularize constraints to be around zero
                 Y_min_low -= ${Y_min}; Y_min_high -= ${Y_min};
@@ -183,11 +184,11 @@
                     fnew = 0.5*(f_low + f_high);
 
                     // Compute filtered state
-                    ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'fnew')};
+                    ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'fnew', 'e')};
 
-                    ${pyfr.expand('minmax_dY', 'ui', 'dY_min', 'dY_max')};
+                    ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min', 'Y_max')};
                     p = qi[0];
-                    ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e' )};
+                    ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
                     // Update brackets
                     if (Ymin < ${Y_min} || Ymax > ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
@@ -217,7 +218,7 @@
         ${pyfr.expand('apply_filter_full', 'umodes', 'vdm', 'u', 'f')};
 
         // Calculate minimum entropy from filtered solution
-        ${pyfr.expand('get_minima', 'u', 'dmin', 'pmin', 'emin')};
+        ${pyfr.expand('get_minima', 'u', 'Ymin', 'Ymax', 'pmin', 'emin')};
     }
 
     // Set new minimum entropy within element for next stage

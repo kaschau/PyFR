@@ -8,9 +8,11 @@
     e = 0.0;
     // Compute mixture entropy
     % for n in range(ns):
-    fpdtype_t cvk = ${c['cp0'][n]} - ${c['Ru']/c['MW'][n]};
-    fpdtype_t gammak = ${c['cp0'][n]}/cvk;
-    e += cvk*u[${Yix + n}] * log(pow(fmax(1e-6, u[${Yix+n}]), 1.0 - gammak)*T);
-    % endif
-    e = exp(e):
+    {
+      fpdtype_t cvk = ${c['cp0'][n]} - ${c['Ru']/c['MW'][n]};
+      fpdtype_t gammak = ${c['cp0'][n]}/cvk;
+      e += cvk*u[${Yix + n}] * log(pow(fmax(1e-6, u[${Yix+n}]), 1.0 - gammak)*T);
+    }
+    % endfor
+    e = exp(e);
 </%pyfr:macro>
