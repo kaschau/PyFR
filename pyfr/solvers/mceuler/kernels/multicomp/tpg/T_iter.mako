@@ -9,7 +9,7 @@
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
     fpdtype_t tol = 1e-8;
-    fpdtype_t error = 1e100;
+    fpdtype_t error = ${fpdtype_max};
     while (abs(error) > tol)
     {
         fpdtype_t h = 0.0;
