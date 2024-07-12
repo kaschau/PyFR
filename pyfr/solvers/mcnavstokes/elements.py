@@ -42,11 +42,8 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
         kprefix = 'pyfr.solvers.mcnavstokes.kernels'
         self._be.pointwise.register(f'{kprefix}.tflux')
 
-        # Handle shock capturing and Sutherland's law
+        # Handle shock capturing
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
-        visc_corr = self.cfg.get('solver', 'viscosity-correction', 'none')
-        if visc_corr not in {'sutherland', 'none'}:
-            raise ValueError('Invalid viscosity-correction option')
 
         consts = self.cfg.items_as('constants', float)
         consts |= self.mcfluid.consts
