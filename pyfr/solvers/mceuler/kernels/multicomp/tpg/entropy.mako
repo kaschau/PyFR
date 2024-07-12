@@ -1,7 +1,10 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<% ns = c['ns'] %>
-<% Yix = ndims + 2 %>
-<% div = [1.0, 2.0, 3.0, 4.0] %>
+<% N7 = c['NASA7'] %>\
+<% Ru = c['Ru'] %>\
+<% MW = c['MW'] %>\
+<% Yix = ndims + 2 %>\
+<% ns = c['ns'] %>\
+<% div = [1.0, 2.0, 3.0, 4.0] %>\
 
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
@@ -17,13 +20,13 @@
       {
       <% m = 8 %>
           es = ${N7[n,m]*Ru/MW[n]}*lnT;
-          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*4});
+          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }else
       {
       <% m = 1 %>
           es = ${N7[n,m]*Ru/MW[n]}*lnT;
-          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*4});
+          es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
       e += es * u[${Yix+n}];
