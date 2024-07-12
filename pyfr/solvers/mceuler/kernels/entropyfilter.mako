@@ -76,7 +76,7 @@
     }
 </%pyfr:macro>
 
-<%pyfr:macro name='apply_filter_single' params='u, q, qh, f, e'>
+<%pyfr:macro name='apply_filter_single' params='u, q, qh, f'>
     // Apply filter to local value
     fpdtype_t v = 1.0;
     for (int pidx = 1; pidx < ${order+1}; pidx++)
@@ -149,7 +149,7 @@
                 ui[${vidx}] = up[0][${vidx}];
             % endfor
 
-            ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f', 'e')};
+            ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f')};
             ${pyfr.expand('get_minmax_Y', 'qi', 'Ymin', 'Ymax')};
             p = qi[0];
             ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
@@ -165,7 +165,7 @@
                 // Compute brackets
                 Y_min_high = Ymin; Y_max_high = Ymax;
                 p_high = p; e_high = e;
-                ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f_low', 'e_low')};
+                ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f_low')};
 
                 ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min_low', 'Y_max_low')};
                 p_low = qi[0];
@@ -184,7 +184,7 @@
                     fnew = 0.5*(f_low + f_high);
 
                     // Compute filtered state
-                    ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'fnew', 'e')};
+                    ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'fnew')};
 
                     ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min', 'Y_max')};
                     p = qi[0];
