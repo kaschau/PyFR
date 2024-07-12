@@ -1,4 +1,6 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<% ns = c['ns'] %>
+<% Yix = ndims + 2 %>
 
 <%pyfr:macro name='inviscid_flux' params='u, f, q'>
     fpdtype_t rho = u[0];
@@ -24,8 +26,6 @@
     f[${i}][${j + 1}] = rhov[${i}]*v[${j}]${' + p' if i == j else ''};
 % endfor
 
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
    // Species fluxes
 % for i, n in pyfr.ndrange(ndims,ns-1):
    f[${i}][${Yix+n}] = v[${i}]*u[${Yix+n}];
@@ -39,24 +39,24 @@
     fpdtype_t rhoE = u[${ndims + 1}];
 
     // Compute the velocities
+    fpdtype_t v[${ndims}];
 % for i in range(ndims):
     v[${i}] = q[${i + 1}];
 % endfor
 
     // Density and energy fluxes
     f[0] = u[1];
-    f[${ndims + 1}] = (rhoE + p)*v[0];
+    f[${ndims + 1}] = (rhoE + q[0])*v[0];
 
     // Momentum fluxes
-    f[1] = u[1]*v[0] + p;
+    f[1] = u[1]*v[0] + q[0];
 % for j in range(1, ndims):
     f[${j + 1}] = u[1]*v[${j}];
 % endfor
 
     // Species fluxes
-<% ns = c['ns'] %>
 % for k in range(ns-1):
-    f[${ndims+2+k}] = u[${ndims+2+k}]*v[0];
+    f[${Yix+k}] = u[${Yix+k}]*v[0];
 % endfor
 
 </%pyfr:macro>
