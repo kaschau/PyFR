@@ -9,11 +9,11 @@
 <%pyfr:macro name='get_minmax_Y' params='q, Ymin, Ymax'>
 
     Ymin = ${fpdtype_max};
-    Ymax = -${fpdtype_max};
+    Ymax = ${fpdtype_max};
 
     % for n in range(ns):
     Ymin = fmin(Ymin, q[${Yix + n}]);
-    Ymax = fmax(Ymax, q[${Yix + n}]);
+    Ymax = fmin(Ymax, 1.0 - q[${Yix + n}]);
     % endfor
 </%pyfr:macro>
 
@@ -21,7 +21,7 @@
     fpdtype_t ui[${nvars}];
 
     Ymin = ${fpdtype_max};
-    Ymax = -${fpdtype_max};
+    Ymax = ${fpdtype_max};
     pmin = ${fpdtype_max};
     emin = ${fpdtype_max};
 
@@ -40,7 +40,7 @@
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         % for n in range(ns):
         Ymin = fmin(Ymin, qi[${Yix + n}]);
-        Ymax = fmax(Ymax, qi[${Yix + n}]);
+        Ymax = fmin(Ymax, 1.0 - qi[${Yix + n}]);
         % endfor
         pmin = fmin(pmin, qi[0]);
         emin = fmin(emin, e);
@@ -107,7 +107,7 @@
     ${pyfr.expand('get_minima', 'u', 'Ymin', 'Ymax', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (Ymin < ${Y_min} || Ymax > ${Y_max} || pmin < ${p_min} || emin < entmin - ${e_tol})
+    if (Ymin < ${Y_min} || Ymax < ${Y_max} || pmin < ${p_min} || emin < entmin - ${e_tol})
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -156,7 +156,7 @@
 
 
             // Update f if constraints aren't satisfied
-            if (Ymin < ${Y_min} || Ymax > ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
+            if (Ymin < ${Y_min} || Ymax < ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
             {
                 // Set root-finding interval
                 f_high = f;
@@ -191,7 +191,7 @@
                     ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
                     // Update brackets
-                    if (Ymin < ${Y_min} || Ymax > ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
+                    if (Ymin < ${Y_min} || Ymax < ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
                     {
                         f_high = fnew;
                         Y_min_high = Ymin - ${Y_min};
