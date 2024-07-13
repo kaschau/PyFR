@@ -139,15 +139,16 @@
 
             // Compute constraints with current minimum f value
             fpdtype_t ui[${nvars}];
-            // Compute thermodynamic properties
-            fpdtype_t qi[${nvars+1}];
-            fpdtype_t qhi[${3+ns}];
-            ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
             // Start accumulation
             % for vidx in range(nvars):
                 ui[${vidx}] = up[0][${vidx}];
             % endfor
+
+            // Compute thermodynamic properties
+            fpdtype_t qi[${nvars+1}];
+            fpdtype_t qhi[${3+ns}];
+            ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
             ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f')};
             ${pyfr.expand('get_minmax_Y', 'qi', 'Ymin', 'Ymax')};
