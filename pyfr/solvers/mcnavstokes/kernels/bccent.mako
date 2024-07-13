@@ -1,9 +1,13 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-prims'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${eos}.e_Y_Y_x'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bctype}'/>
 
+<% ns = c['ns'] %>
 <%pyfr:kernel name='bccent' ndim='1'
               ul='in view fpdtype_t[${str(nvars)}]'
               nl='in fpdtype_t[${str(ndims)}]'
