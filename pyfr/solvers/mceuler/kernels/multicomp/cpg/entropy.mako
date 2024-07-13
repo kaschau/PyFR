@@ -15,8 +15,9 @@
       fpdtype_t cvk = ${cvk};
       fpdtype_t gammak = ${c['cp0'][n]/cvk};
       fpdtype_t rhoYk = rho*q[${Yix + n}];
-      e += cvk*rhoYk * log(pow(fmax(1e-6, rhoYk), 1.0 - gammak)*T);
+      e += cvk*rhoYk * log(pow(rhoYk, 1.0 - gammak)*T);
     }
     % endfor
     e = exp(e);
+    e = ((T > 0) && (q[0] > 0)) ? e : ${fpdtype_max};
 </%pyfr:macro>

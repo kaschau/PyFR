@@ -18,11 +18,11 @@
 
 </%pyfr:macro>
 
-<%pyfr:macro name='get_minima' params='u, Ymin, Ymax, pmin, emin'>
+<%pyfr:macro name='get_minima' params='u, Yminmin, Ymaxmin, pmin, emin'>
     fpdtype_t ui[${nvars}];
 
-    Ymin = ${fpdtype_max};
-    Ymax = ${fpdtype_max};
+    Yminmin = ${fpdtype_max};
+    Ymaxmin = ${fpdtype_max};
     pmin = ${fpdtype_max};
     emin = ${fpdtype_max};
 
@@ -40,8 +40,8 @@
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         % for n in range(ns):
-        Ymin = fmin(Ymin, qi[${Yix + n}]);
-        Ymax = fmin(Ymax, 1.0 - qi[${Yix + n}]);
+        Yminmin = fmin(Yminmin, qi[${Yix + n}]);
+        Ymaxmin = fmin(Ymaxmin, 1.0 - qi[${Yix + n}]);
         % endfor
         pmin = fmin(pmin, qi[0]);
         emin = fmin(emin, e);
@@ -112,17 +112,17 @@
               vdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'>
 
-    fpdtype_t Ymin, Ymax, pmin, emin;
+    fpdtype_t Yminmin, Ymaxmin, pmin, emin;
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
     for (int fidx = 0; fidx < ${nfaces}; fidx++) entmin = fmin(entmin, entmin_int[fidx]);
 
     // Check if solution is within bounds
-    ${pyfr.expand('get_minima', 'u', 'Ymin', 'Ymax', 'pmin', 'emin')};
+    ${pyfr.expand('get_minima', 'u', 'Yminmin', 'Ymaxmin', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (Ymin < ${Y_min} || Ymax < ${Y_max} || pmin < ${p_min} || emin < entmin - ${e_tol})
+    if (Yminmin < ${Y_min} || Ymaxmin < ${Y_max} || pmin < ${p_min} || emin < entmin - ${e_tol})
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -137,10 +137,11 @@
         // Setup filter (solve for f = exp(-zeta))
         fpdtype_t f = 1.0;
         fpdtype_t f_low, f_high, fnew;
+        fpdtype_t f1, f2, f3, f4;
 
-        fpdtype_t Y_min, Y_max, p, e;
-        fpdtype_t Y_min_low, Y_max_low, p_low, e_low;
-        fpdtype_t Y_min_high, Y_max_high, p_high, e_high;
+        fpdtype_t Ymin, Ymax, p, e;
+        fpdtype_t Ymin_low, Ymax_low, p_low, e_low;
+        fpdtype_t Ymin_high, Ymax_high, p_high, e_high;
 
         // Compute f on a rolling basis per solution point
         fpdtype_t up[${order+1}][${nvars}];
@@ -163,22 +164,31 @@
                 f_low = 0.0;
 
                 // Compute brackets
-                Y_min_high = Ymin; Y_max_high = Ymax;
+                Ymin_high = Ymin; Ymax_high = Ymax;
                 p_high = p; e_high = e;
 
-                ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'Y_min_low', 'Y_max_low', 'p_low', 'e_low')};
+                ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'Ymin_low', 'Ymax_low', 'p_low', 'e_low')};
 
                 // Regularize constraints to be around zero
-                Y_min_low -= ${Y_min}; Y_min_high -= ${Y_min};
-                Y_max_low -= ${Y_max}; Y_max_high -= ${Y_max};
+                Ymin_low -= ${Y_min}; Ymin_high -= ${Y_min};
+                Ymax_low -= ${Y_max}; Ymax_high -= ${Y_max};
                 p_low -= ${p_min}; p_high -= ${p_min};
                 e_low -= entmin - ${e_tol}; e_high -= entmin - ${e_tol};
 
-                // Iterate filter strength with bisection algorithm
+                // Iterate filter strength with Illinois algorithm
                 for (int iter = 0; iter < ${niters} && f_high - f_low > ${f_tol}; iter++)
                 {
-                    // Compute new guess using bisection
-                    fnew = 0.5*(f_low + f_high);
+                    // Compute new guess for each constraint (catch if root is not bracketed)
+                    f1 = (Ymin_high > 0.0) ? f_high : (0.5*f_low*Ymin_high - f_high*Ymin_low)/(0.5*Ymin_high - Ymin_low + ${ill_tol});
+                    f2 = (Ymax_high > 0.0) ? f_high : (0.5*f_low*Ymax_high - f_high*Ymax_low)/(0.5*Ymax_high - Ymax_low + ${ill_tol});
+                    f3 = (p_high > 0.0) ? f_high : (0.5*f_low*p_high - f_high*p_low)/(0.5*p_high - p_low + ${ill_tol});
+                    f4 = (e_high > 0.0) ? f_high : (0.5*f_low*e_high - f_high*e_low)/(0.5*e_high - e_low + ${ill_tol});
+
+                    // Compute guess as minima of individual constraints
+                    fnew = fmin(fmin(f1, f2), fmin(f3, f4));
+
+                    // In case of bracketing failure (due to roundoff errors), revert to bisection
+                    fnew = ((fnew > f_high) || (fnew < f_low)) ? 0.5*(f_low + f_high) : fnew;
 
                     // Compute filtered state
                     ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'Ymin', 'Ymax', 'p', 'e')};
@@ -187,16 +197,16 @@
                     if (Ymin < ${Y_min} || Ymax < ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
                     {
                         f_high = fnew;
-                        Y_min_high = Ymin - ${Y_min};
-                        Y_max_high = Ymax - ${Y_max};
+                        Ymin_high = Ymin - ${Y_min};
+                        Ymax_high = Ymax - ${Y_max};
                         p_high = p - ${p_min};
                         e_high = e - (entmin - ${e_tol});
                     }
                     else
                     {
                         f_low = fnew;
-                        Y_min_low = Ymin - ${Y_min};
-                        Y_max_low = Ymax - ${Y_max};
+                        Ymin_low = Ymin - ${Y_min};
+                        Ymax_low = Ymax - ${Y_max};
                         p_low = p - ${p_min};
                         e_low = e - (entmin - ${e_tol});
                     }
@@ -211,7 +221,7 @@
         ${pyfr.expand('apply_filter_full', 'umodes', 'vdm', 'u', 'f')};
 
         // Calculate minimum entropy from filtered solution
-        ${pyfr.expand('get_minima', 'u', 'Ymin', 'Ymax', 'pmin', 'emin')};
+        ${pyfr.expand('get_minima', 'u', 'Yminmin', 'Ymaxmin', 'pmin', 'emin')};
     }
 
     // Set new minimum entropy within element for next stage
