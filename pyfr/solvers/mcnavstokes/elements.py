@@ -5,9 +5,15 @@ from pyfr.solvers.mceuler.elements import BaseMCFluidElements
 from pyfr.multicomp.mcfluid import MCFluid
 
 
-class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements):
+class MCNavierStokesElements(BaseMCFluidElements,
+                             BaseAdvectionDiffusionElements):
     # Use the density field for shock sensing
     shockvar = 'rho'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.mcfluid = MCFluid(self.cfg)
 
     @staticmethod
     def grad_con_to_pri(cons, grad_cons, cfg):
@@ -31,8 +37,6 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
-
-        self.mcfluid = MCFluid(self.cfg)
 
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
