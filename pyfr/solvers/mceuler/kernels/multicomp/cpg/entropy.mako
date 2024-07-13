@@ -11,8 +11,9 @@
     % for n in range(ns):
     // ${c['names'][n]} Entropy
     {
-      fpdtype_t cvk = ${c['cp0'][n]} - ${c['Ru']/c['MW'][n]};
-      fpdtype_t gammak = ${c['cp0'][n]}/${c['cp0'][n]} - ${c['Ru']/c['MW'][n]};
+      <% cvk = c['cp0'][n] - c['Ru']/c['MW'][n] %>
+      fpdtype_t cvk = ${cvk};
+      fpdtype_t gammak = ${c['cp0'][n]/cvk};
       fpdtype_t rhoYk = rho*q[${Yix + n}];
       e += cvk*rhoYk * log(pow(fmax(1e-6, rhoYk), 1.0 - gammak)*T);
     }
