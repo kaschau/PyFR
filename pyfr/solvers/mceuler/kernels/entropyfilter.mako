@@ -15,6 +15,7 @@
     Ymin = fmin(Ymin, q[${Yix + n}]);
     Ymax = fmin(Ymax, 1.0 - q[${Yix + n}]);
     % endfor
+
 </%pyfr:macro>
 
 <%pyfr:macro name='get_minima' params='u, Ymin, Ymax, pmin, emin'>
@@ -76,7 +77,7 @@
     }
 </%pyfr:macro>
 
-<%pyfr:macro name='apply_filter_single' params='u, q, qh, f'>
+<%pyfr:macro name='apply_filter_single' params='up, u, q, qh, f'>
     // Apply filter to local value
     fpdtype_t v = 1.0;
     for (int pidx = 1; pidx < ${order+1}; pidx++)
@@ -139,18 +140,18 @@
 
             // Compute constraints with current minimum f value
             fpdtype_t ui[${nvars}];
+            fpdtype_t qi[${nvars+1}];
+            fpdtype_t qhi[${3+ns}];
 
             // Start accumulation
             % for vidx in range(nvars):
                 ui[${vidx}] = up[0][${vidx}];
             % endfor
-
             // Compute thermodynamic properties
-            fpdtype_t qi[${nvars+1}];
-            fpdtype_t qhi[${3+ns}];
             ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
-            ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f')};
+            ${pyfr.expand('apply_filter_single', 'up', 'ui', 'qi', 'qhi', 'f')};
+
             ${pyfr.expand('get_minmax_Y', 'qi', 'Ymin', 'Ymax')};
             p = qi[0];
             ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
@@ -166,7 +167,15 @@
                 // Compute brackets
                 Y_min_high = Ymin; Y_max_high = Ymax;
                 p_high = p; e_high = e;
-                ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'f_low')};
+
+                // Start accumulation
+                % for vidx in range(nvars):
+                    ui[${vidx}] = up[0][${vidx}];
+                % endfor
+                // Compute thermodynamic properties
+                ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+
+                ${pyfr.expand('apply_filter_single', 'up', 'ui', 'qi', 'qhi', 'f_low')};
 
                 ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min_low', 'Y_max_low')};
                 p_low = qi[0];
@@ -185,7 +194,14 @@
                     fnew = 0.5*(f_low + f_high);
 
                     // Compute filtered state
-                    ${pyfr.expand('apply_filter_single', 'ui', 'qi', 'qhi', 'fnew')};
+                    // Start accumulation
+                    % for vidx in range(nvars):
+                        ui[${vidx}] = up[0][${vidx}];
+                    % endfor
+                    // Compute thermodynamic properties
+                    ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+
+                    ${pyfr.expand('apply_filter_single', 'up', 'ui', 'qi', 'qhi', 'fnew')};
 
                     ${pyfr.expand('get_minmax_Y', 'ui', 'Y_min', 'Y_max')};
                     p = qi[0];
