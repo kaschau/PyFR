@@ -8,6 +8,7 @@
 
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
+    fpdtype_t rho = u[0];
     fpdtype_t T = q[${ndims + 1}];
     fpdtype_t lnT = log(T);
     e = 0.0;
@@ -29,7 +30,7 @@
           es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
-      e += es * u[${Yix+n}];
+      e += es * rho * q[${Yix+n}];
     }
 % endfor
 </%pyfr:macro>
