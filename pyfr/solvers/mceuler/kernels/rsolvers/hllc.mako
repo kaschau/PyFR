@@ -26,7 +26,7 @@
     fpdtype_t ul_com = (sl - vl[0]) / (sl - sstar);
     fpdtype_t ur_com = (sr - vr[0]) / (sr - sstar);
 
-% for n in range(ns):
+% for n in range(ns-1):
     usl[${Yix + n}] = ul_com*ul[${Yix + n}];
     usr[${Yix + n}] = ur_com*ur[${Yix + n}];
 % endfor
