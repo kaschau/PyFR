@@ -15,7 +15,7 @@
       fpdtype_t cvk = ${cvk};
       fpdtype_t gammak = ${c['cp0'][n]/cvk};
       fpdtype_t rhoYk = rho*q[${Yix + n}];
-      e += cvk*rhoYk * log(pow(rhoYk, 1.0 - gammak)*T);
+      e += cvk*rhoYk * log(pow(fmax(${Y_tol}, rhoYk), 1.0 - gammak)*T);
     }
     % endfor
     e = exp(e);
