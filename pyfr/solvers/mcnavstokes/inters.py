@@ -17,6 +17,8 @@ class TplargsMixin:
         visc_corr = self.cfg.get('solver', 'viscosity-correction', 'none')
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
         if shock_capturing == 'entropy-filter':
+            self.Y_tol = self.cfg.getfloat('solver-entropy-filter', 'Y-tol',
+                                           1e-12)
             self.p_min = self.cfg.getfloat('solver-entropy-filter', 'p-min',
                                            1e-6)
         else:
@@ -29,7 +31,7 @@ class TplargsMixin:
                              rsolver=rsolver, visc_corr=visc_corr,
                              eos = mcfluid.eos, trans = mcfluid.trans,
                              shock_capturing=shock_capturing, c=self.c,
-                             p_min=self.p_min)
+                             Y_tol=self.Y_tol, p_min=self.p_min)
 
 
 class MCNavierStokesIntInters(TplargsMixin,
