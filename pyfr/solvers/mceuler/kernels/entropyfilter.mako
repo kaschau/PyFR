@@ -19,7 +19,6 @@
 </%pyfr:macro>
 
 <%pyfr:macro name='get_minima' params='u, Yminmin, Ymaxmin, pmin, emin'>
-    fpdtype_t ui[${nvars}];
 
     Yminmin = ${fpdtype_max};
     Ymaxmin = ${fpdtype_max};
@@ -28,6 +27,7 @@
 
     for (int i = 0; i < ${nupts}; i++)
     {
+    fpdtype_t ui[${nvars}];
     % for j in range(nvars):
         ui[${j}] = u[i][${j}];
     % endfor
