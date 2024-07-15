@@ -122,7 +122,7 @@
     ${pyfr.expand('get_minima', 'u', 'Yminmin', 'Ymaxmin', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (Yminmin < ${Y_min} || Ymaxmin < ${Y_max} || pmin < ${p_min} || emin < entmin - ${e_tol})
+    if (Yminmin + ${Y_tol} < 0.0 || Ymaxmin + ${Y_tol} < 0.0 || pmin < ${p_min} || emin < entmin - ${e_tol})
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -157,7 +157,7 @@
             ${pyfr.expand('apply_filter_single', 'up', 'f', 'Ymin', 'Ymax', 'p', 'e')};
 
             // Update f if constraints aren't satisfied
-            if (Ymin < ${Y_min} || Ymax < ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
+            if (Ymin + ${Y_tol} < 0.0 || Ymax + ${Y_tol} < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
             {
                 // Set root-finding interval
                 f_high = f;
@@ -170,8 +170,8 @@
                 ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'Ymin_low', 'Ymax_low', 'p_low', 'e_low')};
 
                 // Regularize constraints to be around zero
-                Ymin_low -= ${Y_min}; Ymin_high -= ${Y_min};
-                Ymax_low -= ${Y_max}; Ymax_high -= ${Y_max};
+                Ymin_low += ${Y_tol}; Ymin_high += ${Y_tol};
+                Ymax_low += ${Y_tol}; Ymax_high += ${Y_tol};
                 p_low -= ${p_min}; p_high -= ${p_min};
                 e_low -= entmin - ${e_tol}; e_high -= entmin - ${e_tol};
 
@@ -194,19 +194,19 @@
                     ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'Ymin', 'Ymax', 'p', 'e')};
 
                     // Update brackets
-                    if (Ymin < ${Y_min} || Ymax < ${Y_max} || p < ${p_min} || e < entmin - ${e_tol})
+                    if (Ymin + ${Y_tol} < 0.0 || Ymax + ${Y_tol} < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
                     {
                         f_high = fnew;
-                        Ymin_high = Ymin - ${Y_min};
-                        Ymax_high = Ymax - ${Y_max};
+                        Ymin_high = Ymin + ${Y_tol};
+                        Ymax_high = Ymax + ${Y_tol};
                         p_high = p - ${p_min};
                         e_high = e - (entmin - ${e_tol});
                     }
                     else
                     {
                         f_low = fnew;
-                        Ymin_low = Ymin - ${Y_min};
-                        Ymax_low = Ymax - ${Y_max};
+                        Ymin_low = Ymin + ${Y_tol};
+                        Ymax_low = Ymax + ${Y_tol};
                         p_low = p - ${p_min};
                         e_low = e - (entmin - ${e_tol});
                     }

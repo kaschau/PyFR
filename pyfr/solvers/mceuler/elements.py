@@ -129,12 +129,9 @@ class BaseMCFluidElements:
                                  'subset of solution points or a convex '
                                  'combination thereof.')
 
-            # Minimum density/pressure constraints
-            eftplargs['Y_min'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'Y-min', 0.0)
-            # We enforce 1-Ymax >~ 0... so Y-max set to ~zero too
-            eftplargs['Y_max'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'Y-max', 0.0)
+            # Minimum Mass fraction/pressure constraints
+            eftplargs['Y_tol'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'Y-tol', 1e-12)
             eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'p-min', 1e-6)
 
