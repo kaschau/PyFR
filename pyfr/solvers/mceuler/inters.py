@@ -28,6 +28,8 @@ class TplargsMixin:
             self.p_min = self.cfg.getfloat('solver-entropy-filter', 'p-min',
                                            1e-6)
         else:
+            self.Y_tol = self.cfg.getfloat('solver-interfaces', 'Y-tol',
+                                           5*self._be.fpdtype_eps)
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
         self.mcfluid = MCFluid(self.cfg)
