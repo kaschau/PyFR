@@ -1,5 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
+
 <%pyfr:macro name='inviscid_flux' params='u, f, q'>
     fpdtype_t rho = u[0];
     fpdtype_t p = q[0];
@@ -24,8 +27,6 @@
     f[${i}][${j + 1}] = rhov[${i}]*v[${j}]${' + p' if i == j else ''};
 % endfor
 
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
    // Species fluxes
 % for i, n in pyfr.ndrange(ndims,ns-1):
    f[${i}][${Yix+n}] = v[${i}]*u[${Yix+n}];
@@ -34,11 +35,12 @@
 </%pyfr:macro>
 
 <%pyfr:macro name='inviscid_flux_1d' params='u, f, q'>
-    fpdtype_t rho = u[0];
-    fpdtype_t invrho = 1.0/rho;
+    fpdtype_t invrho = 1.0/u[0];
     fpdtype_t rhoE = u[${ndims + 1}];
+    fpdtype_t p = q[0];
 
     // Compute the velocities
+    fpdtype_t v[${ndims}];
 % for i in range(ndims):
     v[${i}] = q[${i + 1}];
 % endfor
@@ -54,9 +56,8 @@
 % endfor
 
     // Species fluxes
-<% ns = c['ns'] %>
-% for k in range(ns-1):
-    f[${ndims+2+k}] = u[${ndims+2+k}]*v[0];
+% for n in range(ns - 1):
+    f[${Yix + n}] = u[${Yix + n}]*v[0];
 % endfor
 
 </%pyfr:macro>
