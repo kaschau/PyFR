@@ -21,7 +21,7 @@
     // We now have a valid density value, set momentums to reach input mdot
     fpdtype_t invrho = 1.0/ur[0];
 % for i in range(ndims):
-    ur[${i + 1}] = 2*nl[${i}]*${c['mdot-per-area']} - ul[${i+1}];
+    ur[${i + 1}] = -2*nl[${i}]*${c['mdot-per-area']} - ul[${i+1}];
     qr[${i + 1}] = ur[${i+1}]*invrho;
 % endfor
 
