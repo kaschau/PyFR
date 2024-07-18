@@ -218,24 +218,6 @@ time with one rank, and :math:`T_N` is the simulation time with
 :math:`N` ranks.  This represents a reasonable trade-off between the
 overall time-to-solution and efficient resource utilisation.
 
-Parallel I/O
-============
-
-PyFR incorporates support for parallel file I/O via HDF5 and will use it
-automatically where available.  However, for this work several
-prerequisites must be satisfied:
-
- - HDF5 must be explicitly compiled with support for parallel I/O.
- - The mpi4py Python module *must* be compiled against the same MPI
-   distribution as HDF5.  A version mismatch here can result in subtle
-   and difficult to diagnose errors.
- - The h5py Python module *must* be built with support for parallel
-   I/O.
-
-After completing this process it is highly recommended to verify
-everything is working by trying the
-`h5py parallel HDF5 example <https://docs.h5py.org/en/stable/mpi.html#using-parallel-hdf5-from-h5py>`_.
-
 Plugins
 =======
 
@@ -245,6 +227,12 @@ frequently.  PyFR records the amount of time spent in plugins in the
 included in all PyFR solution files.  This can be extracted as::
 
     h5dump -d /stats -b --output=stats.ini soln.pyfrs
+
+Here, the *common* field contains the amount of time spent obtaining
+properties which are not directly attributable to any specific plugin.
+Examples include fetching the solution, computing its gradient, and
+computing its time derivative.  The *other* field accounts for time
+spent in unnamed plugins such as the progress bar.
 
 Given the time steps taken by PyFR are typically much smaller than
 those associated with the underlying physics there is seldom any
