@@ -50,6 +50,7 @@ class tpgEOS(BaseEOS):
         Ru = consts['Ru']
         MW = consts['MW']
         N7 = consts['NASA7'] * Ru/MW[:, np.newaxis]
+        N7[:, 0] = consts['NASA7'][:, 0]
         for n, Y in enumerate(it.chain(pris[ndims+2::],[Yns])):
             m = np.where(T <= N7[n,0], 8, 1)
             h += (  T*(N7[n, m + 0]
