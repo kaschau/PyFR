@@ -99,10 +99,16 @@
       sum2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
 % endif
 % endfor
-  // account for pressure
-  sum1 *= p;
-  sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-  qt[${2+n}] = 1.0 / (sum1 + sum2);
+    // account for pressure
+    sum1 *= p;
+    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+    // HACK
+    fpdtype_t temp = sum1 + sum2;
+    if (temp != 0.0){
+      qt[${2+n}] = 1.0 / temp;
+    }else{
+      qt[${2+n}] = 0.0;
+    }
   }
 % endfor
 
