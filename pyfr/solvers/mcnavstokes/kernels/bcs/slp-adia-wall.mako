@@ -25,8 +25,8 @@
 
     // Ghost state r
     fpdtype_t ur[${nvars}];
-    fpdtype_t qr[${nvars+1}];
-    fpdtype_t qhr[${3+ns}];
+    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qhr[${3 + ns}];
     ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve

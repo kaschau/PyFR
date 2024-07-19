@@ -13,14 +13,14 @@
 
     // Right states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
-    fpdtype_t qr[${nvars+1}];
-    fpdtype_t qhr[${3+ns}];
+    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qhr[${3 + ns}];
 
     ${pyfr.expand('bc_ldg_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
     ${pyfr.expand('bc_ldg_grad_state', 'ul', 'ql', 'qhl', 'nl', 'gradul', 'gradur')};
 
     // Mixture transport properties
-    fpdtype_t qtr[${nvars+1}];
+    fpdtype_t qtr[${nvars + 1}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
 
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};

@@ -4,7 +4,7 @@
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 <% Yix = ndims + 2 %>
 
-    fpdtype_t qr[${nvars+1}];
+    fpdtype_t qr[${nvars + 1}];
     qr[0] = ${c['p']};
 % for i, v in enumerate('uvw'[:ndims]):
     qr[${i + 1}] = ${c[v]};

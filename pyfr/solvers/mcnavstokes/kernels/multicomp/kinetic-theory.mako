@@ -14,7 +14,7 @@
 
   fpdtype_t mu_sp[${ns}] = {0};
   fpdtype_t kappa_sp[${ns}] = {0};
-  fpdtype_t invDij[${int((ns+1)*ns/2)}] = {0};
+  fpdtype_t invDij[${int((ns + 1)*ns/2)}] = {0};
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;

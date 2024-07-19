@@ -11,7 +11,7 @@
     ## p, u,v(,w),   T    ,   Y0    ...  Yns
 
     ## qh stores mixture thermodynamic properties
-    ## 0,  1,     2, 3..3+ns
+    ## 0,  1,     2, 3..3 + ns
     ## cp, gamma, c, hi1..hins
     fpdtype_t rho = u[0];
     fpdtype_t invrho = 1.0/rho;

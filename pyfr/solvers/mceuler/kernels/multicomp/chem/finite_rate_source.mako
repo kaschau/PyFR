@@ -44,8 +44,8 @@
   fpdtype_t rho = u[0];
 
   // Compute thermodynamic properties
-  fpdtype_t q[${nvars+1}];
-  fpdtype_t qh[${3+ns}];
+  fpdtype_t q[${nvars + 1}];
+  fpdtype_t qh[${3 + ns}];
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t T = q[${ndims+1}];

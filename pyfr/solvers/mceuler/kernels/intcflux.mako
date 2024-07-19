@@ -13,13 +13,13 @@
 <% ns = c['ns'] %>
 
     // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
+    fpdtype_t ql[${nvars + 1}];
+    fpdtype_t qhl[${3 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 
     // Compute right thermodynamic quantities
-    fpdtype_t qr[${nvars+1}];
-    fpdtype_t qhr[${3+ns}];
+    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qhr[${3 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve
