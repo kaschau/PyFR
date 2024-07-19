@@ -16,10 +16,10 @@
     fpdtype_t mag_nl = sqrt(${pyfr.dot('nlin[{i}]', i=ndims)});
     fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nlin[{i}]', i=ndims)};
 
-    fpdtype_t qlin[${nvars+1}];
-    fpdtype_t qhlin[${3+ns}];
+    fpdtype_t qlin[${nvars + 1}];
+    fpdtype_t qhlin[${3 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ulin', 'qlin', 'qhlin')};
-    fpdtype_t qlout[${nvars+1}];
-    fpdtype_t qhlout[${3+ns}];
+    fpdtype_t qlout[${nvars + 1}];
+    fpdtype_t qhlout[${3 + ns}];
     ${pyfr.expand('bc_ldg_state', 'ulin', 'qlin', 'qhlin', 'norm_nl', 'ulout', 'qlout', 'qhlout')};
 </%pyfr:kernel>

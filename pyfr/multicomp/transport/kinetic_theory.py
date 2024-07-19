@@ -63,8 +63,8 @@ class KineticTheory(BaseTransport):
         # minTemp and maxTemp based on the min/max ranges of the NASA7 poly'l
         # data. In testing, this seems to explain the errors we sometimes get
         # in thermodynamic testing against Cantera.
-        # (i.e. takes error from 1% to 0.001%). For now we just use sensible values
-        # here.
+        # (i.e. takes error from 1% to 0.001%).
+        # For now we just use sensible values here.
         Tmin = 200
         Tmax = 5000
         # Generate range of temperatures
@@ -72,8 +72,10 @@ class KineticTheory(BaseTransport):
         Ts = np.linspace(Tmin, Tmax, npts)
 
         # Collision integral interpolations
-        intrp_o22 = intrp.RectBivariateSpline(tstar22, delta, omega22_table, kx=5, ky=5)
-        intrp_Astar = intrp.RectBivariateSpline(tstar, delta, astar_table, kx=5, ky=5)
+        intrp_o22 = intrp.RectBivariateSpline(tstar22, delta,
+                                              omega22_table, kx=5, ky=5)
+        intrp_Astar = intrp.RectBivariateSpline(tstar, delta,
+                                                astar_table, kx=5, ky=5)
 
         # Get molecular mass
         MW = props["MW"]
@@ -170,15 +172,17 @@ class KineticTheory(BaseTransport):
             Tstar = T * kb / well
             omga22 = intrp_o22(Tstar, r_deltastar.diagonal(), grid=False)
             visc[i, :] = (
-                (5.0 / 16.0) * np.sqrt(np.pi * mass * kb * T) / (np.pi * diam**2 * omga22)
+                (5.0 / 16.0) * np.sqrt(np.pi * mass * kb * T)
+                / (np.pi * diam**2 * omga22)
             )
 
         ##########################################
         # Thermal Conductivity
         ##########################################
-        # NOTE The EOS has an effect on the transport properties via the calculation of cp
-        #     so if you use tpg you will use NASA7 to help compute thermal conductivities,
-        #     if you use cpg you will use constant cp to compute kappa.
+        # NOTE The EOS has an effect on the transport properties via
+        # the calculation of cp so if you use tpg you will use NASA7
+        # to help compute thermal conductivities, if you use cpg you
+        # will use constant cp to compute kappa.
         cond = np.zeros((npts, ns))
         for i, T in enumerate(Ts):
             for k in range(ns):
@@ -239,8 +243,9 @@ class KineticTheory(BaseTransport):
                     Astar = intrp_Astar(Tstar, r_deltastar[j, k], grid=False)
                     omga11 = omga22 / Astar
 
-                    # To get pressure dependence, we evaluate the coeff at unit pressure
-                    # then when we actually NEED the coeff, we use divide by the real pressure
+                    # To get pressure dependence, we evaluate the coeff at
+                    # unit pressure then when we actually NEED the coeff,
+                    # we use divide by the real pressure
                     diffcoeff = (
                         3.0
                         / 16.0
@@ -262,7 +267,9 @@ class KineticTheory(BaseTransport):
         w = 1.0 / (visc**2)
         consts['muPoly'] = np.flip(
             np.array(
-                [list(np.polyfit(logTs, visc[:, k], deg=deg, w=w[:, k])) for k in range(ns)]
+                [list(
+                    np.polyfit(logTs, visc[:, k], deg=deg, w=w[:, k])
+                    ) for k in range(ns)]
             ),
             -1,
         )
@@ -273,12 +280,14 @@ class KineticTheory(BaseTransport):
         w = 1.0 / (cond**2)
         consts['kappaPoly'] = np.flip(
             np.array(
-                [list(np.polyfit(logTs, cond[:, k], deg=deg, w=w[:, k])) for k in range(ns)]
+                [list(
+                    np.polyfit(logTs, cond[:, k], deg=deg, w=w[:, k])
+                    ) for k in range(ns)]
             ),
             -1,
         )
 
-        Dij = np.empty((int((ns+1)*ns/2), deg+1))
+        Dij = np.empty((int((ns + 1)*ns/2), deg+1))
         diff = diff / Ts[:, None, None] ** 1.5
         w = 1.0 / (diff**2)
         icc = 0
