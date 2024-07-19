@@ -46,7 +46,7 @@
     ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q')};
 
     // Compute transport properties
-    fpdtype_t qt[${nvars + 1}];
+    fpdtype_t qt[${2 + ns}];
     ${pyfr.expand('mixture_transport', 'u', 'q', 'qh', 'qt')};
     ${pyfr.expand('viscous_flux_add', 'u', gradu, 'q', 'qh', 'qt', 'ftemp')};
     ${pyfr.expand('artificial_viscosity_add', gradu, 'ftemp', 'artvisc')};

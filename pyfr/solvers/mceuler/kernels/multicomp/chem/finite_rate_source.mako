@@ -90,7 +90,7 @@
 <% A_o = c['A_o'] %>\
 <% m_o = c['m_o'] %>\
 <% Ea_o = c['Ea_o'] %>\
-  fpdtype_t q[${nr}];
+  fpdtype_t rp[${nr}];
 
 % for i in range(nr):
   <% alpha = c['fall_coeffs'][i][0]%>\
