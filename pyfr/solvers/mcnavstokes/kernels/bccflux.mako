@@ -22,8 +22,8 @@
 
 
     // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars+1}];
-    fpdtype_t qhl[${3+ns}];
+    fpdtype_t ql[${nvars + 1}];
+    fpdtype_t qhl[${3 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 
     ${pyfr.expand('bc_common_flux_state', 'ul', 'ql', 'qhl', 'gradul', 'artviscl', 'norm_nl', 'mag_nl')};

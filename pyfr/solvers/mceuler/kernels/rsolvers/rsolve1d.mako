@@ -7,7 +7,7 @@
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     fpdtype_t utl[${nvars}], utr[${nvars}], ntf[${nvars}];
-    fpdtype_t qtl[${nvars+1}], qtr[${nvars+1}];
+    fpdtype_t qtl[${nvars + 1}], qtr[${nvars + 1}];
 
     utl[0] = ul[0];
     qtl[0] = ql[0];
