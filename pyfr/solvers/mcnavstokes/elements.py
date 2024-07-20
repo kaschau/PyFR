@@ -114,16 +114,3 @@ class MCNavierStokesElements(BaseMCFluidElements,
                 return self._make_sliced_kernel(k() for k in tdisf)
 
             self.kernels['tdisf'] = tdisf_k
-
-        if self.cfg.getbool('multi-component', 'chemistry', default=False):
-            chem_tplargs = {
-                'ndims': self.ndims,
-                'nvars': self.nvars,
-                'c': consts,
-                'eos': self.mcfluid.eos,
-            }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
-                               'finite_rate_source',
-                               chem_tplargs,
-                               False,
-                               True)
