@@ -171,6 +171,26 @@ class BaseMCFluidElements:
             )
 
 
+        if self.cfg.getbool('multi-component', 'chemistry', default=False):
+
+            consts = self.cfg.items_as('constants', float)
+            consts |= self.mcfluid.consts
+
+            chem_tplargs = {
+                'ndims': self.ndims,
+                'nvars': self.nvars,
+                'c': consts,
+                'eos': self.mcfluid.eos,
+                'nsub_steps': self.cfg.get('multi-component', 'nsub-steps', default = 1),
+                'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
+            }
+            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
+                               'finite_rate_source',
+                               chem_tplargs,
+                               False,
+                               True)
+
+
 class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -180,22 +200,6 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
-
-        if self.cfg.getbool('multi-component', 'chemistry', default=False):
-            chem_tplargs = {
-                'ndims': self.ndims,
-                'nvars': self.nvars,
-                'c': consts,
-                'eos': self.mcfluid.eos,
-            }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
-                               'finite_rate_source',
-                               chem_tplargs,
-                               False,
-                               True)
-
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
             return
@@ -204,6 +208,8 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
 
         # Template parameters for the flux kernels
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,

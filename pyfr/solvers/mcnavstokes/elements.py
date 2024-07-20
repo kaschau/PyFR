@@ -37,22 +37,6 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
-
-        if self.cfg.getbool('multi-component', 'chemistry', default=False):
-            chem_tplargs = {
-                'ndims': self.ndims,
-                'nvars': self.nvars,
-                'c': consts,
-                'eos': self.mcfluid.eos,
-            }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
-                               'finite_rate_source',
-                               chem_tplargs,
-                               False,
-                               True)
-
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
             return
@@ -68,6 +52,8 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
             raise ValueError('Invalid viscosity-correction option')
 
         # Template parameters for the flux kernels
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,

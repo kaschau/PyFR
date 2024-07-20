@@ -39,9 +39,11 @@
 <% nr = c['Ea_f'].shape[0] %>\
 <% MW = c['MW'] %>\
 <% N7 = c['NASA7'] %>\
+<% Ru = c['Ru'] %>\
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
   fpdtype_t rho = u[0];
+  fpdtype_t tSub = ${dt} / ${nsub_steps};
 
   // Compute thermodynamic properties
   fpdtype_t q[${nvars + 1}];
@@ -49,6 +51,8 @@
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t T = q[${ndims+1}];
+
+  for( int nSub = 0; nSub < ${nsub_steps}; nSub++){
 
   // Concentrations
   fpdtype_t cs[${ns}];
@@ -61,24 +65,30 @@
   fpdtype_t logT = log(T);
   fpdtype_t Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
+  fpdtype_t cp = 0.0;
   {
 % for n in range(ns):
       // ${c['names'][n]} Properties
       if (T < ${N7[n,0]})
       {
 <% m = 8 %>\
-
+            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
             fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
             fpdtype_t scs = ${N7[n, m + 0]} * logT +
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
+            qh[${2 + n}] = hi;
+            cp += cps*q[${Yix + n}];
         }else
         {
 <% m = 1 %>\
+            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
             fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
             fpdtype_t scs = ${N7[n, m + 0]} * logT +
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
+            qh[${2 + n}] = hi;
+            cp += cps*q[${Yix + n}];
         }
 % endfor
   }
@@ -150,6 +160,24 @@
   }
 % endfor
 
+  fpdtype_t dTdt = 0.0;
+% for n in range(ns):
+  {
+<% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
+% if max(abs(nu_sum)) > 0:
+    fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+% else:
+    fpdtype_t dYdt = 0.0;
+% endif
+    dTdt -= qh[${2 + n}] * dYdt;
+    q[${Yix + n}] += dYdt / rho * tSub;
+    q[${Yix + n}] = fmin(1.0, fmax(0.0, q[${Yix + n}]));
+  }
+% endfor
+  dTdt /= cp*rho;
+  T += dTdt*tSub;
+  }
+
   // Output source terms
   src[0] = 0.0;
 % for i in range(ndims):
@@ -157,10 +185,10 @@
 % endfor
   src[${ndims+1}] = 0.0;
   // Chemical source terms
+  // Reconstruct d(rhoY)/dt based on where we ended up
 % for n in range(ns-1):
-    // ${c['names'][n]}
-<% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
-  src[${Yix+n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+  // ${c['names'][n]}
+  src[${Yix+n}] = (q[${Yix + n}] * rho - u[${Yix + n}]) / ${dt};
 % endfor
 
 #ifdef DEBUG
