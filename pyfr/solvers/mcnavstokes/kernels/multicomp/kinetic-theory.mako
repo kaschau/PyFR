@@ -101,10 +101,10 @@
 % endfor
     // account for pressure
     sum1 *= p;
-    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}] + 1e-12);
     // HACK
     fpdtype_t temp = sum1 + sum2;
-    if (temp != 0.0){
+    if (fabs(temp) > 1e-10){
       qt[${2+n}] = 1.0 / temp;
     }else{
       qt[${2+n}] = 0.0;
