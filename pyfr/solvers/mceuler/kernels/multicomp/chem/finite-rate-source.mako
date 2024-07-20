@@ -52,7 +52,7 @@
 
   fpdtype_t T = q[${ndims+1}];
 
-  for( int nSub = 0; nSub < ${nsub_steps}; nSub++){
+  for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
 
   // Concentrations
   fpdtype_t cs[${ns}];
