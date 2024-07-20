@@ -136,7 +136,11 @@
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
+  % if c['r_type'][i] == "Arrhenius Custom Order":
+  fpdtype_t rp_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['orders'][i]) if s != 0.0])};
+  % else:
   fpdtype_t rp_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_f'][:,i]) if s != 0.0])};
+  % endif
   % if c['reversible'][i] == 1.0:
   fpdtype_t rp_b = -k_f/K_c * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_b'][:,i]) if s != 0.0])};
   rp[${i}] = rp_f + rp_b;
