@@ -175,6 +175,22 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
+
+        if self.cfg.getbool('multi-component', 'chemistry', default=False):
+            chem_tplargs = {
+                'ndims': self.ndims,
+                'nvars': self.nvars,
+                'c': consts,
+                'eos': self.mcfluid.eos,
+            }
+            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
+                               'finite_rate_source',
+                               chem_tplargs,
+                               False,
+                               True)
+
         # Can elide interior flux calculations at p = 0
         if self.basis.order == 0:
             return
@@ -182,8 +198,6 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         # Register our flux kernels
         self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
 
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
         # Template parameters for the flux kernels
         tplargs = {
             'ndims': self.ndims,
@@ -232,16 +246,3 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
             self.kernels['tdisf'] = lambda uin: slicedk(k(uin) for k in tdisf)
         else:
             self.kernels['tdisf'] = lambda: slicedk(k() for k in tdisf)
-
-        if self.cfg.getbool('multi-component', 'chemistry', default=False):
-            chem_tplargs = {
-                'ndims': self.ndims,
-                'nvars': self.nvars,
-                'c': consts,
-                'eos': self.mcfluid.eos,
-            }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite_rate_source',
-                               'finite_rate_source',
-                               chem_tplargs,
-                               False,
-                               True)
