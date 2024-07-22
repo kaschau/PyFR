@@ -161,6 +161,7 @@
 % endfor
 
   fpdtype_t dTdt = 0.0;
+  q[${Yix + ns - 1}] = 1.0;
 % for n in range(ns):
   {
 <% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
@@ -170,8 +171,11 @@
     fpdtype_t dYdt = 0.0;
 % endif
     dTdt -= qh[${2 + n}] * dYdt;
+    % if n < ns - 1:
     q[${Yix + n}] += dYdt / rho * tSub;
     q[${Yix + n}] = fmin(1.0, fmax(0.0, q[${Yix + n}]));
+    q[${Yix + ns - 1}] -= q[${Yix + n}];
+    % endif
   }
 % endfor
   dTdt /= cp*rho;
