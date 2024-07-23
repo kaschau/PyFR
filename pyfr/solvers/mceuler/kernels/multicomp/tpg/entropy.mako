@@ -12,6 +12,8 @@
     fpdtype_t T = q[${ndims + 1}];
     fpdtype_t lnT = log(T);
     e = 0.0;
+    fpdtype_t Ymin = ${fpdtype_max};
+    fpdtype_t Ysum = 0.0;
     // Compute mixture entropy
 % for n in range(ns):
     // ${c['names'][n]} Entropy
@@ -30,7 +32,12 @@
           es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
-      e += es * rho * q[${Yix+n}];
+      e += es * q[${Yix+n}];
+      Ymin = fmin(Ymin, q[${Yix + n}]);
+      Ysum += q[${Yix + n}];
     }
-% endfor
+%endfor
+
+    e = ((T > 0.0) && (q[0] > 0.0) && (Ymin > 0.0) && (Ysum < 1.0)) ? exp(e) : ${fpdtype_max};
+
 </%pyfr:macro>
