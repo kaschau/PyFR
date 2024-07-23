@@ -2,7 +2,6 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
-<%include file='pyfr.solvers.mpeuler.kernels.bcs.${bctype}'/>
 
 <% ns = c['ns'] %>
 

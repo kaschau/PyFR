@@ -66,7 +66,7 @@ class MCFluidMPIIntersMixin:
                 entmin_lhs=self._entmin_lhs, entmin_rhs=self._entmin_rhs
             )
 
-            self._be.pointwise.register('pyfr.solvers.mpeuler.kernels.mpicjump')
+            self._be.pointwise.register('pyfr.solvers.mceuler.kernels.mpicjump')
 
             self.mcfluid = MCFluid(self.cfg)
             self.c |= self.mcfluid.consts
@@ -129,7 +129,7 @@ class MCEulerBaseBCInters(TplargsMixin, BaseAdvectionBCInters):
             )
 
             # Shock sensor
-            self._be.pointwise.register('pyfr.solvers.mpeuler.kernels.bccjump')
+            self._be.pointwise.register('pyfr.solvers.mceuler.kernels.bccjump')
             self.kernels['comm_jump'] = lambda: self._be.kernel(
                 'bccjump', tplargs=self._tplargs, dims=[self.ninterfpts],
                 extrns=self._external_args, ul=self._scal_lhs,
