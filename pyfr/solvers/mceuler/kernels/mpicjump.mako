@@ -21,7 +21,7 @@
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 
     // Write out the jumps
-    jumpl[0] = mag_nl*(pl - pr);
-    jumpl[1] = fabs(pl);
+    jumpl[0] = mag_nl*(ql[0] - qr[0]);
+    jumpl[1] = fabs(ql[0]);
     jumpl[2] = mag_nl;
 </%pyfr:kernel>
