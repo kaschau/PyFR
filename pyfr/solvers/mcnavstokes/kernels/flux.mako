@@ -1,5 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<% Yix = ndims + 2 %>
+<% ns = c['ns'] %>
+
 % if ndims == 2:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
     fpdtype_t rho = uin[0], rhou = uin[1], rhov = uin[2], rhoE = uin[3];
@@ -43,22 +46,58 @@
     fout[1][3] += u*t_xy + v*t_yy + -kappa*T_y;
 
     // Species diffusion
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
-    fpdtype_t Y_x, Y_y;
-    ## TODO diffusion correction term
-%   for n in range(ns-1):
-    // Species derivative (rho*dY/d[x,y])
-    Y_x =  grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
-    Y_y =  grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
+    fpdtype_t Y_x[${ns}];
+    fpdtype_t Y_y[${ns}];
+    Y_x[${ns-1}] = 0.0;
+    Y_y[${ns-1}] = 0.0;
+    fpdtype_t Vcx = 0.0;
+    fpdtype_t Vcy = 0.0;
+    // Species derivative (dY/d[x,y])
+%   for n in range(ns):
+    % if n < ns - 1:
+    {
+      Y_x[${n}] = (grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x)*rcprho;
+      Y_y[${n}] = (grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y)*rcprho;
 
-    fout[0][${Yix+n}] += -qt[${2+n}] * Y_x;
-    fout[1][${Yix+n}] += -qt[${2+n}] * Y_y;
+      Y_x[${ns-1}] -= Y_x[${n}];
+      Y_y[${ns-1}] -= Y_y[${n}];
 
-    ## TODO species thermal diffusion
+      Vcx += qt[${2+n}]*Y_x[${n}];
+      Vcy += qt[${2+n}]*Y_y[${n}];
+    }
+    % else:
+    // Add in the ns species's diffusion velocity
+    Vcx += qt[${2+n}]*Y_x[${n}];
+    Vcy += qt[${2+n}]*Y_y[${n}];
+    % endif
 %   endfor
 
+    // Vc calculated, compute species mass and thermal diffusion
+%   for n in range(ns):
+    % if n < ns - 1:
+    {
+      // Species mass diffusion
+      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fout[0][${Yix+n}] += Jx;
+      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fout[1][${Yix+n}] += Jy;
+
+      // Species thermal diffusion
+      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+    }
+    % else:
+      // Species mass diffusion
+      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+
+      // Species thermal diffusion
+      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+    % endif
+%   endfor
 </%pyfr:macro>
+
 % elif ndims == 3:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, fout'>
     fpdtype_t rho  = uin[0];
@@ -115,21 +154,67 @@
     fout[2][4] += u*t_xz + v*t_yz + w*t_zz + -kappa*T_z;
 
     // Species diffusion
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
-    fpdtype_t Y_x, Y_y;
-    ## TODO diffusion correction term
-%   for n in range(ns-1):
-    // Species derivative (rho*dY/d[x,y])
-    Y_x =  grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
-    Y_y =  grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
-    Y_z =  grad_uin[2][${Yix+n}] - q[${Yix+n}]*rho_z;
+    fpdtype_t Y_x[${ns}];
+    fpdtype_t Y_y[${ns}];
+    fpdtype_t Y_z[${ns}];
+    Y_x[${ns-1}] = 0.0;
+    Y_y[${ns-1}] = 0.0;
+    Y_z[${ns-1}] = 0.0;
+    fpdtype_t Vcx = 0.0;
+    fpdtype_t Vcy = 0.0;
+    fpdtype_t Vcz = 0.0;
+    // Species derivative (dY/d[x,y,z])
+%   for n in range(ns):
+    % if n < ns - 1:
+    {
+      Y_x[${n}] = (grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x)*rcprho;
+      Y_y[${n}] = (grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y)*rcprho;
+      Y_z[${n}] = (grad_uin[2][${Yix+n}] - q[${Yix+n}]*rho_z)*rcprho;
 
-    fout[0][${Yix+n}] += -qt[${2+n}] * Y_x;
-    fout[1][${Yix+n}] += -qt[${2+n}] * Y_y;
-    fout[2][${Yix+n}] += -qt[${2+n}] * Y_z;
+      Y_x[${ns-1}] -= Y_x[${n}];
+      Y_y[${ns-1}] -= Y_y[${n}];
+      Y_z[${ns-1}] -= Y_z[${n}];
 
-    ## TODO species thermal diffusion
+      Vcx += qt[${2+n}]*Y_x[${n}];
+      Vcy += qt[${2+n}]*Y_y[${n}];
+      Vcz += qt[${2+n}]*Y_z[${n}];
+    }
+    % else:
+    // Add in the ns species's diffusion velocity
+    Vcx += qt[${2+n}]*Y_x[${n}];
+    Vcy += qt[${2+n}]*Y_y[${n}];
+    Vcz += qt[${2+n}]*Y_z[${n}];
+    % endif
+%   endfor
+
+    // Vc calculated, compute species mass and thermal diffusion
+%   for n in range(ns):
+    % if n < ns - 1:
+    {
+      // Species mass diffusion
+      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fout[0][${Yix+n}] += Jx;
+      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fout[1][${Yix+n}] += Jy;
+      fpdtype_t Jz = -rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
+      fout[2][${Yix+n}] += Jz;
+
+      // Species thermal diffusion
+      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+      fout[2][${ndims + 1}] += qh[${3 + n}] * Jz;
+    }
+    % else:
+      // Species mass diffusion
+      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jz = -rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
+
+      // Species thermal diffusion
+      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+      fout[2][${ndims + 1}] += qh[${3 + n}] * Jz;
+    % endif
 %   endfor
 </%pyfr:macro>
 % endif
