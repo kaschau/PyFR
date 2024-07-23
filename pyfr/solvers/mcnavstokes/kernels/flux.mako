@@ -52,12 +52,12 @@
     Y_y[${ns-1}] = 0.0;
     fpdtype_t Vcx = 0.0;
     fpdtype_t Vcy = 0.0;
-    // Species derivative (dY/d[x,y])
+    // Species derivative (rho*dY/d[x,y])
 %   for n in range(ns):
     % if n < ns - 1:
     {
-      Y_x[${n}] = (grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x)*rcprho;
-      Y_y[${n}] = (grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y)*rcprho;
+      Y_x[${n}] = grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
+      Y_y[${n}] = grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
 
       Y_x[${ns-1}] -= Y_x[${n}];
       Y_y[${ns-1}] -= Y_y[${n}];
@@ -77,9 +77,9 @@
     % if n < ns - 1:
     {
       // Species mass diffusion
-      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jx = qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx;
       fout[0][${Yix+n}] -= Jx;
-      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jy = qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy;
       fout[1][${Yix+n}] -= Jy;
 
       // Species thermal diffusion
@@ -88,8 +88,8 @@
     }
     % else:
       // Species mass diffusion
-      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
-      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jx = qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx;
+      fpdtype_t Jy = qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy;
 
       // Species thermal diffusion
       fout[0][${ndims + 1}] -= qh[${3 + n}] * Jx;
@@ -163,13 +163,13 @@
     fpdtype_t Vcx = 0.0;
     fpdtype_t Vcy = 0.0;
     fpdtype_t Vcz = 0.0;
-    // Species derivative (dY/d[x,y,z])
+    // Species derivative (rho*dY/d[x,y,z])
 %   for n in range(ns):
     % if n < ns - 1:
     {
-      Y_x[${n}] = (grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x)*rcprho;
-      Y_y[${n}] = (grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y)*rcprho;
-      Y_z[${n}] = (grad_uin[2][${Yix+n}] - q[${Yix+n}]*rho_z)*rcprho;
+      Y_x[${n}] = grad_uin[0][${Yix+n}] - q[${Yix+n}]*rho_x;
+      Y_y[${n}] = grad_uin[1][${Yix+n}] - q[${Yix+n}]*rho_y;
+      Y_z[${n}] = grad_uin[2][${Yix+n}] - q[${Yix+n}]*rho_z;
 
       Y_x[${ns-1}] -= Y_x[${n}];
       Y_y[${ns-1}] -= Y_y[${n}];
@@ -192,11 +192,11 @@
     % if n < ns - 1:
     {
       // Species mass diffusion
-      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jx = qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx;
       fout[0][${Yix+n}] -= Jx;
-      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jy = qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy;
       fout[1][${Yix+n}] -= Jy;
-      fpdtype_t Jz = rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
+      fpdtype_t Jz = qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz;
       fout[2][${Yix+n}] -= Jz;
 
       // Species thermal diffusion
