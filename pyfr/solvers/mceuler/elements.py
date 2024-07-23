@@ -101,6 +101,9 @@ class BaseMCFluidElements:
             self._be.pointwise.register(
                 'pyfr.solvers.mceuler.kernels.entropyfilter'
             )
+            self._be.pointwise.register(
+                'pyfr.solvers.mceuler.kernels.kxrcf'
+            )
 
             # Template arguments
             consts = self.cfg.items_as('constants', float)
@@ -152,6 +155,10 @@ class BaseMCFluidElements:
                 raise ValueError('Only physical entropy compatible with '
                                  'multicomponent system.')
 
+            # KXRCF sensor switch
+            eftplargs['s_switch'] = self.cfg.getfloat('solver-entropy-filter',
+                                                      'kxrcf-switch', 1)
+
             # Precompute basis orders for filter
             ubdegs = self.basis.ubasis.degrees
             eftplargs['ubdegs'] = [int(max(dd)) for dd in ubdegs]
@@ -167,10 +174,16 @@ class BaseMCFluidElements:
             self.kernels['entropy_filter'] = lambda uin: self._be.kernel(
                 'entropyfilter', tplargs=eftplargs, dims=[self.neles],
                 u=self.scal_upts[uin], entmin_int=self.entmin_int,
-                vdm=self.vdm, invvdm=self.invvdm
+                vdm=self.vdm, invvdm=self.invvdm, sensor=self.jump_mass
             )
 
+            # KXRCF shock sensor
+            self.kernels['kxrcf'] = lambda: self._be.kernel(
+                'kxrcf', tplargs=eftplargs, dims=[self.neles],
+                jump=self.jump_int, sensor=self.jump_mass, mass=self.intmass
+            )
 
+        # Chemical reactions
         if self.cfg.getbool('multi-component', 'chemistry', default=False):
 
             consts = self.cfg.items_as('constants', float)
@@ -184,7 +197,7 @@ class BaseMCFluidElements:
                 'nsub_steps': self.cfg.get('multi-component', 'nsub-steps', default = 1),
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-source',
+            self.add_src_macro('finite-rate-source',
                                'finite_rate_source',
                                chem_tplargs,
                                False,

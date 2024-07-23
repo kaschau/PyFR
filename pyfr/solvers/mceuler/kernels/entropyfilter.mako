@@ -113,9 +113,11 @@
               u='inout fpdtype_t[${str(nupts)}][${str(nvars)}]'
               entmin_int='inout fpdtype_t[${str(nfaces)}]'
               vdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
-              invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'>
+              invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
+              sensor='in fpdtype_t[1][3]'>
 
     fpdtype_t Yminmin, Ysummin, pmin, emin;
+    fpdtype_t kxrcf = sensor[0][0];
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
@@ -125,7 +127,7 @@
     ${pyfr.expand('get_minima', 'u', 'Yminmin', 'Ysummin', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (Yminmin + ${Y_tol} < 0.0 || Ysummin + ${Y_tol} < 0.0 || pmin < ${p_min} || emin < entmin - ${e_tol})
+    if (Yminmin + ${Y_tol} < 0.0 || Ysummin + ${Y_tol} < 0.0 || pmin < ${p_min} || (emin < entmin - ${e_tol} && kxrcf >= ${s_switch}))
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -160,7 +162,7 @@
             ${pyfr.expand('apply_filter_single', 'up', 'f', 'Ymin', 'Ysum', 'p', 'e')};
 
             // Update f if constraints aren't satisfied
-            if (Ymin + ${Y_tol} < 0.0 || Ysum + ${Y_tol} < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+            if (Ymin + ${Y_tol} < 0.0 || Ysum + ${Y_tol} < 0.0 || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
             {
                 // Set root-finding interval
                 f_high = f;
@@ -197,7 +199,7 @@
                     ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'Ymin', 'Ysum', 'p', 'e')};
 
                     // Update brackets
-                    if (Ymin + ${Y_tol} < 0.0 || Ysum + ${Y_tol} < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+                    if (Ymin + ${Y_tol} < 0.0 || Ysum + ${Y_tol} < 0.0 || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
                     {
                         f_high = fnew;
                         Ymin_high = Ymin + ${Y_tol};
