@@ -77,23 +77,23 @@
     % if n < ns - 1:
     {
       // Species mass diffusion
-      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
-      fout[0][${Yix+n}] += Jx;
-      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
-      fout[1][${Yix+n}] += Jy;
+      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fout[0][${Yix+n}] -= Jx;
+      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fout[1][${Yix+n}] -= Jy;
 
       // Species thermal diffusion
-      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
-      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+      fout[0][${ndims + 1}] -= qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] -= qh[${3 + n}] * Jy;
     }
     % else:
       // Species mass diffusion
-      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
-      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
 
       // Species thermal diffusion
-      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
-      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
+      fout[0][${ndims + 1}] -= qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] -= qh[${3 + n}] * Jy;
     % endif
 %   endfor
 </%pyfr:macro>
@@ -192,28 +192,28 @@
     % if n < ns - 1:
     {
       // Species mass diffusion
-      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
-      fout[0][${Yix+n}] += Jx;
-      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
-      fout[1][${Yix+n}] += Jy;
-      fpdtype_t Jz = -rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
-      fout[2][${Yix+n}] += Jz;
+      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fout[0][${Yix+n}] -= Jx;
+      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fout[1][${Yix+n}] -= Jy;
+      fpdtype_t Jz = rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
+      fout[2][${Yix+n}] -= Jz;
 
       // Species thermal diffusion
-      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
-      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
-      fout[2][${ndims + 1}] += qh[${3 + n}] * Jz;
+      fout[0][${ndims + 1}] -= qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] -= qh[${3 + n}] * Jy;
+      fout[2][${ndims + 1}] -= qh[${3 + n}] * Jz;
     }
     % else:
       // Species mass diffusion
-      fpdtype_t Jx = -rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
-      fpdtype_t Jy = -rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
-      fpdtype_t Jz = -rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
+      fpdtype_t Jx = rho*(qt[${2 + n}]*Y_x[${n}] - q[${Yix + n}]*Vcx);
+      fpdtype_t Jy = rho*(qt[${2 + n}]*Y_y[${n}] - q[${Yix + n}]*Vcy);
+      fpdtype_t Jz = rho*(qt[${2 + n}]*Y_z[${n}] - q[${Yix + n}]*Vcz);
 
       // Species thermal diffusion
-      fout[0][${ndims + 1}] += qh[${3 + n}] * Jx;
-      fout[1][${ndims + 1}] += qh[${3 + n}] * Jy;
-      fout[2][${ndims + 1}] += qh[${3 + n}] * Jz;
+      fout[0][${ndims + 1}] -= qh[${3 + n}] * Jx;
+      fout[1][${ndims + 1}] -= qh[${3 + n}] * Jy;
+      fout[2][${ndims + 1}] -= qh[${3 + n}] * Jz;
     % endif
 %   endfor
 </%pyfr:macro>
