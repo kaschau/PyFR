@@ -135,9 +135,10 @@ class BaseMCFluidElements:
             # Minimum Mass fraction/pressure constraints
             eftplargs['Y_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'Y-tol', 1e-12)
+            eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'd-min', 1e-6)
             eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'p-min', 1e-6)
-
             # Entropy tolerance
             eftplargs['e_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'e-tol', 1e-6)
@@ -157,7 +158,7 @@ class BaseMCFluidElements:
 
             # KXRCF sensor switch
             eftplargs['s_switch'] = self.cfg.getfloat('solver-entropy-filter',
-                                                      'kxrcf-switch', 1)
+                                                      'kxrcf-switch', 1.0)
 
             # Precompute basis orders for filter
             ubdegs = self.basis.ubasis.degrees

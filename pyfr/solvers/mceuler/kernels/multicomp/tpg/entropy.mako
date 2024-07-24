@@ -33,11 +33,9 @@
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
       e += es * q[${Yix+n}];
-      Ymin = fmin(Ymin, q[${Yix + n}]);
-      Ysum += q[${Yix + n}];
     }
 %endfor
-
-    e = ((T > 0.0) && (q[0] > 0.0) && (Ymin > 0.0) && (Ysum < 1.0)) ? exp(e) : ${fpdtype_max};
+    e *= u[0];
+    e = ((T > 0.0)) ? exp(e) : ${fpdtype_max};
 
 </%pyfr:macro>
