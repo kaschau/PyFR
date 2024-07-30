@@ -102,7 +102,7 @@ class BaseAdvectionMPIInters(BaseInters):
             )
 
             self._jump_lhs = self._xchg_view(
-                lhs, 'get_jump_int_fpts_for_inter', (3,)
+                lhs, 'get_jump_int_fpts_for_inter', (5,)
             )
             self._jump_rhs = be.xchg_matrix_for_view(self._jump_lhs)
 

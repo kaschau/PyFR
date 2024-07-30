@@ -151,11 +151,11 @@ class BaseAdvectionElements(BaseElements):
             self.entmin_int = self._be.matrix((self.nfaces, self.neles),
                                               tags=tags, extent=ext)
 
-            # Allocate interface pressure jumps
+            # Allocate interface pressure/density jumps
             ext = nonce + 'jump'
-            self.jump_int = self._be.matrix((self.nfpts, 3, self.neles),
+            self.jump_int = self._be.matrix((self.nfpts, 5, self.neles),
                                             tags=tags, extent=ext)
-            self.jump_mass = self._be.matrix((1, 3, self.neles),
+            self.jump_mass = self._be.matrix((2, self.neles),
                                              tags=tags, extent=ext)
 
             # Setup interface mass matrix

@@ -111,10 +111,10 @@
               entmin_int='inout fpdtype_t[${str(nfaces)}]'
               vdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
-              sensor='in fpdtype_t[1][3]'>
+              sensor='in fpdtype_t[2]'>
 
     fpdtype_t Ymin, rhomin, pmin, emin;
-    fpdtype_t kxrcf = sensor[0][0];
+    fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
