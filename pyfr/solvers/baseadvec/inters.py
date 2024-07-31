@@ -25,10 +25,10 @@ class BaseAdvectionIntInters(BaseInters):
                 rhs, 'get_entmin_int_fpts_for_inter', with_perm=False
             )
             self._jump_lhs = self._view(
-                lhs, 'get_jump_int_fpts_for_inter', (3,)
+                lhs, 'get_jump_int_fpts_for_inter', (5,)
             )
             self._jump_rhs = self._view(
-                rhs, 'get_jump_int_fpts_for_inter', (3,)
+                rhs, 'get_jump_int_fpts_for_inter', (5,)
             )
         else:
             self._entmin_lhs = self._entmin_rhs = None
@@ -145,7 +145,7 @@ class BaseAdvectionBCInters(BaseInters):
 
         if cfg.get('solver', 'shock-capturing') == 'entropy-filter':
             self._entmin_lhs = self._view(lhs, 'get_entmin_bc_fpts_for_inter')
-            self._jump_lhs = self._view(lhs, 'get_jump_int_fpts_for_inter', (3,))
+            self._jump_lhs = self._view(lhs, 'get_jump_int_fpts_for_inter', (5,))
         else:
             self._entmin_lhs = None
             self._jump_lhs = None
