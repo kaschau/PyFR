@@ -114,7 +114,7 @@
               sensor='in fpdtype_t[2]'>
 
     fpdtype_t Ymin, rhomin, pmin, emin;
-    fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
+    fpdtype_t kxrcf = sensor[0]; //fmax(sensor[0], sensor[1]);
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
