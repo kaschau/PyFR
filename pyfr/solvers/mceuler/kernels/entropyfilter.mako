@@ -111,10 +111,11 @@
               entmin_int='inout fpdtype_t[${str(nfaces)}]'
               vdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
-              sensor='in fpdtype_t[2]'>
+              sensor='in fpdtype_t[2]'
+              zeta='inout fpdtype_t'>
 
     fpdtype_t Ymin, rhomin, pmin, emin;
-    fpdtype_t kxrcf = sensor[0]; //fmax(sensor[0], sensor[1]);
+    fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
@@ -218,6 +219,7 @@
                 // Set current minimum f as the bounds-preserving value
                 f = f_low;
             }
+            zeta = f;
         }
 
         // Filter full solution with bounds-preserving f value
@@ -225,10 +227,13 @@
 
         // Calculate minimum entropy from filtered solution
         ${pyfr.expand('get_minima', 'u', 'Ymin', 'rhomin', 'pmin', 'emin')};
+    }else{
+        zeta = 0.0;
     }
 
     // Set new minimum entropy within element for next stage
 % for fidx in range(nfaces):
     entmin_int[${fidx}] = emin;
 % endfor
+
 </%pyfr:kernel>
