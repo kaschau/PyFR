@@ -1,6 +1,6 @@
 from argparse import FileType
-from collections import defaultdict
-from ctypes import RTLD_GLOBAL, c_char_p, c_double, c_int, c_int64, c_void_p
+from ctypes import (RTLD_GLOBAL, c_char_p, c_double, c_int, c_int32, c_int64,
+                    c_void_p)
 import re
 
 import numpy as np
@@ -40,6 +40,7 @@ class ConduitWrappers(LibWrapper):
          c_double),
         (None, 'conduit_node_set_path_float64_ptr', c_void_p, c_char_p,
          c_void_p, c_int64),
+        (None, 'conduit_node_set_path_int32', c_void_p, c_char_p, c_int32),
         (None, 'conduit_node_set_path_int64', c_void_p, c_char_p, c_int64),
         (None, 'conduit_node_set_path_int64_ptr', c_void_p, c_char_p,
          c_void_p, c_int64),
@@ -79,7 +80,10 @@ class ConduitNode:
             case ConduitNode():
                 self.lib.conduit_node_set_path_node(self, key, value)
             case int():
-                self.lib.conduit_node_set_path_int64(self, key, value)
+                if value.bit_length() <= 32:
+                    self.lib.conduit_node_set_path_int32(self, key, value)
+                else:
+                    self.lib.conduit_node_set_path_int64(self, key, value)
             case float():
                 self.lib.conduit_node_set_path_float64(self, key, value)
             case (np.ndarray() | np.generic()):
@@ -146,12 +150,12 @@ class _IntegratorAdapter:
     def region_data(self):
         return region_data(self.acfg, self.cfgsect, self.intg.system.mesh)
 
-    def soln_op_vpts(self, ename, divisors):
+    def soln_op_vpts(self, ename, divisor):
         eles = self.intg.system.ele_map[ename]
         shapecls = subclass_where(BaseShape, name=ename)
         shape = shapecls(eles.nspts, self.scfg)
 
-        svpts = shape.std_ele(divisors[ename])
+        svpts = shape.std_ele(divisor)
         soln_op = shape.ubasis.nodal_basis_at(svpts).astype(self.dtype)
 
         return soln_op, eles.ploc_at_np(svpts)
@@ -206,13 +210,13 @@ class _CLIAdapter:
     def region_data(self):
         return region_data(self.acfg, self.cfgsect, self._mesh)
 
-    def soln_op_vpts(self, ename, divisors):
+    def soln_op_vpts(self, ename, divisor):
         meshf = self._mesh.spts[ename]
 
         shapecls = subclass_where(BaseShape, name=ename)
         shape = shapecls(len(meshf), self.scfg)
 
-        svpts = shapecls.std_ele(divisors[ename])
+        svpts = shapecls.std_ele(divisor)
         mesh_op = shape.sbasis.nodal_basis_at(svpts)
         soln_op = shape.ubasis.nodal_basis_at(svpts)
 
@@ -246,8 +250,7 @@ class _AscentRenderer:
     def __init__(self, adapter, isrestart):
         # Set order for subdivision
         sorder = adapter.scfg.getint('solver', 'order')
-        dorder = adapter.acfg.getint(adapter.cfgsect, 'division', sorder)
-        divisors = defaultdict(lambda: dorder, pyr=1)
+        divisor = adapter.acfg.getint(adapter.cfgsect, 'division', sorder)
 
         # Load Conduit
         self.conduit = ConduitWrappers()
@@ -279,7 +282,7 @@ class _AscentRenderer:
         self._ele_regions_lin = []
         for etype, eidxs in adapter.region_data.items():
             # Build the conduit blueprint mesh for the regions
-            self._build_blueprint(adapter, etype, eidxs, divisors)
+            self._build_blueprint(adapter, etype, eidxs, divisor)
 
         # Initalise Ascent and the open an instance
         self._init_ascent(adapter)
@@ -288,18 +291,19 @@ class _AscentRenderer:
         if getattr(self, 'ascent_ptr', None):
             self.lib.ascent_close(self.ascent_ptr)
 
-    def _build_blueprint(self, adapter, etype, rgn, divisors):
+    def _build_blueprint(self, adapter, etype, rgn, divisor):
         comm, rank, root = get_comm_rank_root()
 
         mesh_n = self.mesh_n
         d_str = f'domain_{rank}_{etype}'
+        e_str = f'{d_str}/topologies/mesh/elements'
 
         eidx = adapter.etypes.index(etype)
-        soln_op, xd = adapter.soln_op_vpts(etype, divisors)
+        soln_op, xd = adapter.soln_op_vpts(etype, divisor)
         self._ele_regions_lin.append((d_str, eidx, rgn, soln_op))
 
         xd = xd[..., rgn].transpose(1, 2, 0)
-        neles, nsvpts  = xd.shape[1:]
+        ndims, neles, nsvpts = xd.shape
 
         mesh_n[f'{d_str}/state/domain_id'] = rank
         mesh_n[f'{d_str}/state/config/keyword'] = 'Config'
@@ -310,17 +314,39 @@ class _AscentRenderer:
         mesh_n[f'{d_str}/coordsets/coords/type'] = 'explicit'
         mesh_n[f'{d_str}/topologies/mesh/coordset'] = 'coords'
         mesh_n[f'{d_str}/topologies/mesh/type'] = 'unstructured'
-        mesh_n[f'{d_str}/topologies/mesh/elements/shape'] = self.bp_emap[etype]
 
         for l, x in zip('xyz', xd.reshape(adapter.ndims, -1)):
             mesh_n[f'{d_str}/coordsets/coords/values/{l}'] = x
 
+        # Subdivide the element
         subdvcls = subclass_where(BaseShapeSubDiv, name=etype)
-        nodes = subdvcls.subnodes(divisors[etype])
+        snodes = subdvcls.subnodes(divisor)
 
-        subdivcon = np.tile(nodes, (neles, 1))
-        subdivcon += (np.arange(neles)*nsvpts)[:, None]
-        mesh_n[f'{d_str}/topologies/mesh/elements/connectivity'] = subdivcon
+        sconn = np.tile(snodes, (neles, 1))
+        sconn += (np.arange(neles)*nsvpts)[:, None]
+        mesh_n[f'{e_str}/connectivity'] = sconn
+
+        # Handle elements which subdivide into more than one type of element
+        if len(scells := set(subdvcls.subcells(divisor))) > 1:
+            mesh_n[f'{e_str}/shape'] = 'mixed'
+
+            for sc in scells:
+                an = self.bp_emap[sc]
+                mesh_n[f'{e_str}/shape_map/{an}'] = subdvcls.vtk_types[sc]
+
+            scell_t = subdvcls.subcelltypes(divisor)
+            mesh_n[f'{e_str}/shapes'] = np.tile(scell_t, neles)
+
+            scell_s = subdvcls.subcells(divisor)
+            scell_s = [subdvcls.vtk_nodes[sc] for sc in scell_s]
+            mesh_n[f'{e_str}/sizes'] = np.tile(scell_s, neles)
+
+            scell_o = np.tile(subdvcls.subcelloffs(divisor), (neles, 1))
+            scell_o += (np.arange(neles)*len(snodes))[:, None]
+            scell_o = np.concatenate(([0], scell_o.flat[:-1]))
+            mesh_n[f'{e_str}/offsets'] = scell_o
+        else:
+            mesh_n[f'{e_str}/shape'] = self.bp_emap[etype]
 
         for field, path, expr in self._exprs:
             mesh_n[f'{d_str}/fields/{field}/association'] = 'vertex'
