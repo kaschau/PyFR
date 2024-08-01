@@ -37,10 +37,14 @@ class TplargsMixin:
         if self.cfg.get('solver', 'shock-capturing') == 'entropy-filter':
             self.Y_tol = self.cfg.getfloat('solver-entropy-filter', 'Y-tol',
                                            1e-12)
+            self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
+                                           1e-6)
             self.p_min = self.cfg.getfloat('solver-entropy-filter', 'p-min',
                                            1e-6)
         else:
             self.Y_tol = self.cfg.getfloat('solver-interfaces', 'Y-tol',
+                                           5*self._be.fpdtype_eps)
+            self.d_min = self.cfg.getfloat('solver-interfaces', 'd-min',
                                            5*self._be.fpdtype_eps)
             self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
                                            5*self._be.fpdtype_eps)
@@ -51,7 +55,9 @@ class TplargsMixin:
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              eos=self.mcfluid.eos,
                              rsolver=rsolver, c=self.c,
-                             Y_tol=self.Y_tol, p_min=self.p_min)
+                             Y_tol=self.Y_tol,
+                             d_min=self.d_min,
+                             p_min=self.p_min)
 
 
 class MCFluidMPIIntersMixin:
