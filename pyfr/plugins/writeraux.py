@@ -58,7 +58,7 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
         stats = Inifile()
         stats.set('data', 'fields', ','.join(self.fields))
         stats.set('data', 'prefix', 'aux')
-        # intg.collect_stats(stats)
+        intg.collect_stats(stats)
 
         # If we are the root rank then prepare the metadata
         if rank == root:

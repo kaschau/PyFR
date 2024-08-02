@@ -421,7 +421,7 @@ class VTKWriter(BaseWriter):
             self._post_proc_fields = self._post_proc_fields_scal
             self._soln_fields = dfields
             self._vtk_vars = {k: [k] for k in self._soln_fields}
-            self.tcurr = None
+            self.tcurr = self.stats.getfloat('solver-time-integrator', 'tcurr')
 
         # Handle field subsetting
         if args.fields:
