@@ -175,13 +175,14 @@ class BaseMCFluidElements:
             self.kernels['entropy_filter'] = lambda uin: self._be.kernel(
                 'entropyfilter', tplargs=eftplargs, dims=[self.neles],
                 u=self.scal_upts[uin], entmin_int=self.entmin_int,
-                vdm=self.vdm, invvdm=self.invvdm, sensor=self.jump_mass
+                vdm=self.vdm, invvdm=self.invvdm, sensor=self.sensor,
+                zeta=self.zeta,
             )
 
             # KXRCF shock sensor
             self.kernels['kxrcf'] = lambda: self._be.kernel(
                 'kxrcf', tplargs=eftplargs, dims=[self.neles],
-                jump=self.jump_int, sensor=self.jump_mass, mass=self.intmass
+                jump=self.jump_int, sensor=self.sensor, mass=self.intmass
             )
 
         # Chemical reactions

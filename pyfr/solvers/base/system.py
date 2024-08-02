@@ -51,6 +51,12 @@ class BaseSystem:
         if hasattr(eles[0], 'entmin_int'):
             self.eles_entmin_int = [e.entmin_int for e in eles]
 
+        if hasattr(eles[0], 'zeta'):
+            self.eles_zeta = [e.zeta for e in eles]
+
+        if hasattr(eles[0], 'sensor'):
+            self.eles_sensor = [e.sensor for e in eles]
+
         # Save the number of dimensions and field variables
         self.ndims = eles[0].ndims
         self.nvars = eles[0].nvars
@@ -309,6 +315,12 @@ class BaseSystem:
     def get_ele_entmin_int(self):
         return [e.get() for e in self.eles_entmin_int]
 
+    def get_ele_zeta(self):
+        return [e.get() for e in self.eles_zeta]
+
+    def get_ele_sensor(self):
+        return [e.get() for e in self.eles_sensor]
+
     def _group(self, g, kerns, subs=[]):
         # Eliminate non-existing kernels
         kerns = [k for k in kerns if k is not None]
@@ -318,4 +330,12 @@ class BaseSystem:
 
     def set_ele_entmin_int(self, entmin_int):
         for e, em in zip(self.eles_entmin_int, entmin_int):
+            e.set(em)
+
+    def set_ele_zeta(self, zeta):
+        for e, em in zip(self.eles_zeta, zeta):
+            e.set(em)
+
+    def set_ele_sensor(self, sensor):
+        for e, em in zip(self.eles_sensor, sensor):
             e.set(em)
