@@ -116,6 +116,12 @@ class BaseSystem:
             for etype, ele in elemap.items():
                 soln = initsoln[etype][:, smap, :]
                 ele.set_ics_from_soln(soln, solncfg)
+        elif self.cfg.get('soln-ics', 'from-udf', 'None') != 'None':
+            modname = self.cfg.get('soln-ics', 'from-udf')
+            if modname[-3::] == '.py':
+                modname = modname[0:-3]
+            for ele in eles:
+                ele.set_ics_from_udf(modname)
         else:
             for ele in eles:
                 ele.set_ics_from_cfg()

@@ -1,3 +1,6 @@
+import sys
+import os
+import importlib
 from functools import cached_property, wraps
 
 import numpy as np
@@ -86,6 +89,37 @@ class BaseElements:
         # Evaluate the ICs from the config file
         ics = [npeval(self.cfg.getexpr('soln-ics', dv), vars)
                for dv in self.privars]
+
+        # Allocate
+        self.scal_upts = np.empty((self.nupts, self.nvars, self.neles))
+
+        # Convert from primitive to conservative form
+        for i, v in enumerate(self.pri_to_con(ics, self.cfg)):
+            self.scal_upts[:, i, :] = v
+
+    def set_ics_from_udf(self, modname):
+        # Bring simulation constants into scope
+        vars = self.cfg.items_as('constants', float)
+
+        # Get the physical location of each solution point
+        coords = self.ploc_at_np('upts').swapaxes(0, 1)
+
+        # Import the udf
+        sys.path.insert(0, os.getcwd())
+        try:
+            udf = importlib.import_module(modname)
+        except ImportError:
+            raise ImportError('''Failed to import udf_ics method from
+                              local udf.py''')
+
+        # Get the physical location of each solution point
+        coords = self.ploc_at_np('upts').swapaxes(0, 1)
+
+        ics = udf.ics(coords, vars)
+
+        if len(ics) != self.nvars or not isinstance(ics, list):
+            raise ValueError('''Invalid return of user defined
+                                initial consitions''')
 
         # Allocate
         self.scal_upts = np.empty((self.nupts, self.nvars, self.neles))

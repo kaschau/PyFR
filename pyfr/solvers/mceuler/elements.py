@@ -158,7 +158,7 @@ class BaseMCFluidElements:
 
             # KXRCF sensor switch
             eftplargs['s_switch'] = self.cfg.getfloat('solver-entropy-filter',
-                                                      'kxrcf-switch', 1.0)
+                                                      's-switch', 1.0)
 
             # Precompute basis orders for filter
             ubdegs = self.basis.ubasis.degrees

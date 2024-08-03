@@ -112,7 +112,7 @@
               vdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               sensor='in fpdtype_t[2]'
-              zeta='inout fpdtype_t'>
+              zeta='out fpdtype_t'>
 
     fpdtype_t Ymin, rhomin, pmin, emin;
     fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
@@ -219,14 +219,14 @@
                 // Set current minimum f as the bounds-preserving value
                 f = f_low;
             }
-            zeta = f;
         }
-
         // Filter full solution with bounds-preserving f value
         ${pyfr.expand('apply_filter_full', 'umodes', 'vdm', 'u', 'f')};
 
         // Calculate minimum entropy from filtered solution
         ${pyfr.expand('get_minima', 'u', 'Ymin', 'rhomin', 'pmin', 'emin')};
+
+        zeta = f;
     }else{
         zeta = 0.0;
     }

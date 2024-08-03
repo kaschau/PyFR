@@ -85,7 +85,7 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
 
         for idx, etype, rgn in self._ele_regions:
             nupts = intg.system.ele_ploc_upts[idx].shape[0]
-            soln = intg.zeta_[idx]
+            soln = intg.zeta[idx]
             neles = soln.shape[-1]
             d = np.empty((neles, 3, nupts))
 
@@ -93,7 +93,7 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
 
             d[:,0,:] = soln.T.astype(self.fpdtype)[:,0,:]
 
-            soln = np.resize(intg.sensor_[idx][..., rgn], (nupts,2,neles))
+            soln = np.resize(intg.sensor[idx][..., rgn], (nupts,2,neles))
 
             d[:,1::,:] = soln.T.astype(self.fpdtype)
 
