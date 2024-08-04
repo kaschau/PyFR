@@ -73,17 +73,17 @@ class BaseStdIntegrator(BaseCommon, BaseIntegrator):
         self.system.set_ele_entmin_int(value)
 
     @property
-    def zeta_(self):
+    def zeta(self):
         return self.system.get_ele_zeta()
 
-    @zeta_.setter
-    def zeta_(self, value):
+    @zeta.setter
+    def zeta(self, value):
         self.system.set_ele_zeta(value)
 
     @property
-    def sensor_(self):
+    def sensor(self):
         return self.system.get_ele_sensor()
 
-    @sensor_.setter
-    def sensor_(self, value):
+    @sensor.setter
+    def sensor(self, value):
         self.system.set_ele_sensor(value)
