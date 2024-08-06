@@ -20,5 +20,5 @@
       rhoYmin = fmin(rhoYmin, rhoYk);
     }
     % endfor
-    e = ((T > 0.0) && (rhoYmin > -${Y_tol*d_min})) ? exp(e) : ${fpdtype_max};
+    e = ((T > 0.0) && (rhoYmin > -${Y_tol*d_min})) ? e/rho : ${fpdtype_max};
 </%pyfr:macro>
