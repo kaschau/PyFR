@@ -146,8 +146,6 @@ class BaseMCFluidElements:
             # Hidden kernel parameters
             eftplargs['f_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'f-tol', 1e-4)
-            eftplargs['ill_tol'] = self.cfg.getfloat('solver-entropy-filter',
-                                                     'ill-tol', 1e-6)
             eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
                                                     'niters', 20)
             efunc = self.cfg.get('solver-entropy-filter', 'e-func',
