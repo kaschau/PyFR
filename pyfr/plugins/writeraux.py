@@ -24,7 +24,7 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
         emap, erdata = intg.system.ele_map, self._ele_region_data
 
         # Figure out the shape of each element type in our region
-        nvars = 3
+        nvars = 4
         ershapes = {etype: (nvars, emap[etype].nupts) for etype in erdata}
 
         # Construct the solution writer
@@ -39,7 +39,7 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
         self.tout_last = intg.tcurr
 
         # Output field names
-        self.fields = ['zeta', 'sensor_p', 'sensor_rho']
+        self.fields = ['zeta', 'sensor_p', 'sensor_rho', 'emin']
 
         # Output data type
         self.fpdtype = intg.backend.fpdtype
@@ -87,15 +87,19 @@ class WriterAuxPlugin(PostactionMixin, RegionMixin, BaseSolnPlugin):
             nupts = intg.system.ele_ploc_upts[idx].shape[0]
             soln = intg.zeta[idx]
             neles = soln.shape[-1]
-            d = np.empty((neles, 3, nupts))
+            d = np.empty((neles, 4, nupts))
 
+            # zeta
             soln = np.resize(soln[..., rgn], (nupts,1,neles))
-
             d[:,0,:] = soln.T.astype(self.fpdtype)[:,0,:]
 
+            # sensor
             soln = np.resize(intg.sensor[idx][..., rgn], (nupts,2,neles))
+            d[:,1:3,:] = soln.T.astype(self.fpdtype)
 
-            d[:,1::,:] = soln.T.astype(self.fpdtype)
+            #emin
+            soln = np.resize(intg.entmin[idx][..., rgn], (nupts,1,neles))
+            d[:,3,:] = soln.T.astype(self.fpdtype)[:,0,:]
 
             data[etype] = d
 
