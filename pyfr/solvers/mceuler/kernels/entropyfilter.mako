@@ -53,7 +53,7 @@
 
     // Utilize exp(-zeta*(p+1)**2) = exp(-zeta*p**2)*exp(-2*zeta*p)*exp(-zeta)
 % for d in range(1, order + 1):
-    ffac[${d}] = ffrac[${d - 1}]*v*v*f;
+    ffac[${d}] = ffac[${d - 1}]*v*v*f;
     v *= f;
 % endfor
 
