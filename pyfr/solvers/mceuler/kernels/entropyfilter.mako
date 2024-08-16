@@ -51,8 +51,9 @@
     fpdtype_t ffac[${order + 1}];
     fpdtype_t v = ffac[0] = 1.0;
 
-    // Utilize exp(-zeta*p**2) = pow(f, p**2)
+    // Utilize exp(-zeta*(p+1)**2) = exp(-zeta*p**2)*exp(-2*zeta*p)*exp(-zeta)
 % for d in range(1, order + 1):
+    ffac[${d}] = ffrac[${d - 1}]*v*v*f;
     v *= f;
     ffac[${d}] = v*v;
 % endfor
