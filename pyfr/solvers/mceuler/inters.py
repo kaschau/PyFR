@@ -8,7 +8,7 @@ class MCFluidIntIntersMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.cfg.get('solver', 'shock-capturing') == 'entropy-filter':
+        if self._ef_enabled:
             self._be.pointwise.register('pyfr.solvers.mceuler.kernels.intcent')
             self._be.pointwise.register('pyfr.solvers.mceuler.kernels.intcjump')
 
@@ -34,7 +34,7 @@ class TplargsMixin:
         super().__init__(*args, **kwargs)
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
-        if self.cfg.get('solver', 'shock-capturing') == 'entropy-filter':
+        if self._ef_enabled:
             self.Y_tol = self.cfg.getfloat('solver-entropy-filter', 'Y-tol',
                                            1e-12)
             self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
@@ -64,7 +64,7 @@ class MCFluidMPIIntersMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.cfg.get('solver', 'shock-capturing') == 'entropy-filter':
+        if self._ef_enabled:
             self._be.pointwise.register('pyfr.solvers.mceuler.kernels.mpicent')
 
             self.kernels['comm_entropy'] = lambda: self._be.kernel(
