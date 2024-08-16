@@ -55,7 +55,6 @@
 % for d in range(1, order + 1):
     ffac[${d}] = ffrac[${d - 1}]*v*v*f;
     v *= f;
-    ffac[${d}] = v*v;
 % endfor
 
     // Compute filtered solution
