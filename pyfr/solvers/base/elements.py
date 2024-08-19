@@ -120,8 +120,26 @@ class BaseElements:
         # Bring simulation constants into scope
         vars = self.cfg.items_as('constants', float)
 
-        # Get the physical location of each solution point
-        coords = self.ploc_at_np('upts').swapaxes(0, 1)
+        # See if performing L2 projection
+        ename = self.basis.name
+        upts = self.cfg.get(f'solver-elements-{ename}', 'soln-pts')
+        qdeg = (self.cfg.getint('soln-ics', f'quad-deg-{ename}', 0) or
+                self.cfg.getint('soln-ics', f'quad-deg', 0))
+        # Default to solution points if quad-pts are not specified
+        qpts = self.cfg.get('soln-ics', f'quad-pts-{ename}', upts)
+
+        # Get the physical location of each interpolation point
+        if qdeg:
+            qrule = get_quadrule(ename, qpts, qdeg=qdeg)
+            coords = self.ploc_at_np(qrule.pts)
+
+            # Compute projection operator
+            m8 = proj_l2(qrule, self.basis.ubasis)
+        else:
+            m8 = None
+            coords = self.ploc_at_np('upts')
+
+        vars |= dict(zip('xyz', coords.swapaxes(0, 1)))
 
         # Import the udf
         sys.path.insert(0, os.getcwd())
@@ -130,9 +148,6 @@ class BaseElements:
         except ImportError:
             raise ImportError('''Failed to import udf_ics method from
                               local udf.py''')
-
-        # Get the physical location of each solution point
-        coords = self.ploc_at_np('upts').swapaxes(0, 1)
 
         ics = udf.ics(coords, vars)
 
@@ -145,7 +160,7 @@ class BaseElements:
 
         # Convert from primitive to conservative form
         for i, v in enumerate(self.pri_to_con(ics, self.cfg)):
-            self.scal_upts[:, i, :] = v
+            self.scal_upts[:, i, :] = m8 @ v if m8 is not None else v
 
     def set_ics_from_soln(self, solnmat, solncfg):
         # Recreate the existing solution basis
