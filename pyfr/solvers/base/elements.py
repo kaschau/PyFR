@@ -153,7 +153,7 @@ class BaseElements:
 
         if len(ics) != self.nvars or not isinstance(ics, list):
             raise ValueError('''Invalid return of user defined
-                                initial consitions''')
+                                initial conditions''')
 
         # Allocate
         self.scal_upts = np.empty((self.nupts, self.nvars, self.neles))
