@@ -6,18 +6,20 @@
 <% ns = c['ns'] %>
 <% Yix = ndims + 2 %>
 
-<%pyfr:macro name='get_min_Y' params='q, Ymin'>
+<%pyfr:macro name='get_min_rhoY' params='u, q, rhoYmin'>
 
-    Ymin = ${fpdtype_max};
-    % for n in range(ns):
-    Ymin = fmin(Ymin, q[${Yix + n}]);
+    rhoYmin = ${fpdtype_max};
+    % for n in range(ns - 1):
+    rhoYmin = fmin(rhoYmin, u[${Yix + n}]);
     % endfor
+    // Now test the nth species
+    rhoYmin = fmin(rhoYmin, u[0]*q[${Yix + ns - 1}]);
 
 </%pyfr:macro>
 
-<%pyfr:macro name='get_minima' params='u, Ymin, rhomin, pmin, emin'>
+<%pyfr:macro name='get_minima' params='u, rhoYmin, rhomin, pmin, emin'>
 
-    Ymin = ${fpdtype_max};
+    rhoYmin = ${fpdtype_max};
     rhomin = ${fpdtype_max};
     pmin = ${fpdtype_max};
     emin = ${fpdtype_max};
@@ -34,12 +36,12 @@
         fpdtype_t qhi[${3+ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
-        fpdtype_t Ymintemp;
-        ${pyfr.expand('get_min_Y', 'qi', 'Ymintemp')};
+        fpdtype_t rhoYmintemp;
+        ${pyfr.expand('get_min_rhoY', 'ui', 'qi', 'rhoYmintemp')};
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
-        Ymin = fmin(Ymin, Ymintemp);
+        rhoYmin = fmin(rhoYmin, rhoYmintemp);
         rhomin = fmin(rhomin, ui[0]);
         pmin = fmin(pmin, qi[0]);
         emin = fmin(emin, e);
@@ -75,7 +77,7 @@
     }
 </%pyfr:macro>
 
-<%pyfr:macro name='apply_filter_single' params='up, f, Ymin, rho, p, e'>
+<%pyfr:macro name='apply_filter_single' params='up, f, rhoYmin, rho, p, e'>
 
     fpdtype_t u[${nvars}];
 
@@ -100,7 +102,7 @@
     fpdtype_t q[${nvars+1}];
     fpdtype_t qh[${3+ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
-    ${pyfr.expand('get_min_Y', 'q', 'Ymin')};
+    ${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoYmin')};
     rho = u[0];
     p = q[0];
     ${pyfr.expand('compute_entropy', 'u', 'q', 'e')};
@@ -115,18 +117,20 @@
               sensor='in fpdtype_t[2]'
               zeta='out fpdtype_t'>
 
-    fpdtype_t Ymin, rhomin, pmin, emin;
-    fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
+    fpdtype_t rhoYmin, rhomin, pmin, emin;
+    ## fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
+    fpdtype_t kxrcf = sensor[0];
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
     for (int fidx = 0; fidx < ${nfaces}; fidx++) entmin = fmin(entmin, entmin_int[fidx]);
 
     // Check if solution is within bounds
-    ${pyfr.expand('get_minima', 'u', 'Ymin', 'rhomin', 'pmin', 'emin')};
+    ${pyfr.expand('get_minima', 'u', 'rhoYmin', 'rhomin', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (Ymin < -${Y_tol} || rhomin < ${d_min} || pmin < ${p_min} || (emin < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+    if (rhoYmin < ${Y_tol} || rhomin < ${d_min} || pmin < ${p_min} || (emin < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+    ## if (rhoYmin < ${Y_tol} || rhomin < ${d_min} || pmin < ${p_min})
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -142,9 +146,9 @@
         fpdtype_t f = 1.0;
         fpdtype_t f_low, f_high, fnew;
 
-        fpdtype_t Ymin, rho, p, e;
-        fpdtype_t Ymin_low, rho_low, p_low, e_low;
-        fpdtype_t Ymin_high, rho_high, p_high, e_high;
+        fpdtype_t rhoYmin, rho, p, e;
+        fpdtype_t rhoYmin_low, rho_low, p_low, e_low;
+        fpdtype_t rhoYmin_high, rho_high, p_high, e_high;
 
         // Compute f on a rolling basis per solution point
         fpdtype_t up[${order+1}][${nvars}];
@@ -157,41 +161,44 @@
         % endfor
 
             // Compute constraints with current minimum f value
-            ${pyfr.expand('apply_filter_single', 'up', 'f', 'Ymin', 'rho', 'p', 'e')};
+            ${pyfr.expand('apply_filter_single', 'up', 'f', 'rhoYmin', 'rho', 'p', 'e')};
 
             // Update f if constraints aren't satisfied
-            if (Ymin < -${Y_tol} || rho < ${d_min} || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+            if (rhoYmin < ${Y_tol} || rho < ${d_min} || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+            ## if (rhoYmin < ${Y_tol} || rho < ${d_min} || p < ${p_min})
             {
                 // Set root-finding interval
                 f_high = f;
                 f_low = 0.0;
 
                 // Compute brackets
-                Ymin_high = Ymin;
+                rhoYmin_high = rhoYmin;
                 rho_high = rho;
-                p_high = p; e_high = e;
+                p_high = p;
+                e_high = e;
 
-                ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'Ymin_low', 'rho_low', 'p_low', 'e_low')};
+                ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'rhoYmin_low', 'rho_low', 'p_low', 'e_low')};
 
                 // Regularize constraints to be around zero
-                Ymin_low += ${Y_tol}; Ymin_high += ${Y_tol};
+                rhoYmin_low -= ${Y_tol}; rhoYmin_high -= ${Y_tol};
                 rho_low -= ${d_min}; rho_high -= ${d_min};
                 p_low -= ${p_min}; p_high -= ${p_min};
                 e_low -= entmin - ${e_tol}; e_high -= entmin - ${e_tol};
 
-                // Iterate filter strength with Illinois algorithm
+                // Iterate filter strength with bisection algorithm
                 for (int iter = 0; iter < ${niters} && f_high - f_low > ${f_tol}; iter++)
                 {
                     fnew = 0.5*(f_low + f_high);
 
                     // Compute filtered state
-                    ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'Ymin', 'rho', 'p', 'e')};
+                    ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'rhoYmin', 'rho', 'p', 'e')};
 
                     // Update brackets
-                    if (Ymin < -${Y_tol} || rho < ${d_min} || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+                    if (rhoYmin < ${Y_tol} || rho < ${d_min} || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
+                    ## if (rhoYmin < ${Y_tol} || rho < ${d_min} || p < ${p_min})
                     {
                         f_high = fnew;
-                        Ymin_high = Ymin + ${Y_tol};
+                        rhoYmin_high = rhoYmin - ${Y_tol};
                         rho_high = rho - ${d_min};
                         p_high = p - ${p_min};
                         e_high = e - (entmin - ${e_tol});
@@ -199,7 +206,7 @@
                     else
                     {
                         f_low = fnew;
-                        Ymin_low = Ymin + ${Y_tol};
+                        rhoYmin_low = rhoYmin - ${Y_tol};
                         rho_low = rho - ${d_min};
                         p_low = p - ${p_min};
                         e_low = e - (entmin - ${e_tol});
@@ -214,7 +221,7 @@
         ${pyfr.expand('apply_filter_full', 'umodes', 'vdm', 'u', 'f')};
 
         // Calculate minimum entropy from filtered solution
-        ${pyfr.expand('get_minima', 'u', 'Ymin', 'rhomin', 'pmin', 'emin')};
+        ${pyfr.expand('get_minima', 'u', 'rhoYmin', 'rhomin', 'pmin', 'emin')};
 
         zeta = f;
     }else{

@@ -32,6 +32,8 @@ class cpgEOS(BaseEOS):
         ns = consts['ns']
         ndims = len(pris) - (ns - 1) - 2
 
+        for i in it.chain(it.chain(pris[ndims+2::])):
+            i[:] = np.clip(i, 1e-12, 1.0 - 1e-12)
 
         # Compute ns species
         Yns = 1.0 - sum(pris[ndims+2::])
