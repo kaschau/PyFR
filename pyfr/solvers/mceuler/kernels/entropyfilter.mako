@@ -36,8 +36,6 @@
         fpdtype_t qhi[${3+ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
-        fpdtype_t Ymintemp;
-        ${pyfr.expand('get_min_Y', 'qi', 'Ymintemp')};
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         fpdtype_t rhoYmintemp;
@@ -143,6 +141,7 @@
               zeta='out fpdtype_t'>
 
     fpdtype_t rhomin, rhoYmin, pmin, emin;
+    fpdtype_t kxrcf = fmax(sensor[0], sensor[1]);
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
@@ -152,7 +151,7 @@
     ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'rhoYmin', 'pmin', 'emin')};
 
     // Filter if out of bounds
-    if (rhomin < ${d_min} || rhoYmin < 0.0 || pmin < ${p_min} || emin < entmin - ${e_tol})
+    if (rhomin < ${d_min} || rhoYmin < 0.0 || pmin < ${p_min} || (emin < entmin - ${e_tol} && kxrcf >= ${s_switch}))
     {
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -184,7 +183,7 @@
             ${pyfr.expand('apply_filter_single', 'up', 'f', 'rho', 'rhoY', 'p', 'e')};
 
             // Update f if constraints aren't satisfied
-            if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+            if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
             {
                 // Set root-finding interval
                 f_high = f;
@@ -202,7 +201,7 @@
                     ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'rho', 'rhoY', 'p', 'e')};
 
                     // Update brackets
-                    if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+                    if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || (e < entmin - ${e_tol} && kxrcf >= ${s_switch}))
                         f_high = fnew;
                     else
                         f_low = fnew;
@@ -217,6 +216,9 @@
 
         // Calculate minimum entropy from filtered solution
         ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'rhoYmin', 'pmin', 'emin')};
+        zeta = f;
+    }else{
+        zeta = 0.0;
     }
 
     // Set new minimum entropy within element for next stage
