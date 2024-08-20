@@ -7,7 +7,6 @@
     fpdtype_t T = q[${ndims + 1}];
     fpdtype_t rho = u[0];
     e = 0.0;
-    fpdtype_t rhoYmin = ${fpdtype_max};
     // Compute mixture entropy
     % for n in range(ns):
     // ${c['names'][n]} Entropy
