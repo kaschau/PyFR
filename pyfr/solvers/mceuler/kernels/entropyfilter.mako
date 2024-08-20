@@ -65,9 +65,9 @@
         fpdtype_t rhoYmintemp;
         ${pyfr.expand('get_min_rhoY', 'uf', 'qf', 'rhoYmintemp')};
 
-        rhomin = fmin(rhomin, ui[0]);
+        rhomin = fmin(rhomin, uf[0]);
         rhoYmin = fmin(rhoYmin, rhoYmintemp);
-        pmin = fmin(pmin, qi[0]);
+        pmin = fmin(pmin, qf[0]);
         emin = fmin(emin, e);
     }
     % endif
