@@ -124,6 +124,8 @@
         % endfor
     }
     rho = u[0];
+    fpdtype_t q[${nvars+1}];
+    fpdtype_t qh[${3+ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
     ${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoY')};
     p = q[0];
