@@ -170,7 +170,7 @@
 
         // Compute f on a rolling basis per solution point
         fpdtype_t up[${order+1}][${nvars}];
-        for (int uidx = 0; uidx < ${nepts}; uidx++)
+        for (int uidx = 0; uidx < ${nefpts}; uidx++)
         {
             // Group nodal contributions by common filter factor
             % for pidx, vidx in pyfr.ndrange(order+1, nvars):
