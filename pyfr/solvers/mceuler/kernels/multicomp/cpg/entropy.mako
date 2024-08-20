@@ -12,10 +12,9 @@
     // ${c['names'][n]} Entropy
     {
       <% cvk = c['cp0'][n] - c['Ru']/c['MW'][n] %>
-      fpdtype_t cvk = ${cvk};
-      fpdtype_t gammak = ${c['cp0'][n]/cvk};
+      <% gammak = c['cp0'][n]/cvk %>
       fpdtype_t rhoYk = rho*q[${Yix + n}];
-      e += rhoYk > 0.0 ? cvk*rhoYk*log(pow(rhoYk, 1.0 - gammak)*T) : 0.0;
+      e += rhoYk > 0.0 ? ${cvk}*rhoYk*log(pow(rhoYk, ${1.0 - gammak})*T) : 0.0;
     }
     % endfor
     e = ((T > 0) && (q[0] > 0)) ? e : ${fpdtype_max};
