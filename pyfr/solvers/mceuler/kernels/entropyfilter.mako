@@ -56,14 +56,17 @@
         % for vidx in range(nvars):
         uf[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
+
         // Compute thermodynamic properties
         fpdtype_t qf[${nvars+1}];
         fpdtype_t qhf[${3+ns}];
         ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
+
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'uf', 'qf', 'e')};
         fpdtype_t rhoYmintemp;
         ${pyfr.expand('get_min_rhoY', 'uf', 'qf', 'rhoYmintemp')};
+
         rhomin = fmin(rhomin, ui[0]);
         rhoYmin = fmin(rhoYmin, rhoYmintemp);
         pmin = fmin(pmin, qi[0]);
@@ -169,7 +172,7 @@
 
         // Compute f on a rolling basis per solution point
         fpdtype_t up[${order+1}][${nvars}];
-        for (int uidx = 0; uidx < ${nepts}; uidx++)
+        for (int uidx = 0; uidx < ${nefpts}; uidx++)
         {
             // Group nodal contributions by common filter factor
             % for pidx, vidx in pyfr.ndrange(order+1, nvars):
