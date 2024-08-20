@@ -105,15 +105,15 @@ class BaseMCFluidElements:
             # Template arguments
             consts = self.cfg.items_as('constants', float)
             consts |= self.mcfluid.consts
+            fpts_in_upts = self.basis.fpts_in_upts
+            self.nefpts = self.nupts if fpts_in_upts else self.nupts + self.nfpts
             eftplargs = {
-                'ndims': self.ndims,
-                'nupts': self.nupts,
-                'nfpts': self.nfpts,
-                'nvars': self.nvars,
-                'nfaces': self.nfaces,
+                'ndims': self.ndims, 'nupts': self.nupts,
+                'nfpts': self.nfpts, 'nefpts': self.nefpts,
+                'nvars': self.nvars, 'nfaces': self.nfaces,
                 'c': consts,
                 'eos': self.mcfluid.eos,
-                'order': self.basis.order
+                'order': self.basis.order, 'fpts_in_upts': fpts_in_upts
             }
 
             # Check to see if running anti-aliasing
@@ -121,17 +121,9 @@ class BaseMCFluidElements:
                 raise ValueError('Entropy filter not compatible with '
                                  'anti-aliasing.')
 
-            # Check to see if running collocated solution/flux points
-            m0 = self.basis.m0
-            mrowsum = np.max(np.abs(np.sum(m0, axis=1) - 1.0))
-            if np.min(m0) < -1e-8 or mrowsum > 1e-8:
-                raise ValueError('Entropy filter requires flux points to be a '
-                                 'subset of solution points or a convex '
-                                 'combination thereof.')
-
             # Minimum Mass fraction/pressure constraints
-            eftplargs['Y_tol'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'Y-tol', 1e-12)
+            eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'd-min', 1e-6)
             eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'p-min', 1e-6)
 
@@ -142,10 +134,8 @@ class BaseMCFluidElements:
             # Hidden kernel parameters
             eftplargs['f_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'f-tol', 1e-4)
-            eftplargs['ill_tol'] = self.cfg.getfloat('solver-entropy-filter',
-                                                     'ill-tol', 1e-6)
             eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
-                                                    'niters', 20)
+                                                    'niters', 2)
             efunc = self.cfg.get('solver-entropy-filter', 'e-func',
                                  'physical')
             if efunc not in {'physical'}:
@@ -160,14 +150,15 @@ class BaseMCFluidElements:
             # Compute local entropy bounds
             self.kernels['local_entropy'] = lambda uin: self._be.kernel(
                 'entropylocal', tplargs=eftplargs, dims=[self.neles],
-                u=self.scal_upts[uin], entmin_int=self.entmin_int
+                u=self.scal_upts[uin], entmin_int=self.entmin_int,
+                m0=self.m0
             )
 
             # Apply entropy filter
             self.kernels['entropy_filter'] = lambda uin: self._be.kernel(
                 'entropyfilter', tplargs=eftplargs, dims=[self.neles],
                 u=self.scal_upts[uin], entmin_int=self.entmin_int,
-                vdm=self.vdm, invvdm=self.invvdm
+                vdm=self.vdm_ef, invvdm=self.invvdm, m0=self.m0
             )
 
 

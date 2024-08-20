@@ -8,7 +8,8 @@
 
 <%pyfr:kernel name='entropylocal' ndim='1'
               u='in fpdtype_t[${str(nupts)}][${str(nvars)}]'
-              entmin_int='out fpdtype_t[${str(nfaces)}]'>
+              entmin_int='out fpdtype_t[${str(nfaces)}]'
+              m0='in broadcast fpdtype_t[${str(nfpts)}][${str(nupts)}]'>
     // Compute minimum entropy across element
     fpdtype_t ui[${nvars}], e;
 
@@ -28,6 +29,22 @@
 
         entmin = fmin(entmin, e);
     }
+    % if not fpts_in_upts:
+    fpdtype_t uf[${nvars}];
+    for (int fidx = 0; fidx < ${nfpts}; fidx++)
+    {
+        % for vidx in range(nvars):
+        uf[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
+        % endfor
+        // Compute thermodynamic properties
+        fpdtype_t qf[${nvars+1}];
+        fpdtype_t qhf[${3+ns}];
+        ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
+
+        ${pyfr.expand('compute_entropy', 'uf', 'qf', 'e')};
+        entmin = fmin(entmin, e);
+    }
+    % endif
 
     // Set interface entropy values to minimum
 % for i in range(nfaces):
