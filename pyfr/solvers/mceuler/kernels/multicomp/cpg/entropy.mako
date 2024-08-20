@@ -15,10 +15,8 @@
       <% cvk = c['cp0'][n] - c['Ru']/c['MW'][n] %>\
       <% gammak = c['cp0'][n]/cvk %>\
       fpdtype_t rhoYk = rho*q[${Yix + n}];
-      e += ${cvk}*rhoYk * log(pow(fmax(${Y_tol*d_min}, rhoYk), ${1.0 - gammak})*T);
-
-      rhoYmin = fmin(rhoYmin, rhoYk);
+      e += rhoYk > 0.0 ? cvk*rhoYk*log(pow(rhoYk, 1.0 - gammak)*T) : 0.0;
     }
     % endfor
-    e = ((T > 0.0) && (rhoYmin > -${Y_tol*d_min})) ? e/rho : ${fpdtype_max};
+    e = ((T > 0) && (q[0] > 0)) ? e : ${fpdtype_max};
 </%pyfr:macro>
