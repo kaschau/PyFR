@@ -105,6 +105,8 @@
 <%pyfr:macro name='apply_filter_single' params='up, f, rho, rhoY, p, e'>
 
     fpdtype_t u[${nvars}];
+    fpdtype_t q[${nvars+1}];
+    fpdtype_t qh[${3+ns}];
 
     // Start accumulation
     % for vidx in range(nvars):
@@ -124,8 +126,6 @@
         % endfor
     }
     rho = u[0];
-    fpdtype_t q[${nvars+1}];
-    fpdtype_t qh[${3+ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
     ${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoY')};
     p = q[0];
