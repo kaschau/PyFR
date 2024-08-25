@@ -78,7 +78,7 @@
     fpdtype_t ffac[${order + 1}];
     fpdtype_t v = ffac[0] = 1.0;
 
-    // Utilize exp(-zeta*p**2) = pow(f, p**2)
+    // Utilize exp(-zeta*(p+1)**2) = exp(-zeta*p**2)*exp(-2*zeta*p)*exp(-zeta)
 % for d in range(1, order + 1):
     ffac[${d}] = ffac[${d - 1}]*v*v*f;
     v *= f;
@@ -122,7 +122,7 @@
         v *= f;
 
         % for vidx in range(nvars):
-        u[${vidx}] += v*v*up[pidx][${vidx}];
+        u[${vidx}] += v2*up[pidx][${vidx}];
         % endfor
     }
     rho = u[0];
