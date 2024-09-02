@@ -308,6 +308,7 @@ class BaseElements:
 
     def sliceat(fn):
         @memoize
+        @wraps(fn)
         def newfn(self, name, side=None):
             mat = fn(self, name)
 

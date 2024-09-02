@@ -174,8 +174,10 @@ class PointLocator:
         # Apply three iterations of Newton's method
         for k in range(3):
             jac_ops = basis.jac_nodal_basis_at(ktlocs, clean=False)
-            kjplocs = np.einsum('ijk,jkl->kli', jac_ops, spts)
-            ktlocs -= np.linalg.solve(kjplocs, kplocs - plocs)
+
+            A = np.einsum('ijk,jkl->kli', jac_ops, spts)
+            b = kplocs - plocs
+            ktlocs -= np.linalg.solve(A, b[..., None]).squeeze()
 
             ops = basis.nodal_basis_at(ktlocs, clean=False)
             np.einsum('ij,jik->ik', ops, spts, out=kplocs)
