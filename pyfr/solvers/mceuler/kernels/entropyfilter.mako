@@ -188,9 +188,6 @@
                 f_high = f;
                 f_low = 0.0;
 
-                // Compute brackets
-                ${pyfr.expand('apply_filter_single', 'up', 'f_low', 'rho', 'rhoYmin', 'p', 'e')};
-
                 for (int iter = 0; iter < ${niters} && f_high - f_low > ${f_tol}; iter++)
                 {
                     // Compute new guess using bisection
