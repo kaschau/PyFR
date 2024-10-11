@@ -79,15 +79,15 @@
     fpdtype_t w = ul[3]*rcprho;
 
     // Velocity derivatives (rho*grad[u,v,w])
-    fpdtype_t u_x = grad_uin[0][1] - u*rho_x;
-    fpdtype_t u_y = grad_uin[1][1] - u*rho_y;
-    fpdtype_t u_z = grad_uin[2][1] - u*rho_z;
-    fpdtype_t v_x = grad_uin[0][2] - v*rho_x;
-    fpdtype_t v_y = grad_uin[1][2] - v*rho_y;
-    fpdtype_t v_z = grad_uin[2][2] - v*rho_z;
-    fpdtype_t w_x = grad_uin[0][3] - w*rho_x;
-    fpdtype_t w_y = grad_uin[1][3] - w*rho_y;
-    fpdtype_t w_z = grad_uin[2][3] - w*rho_z;
+    fpdtype_t u_x = grad_ul[0][1] - u*rho_x;
+    fpdtype_t u_y = grad_ul[1][1] - u*rho_y;
+    fpdtype_t u_z = grad_ul[2][1] - u*rho_z;
+    fpdtype_t v_x = grad_ul[0][2] - v*rho_x;
+    fpdtype_t v_y = grad_ul[1][2] - v*rho_y;
+    fpdtype_t v_z = grad_ul[2][2] - v*rho_z;
+    fpdtype_t w_x = grad_ul[0][3] - w*rho_x;
+    fpdtype_t w_y = grad_ul[1][3] - w*rho_y;
+    fpdtype_t w_z = grad_ul[2][3] - w*rho_z;
 
     // Enforce zero normal temperature gradient in wall
     fpdtype_t e_Y_Y_x = 0.0;
