@@ -99,7 +99,7 @@
 </%pyfr:macro>
 
 % elif ndims == 3:
-<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, fout'>
+<%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
     fpdtype_t rho  = uin[0];
     fpdtype_t rhou = uin[1], rhov = uin[2], rhow = uin[3];
     fpdtype_t rhoE    = uin[4];
