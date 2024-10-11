@@ -102,10 +102,12 @@
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
     fpdtype_t rho  = uin[0];
     fpdtype_t rhou = uin[1], rhov = uin[2], rhow = uin[3];
-    fpdtype_t rhoE    = uin[4];
+    fpdtype_t rhoE = uin[4];
 
     fpdtype_t rcprho = 1.0/rho;
     fpdtype_t u = rcprho*rhou, v = rcprho*rhov, w = rcprho*rhow;
+    fpdtype_t mu = qt[0];
+    fpdtype_t kappa = qt[1];
 
     fpdtype_t rho_x = grad_uin[0][0];
     fpdtype_t rho_y = grad_uin[1][0];
