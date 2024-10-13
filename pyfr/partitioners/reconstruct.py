@@ -16,24 +16,23 @@ def reconstruct_partitioning(mesh, soln, progress=NullProgressSequence):
     sparts = defaultdict(list)
 
     # Read the partition data from the solution
-    with progress.start('Read partitioning data'):
-        for k in soln[prefix]:
-            if (m := re.match(r'(p(?:\d+)-(\w+))-parts$', k)):
-                parts = soln[f'{prefix}/{k}'][:]
+    for k in soln[prefix]:
+        if (m := re.match(r'(p(?:\d+)-(\w+))-parts$', k)):
+            parts = soln[f'{prefix}/{k}'][:]
 
-                idxs = soln.get(f'{prefix}/{m[1]}-idxs')
-                if idxs is None:
-                    idxs = np.arange(len(parts))
+            idxs = soln.get(f'{prefix}/{m[1]}-idxs')
+            if idxs is None:
+                idxs = np.arange(len(parts))
 
-                sparts[m[2]].append((idxs, parts))
+            sparts[m[2]].append((idxs, parts))
 
-        # Group the data together by element type
-        for etype, sp in sparts.items():
-            idxs, parts = map(np.concatenate, zip(*sp))
+    # Group the data together by element type
+    for etype, sp in sparts.items():
+        idxs, parts = map(np.concatenate, zip(*sp))
 
-            sparts[etype] = parts[np.argsort(idxs)]
+        sparts[etype] = parts[np.argsort(idxs)]
 
-        vparts = np.concatenate([p for _, p in sorted(sparts.items())])
+    vparts = np.concatenate([p for _, p in sorted(sparts.items())])
 
     # Construct the global connectivity array
     with progress.start('Construct global connectivity array'):
