@@ -94,9 +94,9 @@
     fpdtype_t e_Y_Y_y = 0.0;
     fpdtype_t e_Y_Y_z = 0.0;
     ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'ul', 'ql', 'qhl', 'grad_ul')};
-    grad_ur[0][3] = u*u_x + v*v_x + w*w_x + rho*e_Y_Y_x + E*rho_x;
-    grad_ur[1][3] = u*u_y + v*v_y + w*w_y + rho*e_Y_Y_y + E*rho_y;
-    grad_ur[2][3] = u*u_z + v*v_z + w*w_z + rho*e_Y_Y_z + E*rho_z;
+    grad_ur[0][4] = u*u_x + v*v_x + w*w_x + rho*e_Y_Y_x + E*rho_x;
+    grad_ur[1][4] = u*u_y + v*v_y + w*w_y + rho*e_Y_Y_y + E*rho_y;
+    grad_ur[2][4] = u*u_z + v*v_z + w*w_z + rho*e_Y_Y_z + E*rho_z;
 
     // Enforce zero normal species gradient in wall
     fpdtype_t Y;
