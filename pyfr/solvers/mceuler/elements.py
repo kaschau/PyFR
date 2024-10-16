@@ -107,13 +107,16 @@ class BaseMCFluidElements:
             consts |= self.mcfluid.consts
             fpts_in_upts = self.basis.fpts_in_upts
             self.nefpts = self.nupts if fpts_in_upts else self.nupts + self.nfpts
+            ub = self.basis.ubasis
+            meanwts = ub.invvdm[:, 0] / np.sum(ub.invvdm[:, 0])
             eftplargs = {
                 'ndims': self.ndims, 'nupts': self.nupts,
                 'nfpts': self.nfpts, 'nefpts': self.nefpts,
                 'nvars': self.nvars, 'nfaces': self.nfaces,
                 'c': consts,
                 'eos': self.mcfluid.eos,
-                'order': self.basis.order, 'fpts_in_upts': fpts_in_upts
+                'order': self.basis.order, 'fpts_in_upts': fpts_in_upts,
+                'meanwts': meanwts
             }
 
             # Check to see if running anti-aliasing
@@ -136,11 +139,12 @@ class BaseMCFluidElements:
                                                    'f-tol', 1e-4)
             eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
                                                     'niters', 2)
-            efunc = self.cfg.get('solver-entropy-filter', 'e-func',
-                                 'physical')
-            if efunc not in {'physical'}:
-                raise ValueError('Only physical entropy compatible with '
-                                 'multicomponent system.')
+
+            # Use linearised constraints/limiting kernel approach from
+            # Ching et al. (doi:10.1016/j.jcp.2024.112881)
+            form = self.cfg.get('solver-entropy-filter', 'formulation',
+                                'nonlinear')
+            eftplargs['linearise'] = form == 'linearised'
 
             # Precompute basis orders for filter
             ubdegs = self.basis.ubasis.degrees
