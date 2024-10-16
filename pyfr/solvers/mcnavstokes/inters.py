@@ -111,8 +111,6 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
             self._be.pointwise.register(
                 'pyfr.solvers.mcnavstokes.kernels.bccent'
             )
-            self._tplargs['e_func'] = self.cfg.get('solver-entropy-filter',
-                                                   'e-func', 'numerical')
 
             self.kernels['comm_entropy'] = lambda: self._be.kernel(
                 'bccent', tplargs=self._tplargs, dims=[self.ninterfpts],
