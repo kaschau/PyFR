@@ -33,7 +33,7 @@
 
         // Compute thermodynamic properties
         fpdtype_t qi[${nvars+1}];
-        fpdtype_t qhi[${3+ns}];
+        fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
         fpdtype_t e;
@@ -57,7 +57,7 @@
 
         // Compute thermodynamic properties
         fpdtype_t qf[${nvars+1}];
-        fpdtype_t qhf[${3+ns}];
+        fpdtype_t qhf[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
 
         fpdtype_t e;
@@ -106,7 +106,7 @@
 
     fpdtype_t u[${nvars}];
     fpdtype_t q[${nvars+1}];
-    fpdtype_t qh[${3+ns}];
+    fpdtype_t qh[${4 + ns}];
 
     // Start accumulation
     % for vidx in range(nvars):
