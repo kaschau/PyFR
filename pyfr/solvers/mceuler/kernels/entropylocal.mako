@@ -21,8 +21,8 @@
     % endfor
 
         // Compute thermodynamic properties
-        fpdtype_t qi[${nvars+1}];
-        fpdtype_t qhi[${3+ns}];
+        fpdtype_t qi[${nvars + 1}];
+        fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
@@ -38,7 +38,7 @@
         % endfor
         // Compute thermodynamic properties
         fpdtype_t qf[${nvars+1}];
-        fpdtype_t qhf[${3+ns}];
+        fpdtype_t qhf[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
 
         ${pyfr.expand('compute_entropy', 'uf', 'qf', 'e')};

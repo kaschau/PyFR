@@ -47,7 +47,7 @@
 
   // Compute thermodynamic properties
   fpdtype_t q[${nvars + 1}];
-  fpdtype_t qh[${3 + ns}];
+  fpdtype_t qh[${4 + ns}];
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t T = q[${ndims+1}];
@@ -77,7 +77,7 @@
             fpdtype_t scs = ${N7[n, m + 0]} * logT +
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
-            qh[${2 + n}] = hi;
+            qh[${4 + n}] = hi;
             cp += cps*q[${Yix + n}];
         }else
         {
@@ -87,7 +87,7 @@
             fpdtype_t scs = ${N7[n, m + 0]} * logT +
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
-            qh[${2 + n}] = hi;
+            qh[${4 + n}] = hi;
             cp += cps*q[${Yix + n}];
         }
 % endfor
@@ -170,7 +170,7 @@
 % else:
     fpdtype_t dYdt = 0.0;
 % endif
-    dTdt -= qh[${2 + n}] * dYdt;
+    dTdt -= qh[${4 + n}] * dYdt;
     q[${Yix + n}] += dYdt / rho * tSub;
     q[${Yix + n}] = fmin(1.0, fmax(0.0, q[${Yix + n}]));
     tempsum += q[${Yix + n}];
@@ -204,7 +204,6 @@
   printf("chem&omega_${c['names'][n]} = %.14f\n", src[${Yix+n}]);
 % endfor
   printf("*********************************\n");
-
 #endif
 
 </%pyfr:macro>

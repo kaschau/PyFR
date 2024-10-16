@@ -21,7 +21,7 @@
 
     // Compute thermodynamic properties
     fpdtype_t q[${nvars + 1}];
-    fpdtype_t qh[${3 + ns}];
+    fpdtype_t qh[${4 + ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
     // Compute the flux

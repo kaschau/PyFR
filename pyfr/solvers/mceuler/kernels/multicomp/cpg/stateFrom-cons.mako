@@ -43,16 +43,17 @@
     q[${ndims + 1}] = e / (cp - R);
     q[0] = rho * R * q[${ndims + 1}];
 
-
     // Mixture gamma, cp
     qh[0] = cp / (cp - R);
     qh[1] = cp;
     // Mixture speed of sound
     qh[2] = sqrt(qh[0] * R * q[${ndims + 1}]);
+    // internal energy
+    qh[3] = rho*e;
 
     // Store species enthalpy (per mass)
 % for n in range(ns):
-    qh[${3+n}] = q[${ndims+1}]*${c['cp0'][n]};
+    qh[${4+n}] = q[${ndims+1}]*${c['cp0'][n]};
 % endfor
 
 #ifdef DEBUG
@@ -60,7 +61,7 @@
   printf("CPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
   printf("therm&rho = %.14f\n", u[0]);
-  printf("therm&e = %.14f\n", e);
+  printf("therm&e = %.14f\n", qh[3]/rho);
 % for n in range(ns-1):
   printf("therm&rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
 % endfor
@@ -77,8 +78,9 @@
   printf("therm&gamma = %.14f\n", qh[0]);
   printf("therm&cp = %.14f\n", qh[1]);
   printf("therm&c = %.14f\n", qh[2]);
+  printf("therm&rhoe = %.14f\n", qh[3]);
 % for n in range(ns):
-  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
+  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${4+n}]);
 % endfor
   printf("*********************************\n");
 #endif

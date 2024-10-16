@@ -11,8 +11,8 @@
     ## p, u,v(,w),   T    ,   Y0    ...  Yns
 
     ## qh stores mixture thermodynamic properties
-    ## 0,  1,     2, 3..3 + ns
-    ## cp, gamma, c, hi1..hins
+    ## 0,  1,     2, 3,    4..4 + ns
+    ## cp, gamma, c, rhoe, hi1..hins
     fpdtype_t rho = u[0];
     fpdtype_t invrho = 1.0/rho;
     fpdtype_t rhoE = u[${ndims + 1}];
@@ -54,6 +54,9 @@
     // Mixture speed of sound
     qh[2] = sqrt(qh[0] * R * q[${ndims + 1}]);
 
+    // internal energy
+    qh[3] = rho*e;
+
     // Store species enthalpy (per mass)
     // ^ done in T_iter
 
@@ -62,7 +65,7 @@
   printf("TPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
   printf("therm&rho = %.14f\n", u[0]);
-  printf("therm&e = %.14f\n", e);
+  printf("therm&e = %.14f\n", qh[3]/rho);
 % for n in range(ns-1):
   printf("therm&rhoY_${c['names'][n]} = %.14f\n", u[${Yix+n}]);
 % endfor
@@ -80,7 +83,7 @@
   printf("therm&cp = %.14f\n", qh[1]);
   printf("therm&c = %.14f\n", qh[2]);
 % for n in range(ns):
-  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${3+n}]);
+  printf("therm&h_${c['names'][n]} = %.14f\n", qh[${4+n}]);
 % endfor
   printf("*********************************\n");
 #endif
