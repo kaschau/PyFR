@@ -32,7 +32,7 @@
         }
         cp += cps * q[${Yix+n}];
         h += hs * q[${Yix+n}];
-        qh[${3+n}] = hs;
+        qh[${4 + n}] = hs;
         }
 % endfor
     error = e - (h - Rmix * T);

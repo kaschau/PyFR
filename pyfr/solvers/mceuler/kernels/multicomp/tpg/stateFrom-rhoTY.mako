@@ -54,7 +54,7 @@
     }
     h += hs * q[${Yix+n}];
     cp += cps * q[${Yix+n}];
-    qh[${3+n}] = hs;
+    qh[${4 + n}] = hs;
     }
 % endfor
 

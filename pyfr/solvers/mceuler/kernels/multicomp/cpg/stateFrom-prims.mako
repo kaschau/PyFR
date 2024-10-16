@@ -36,12 +36,13 @@
     u[${Yix+n}] = q[${Yix+n}]*rho;
 % endfor
 
-    // Store gamma, cp, c, hs
+    // Store gamma, cp, c, rhoe, hs
     qh[0] = cp/(cp-R);
     qh[1] = cp;
     qh[2] = sqrt(qh[0]*R*q[${ndims+1}]);
+    qh[3] = rhoe
 % for n in range(ns):
-    qh[${3+n}] = q[${ndims+1}]*${c['cp0'][n]};
+    qh[${4+n}] = q[${ndims+1}]*${c['cp0'][n]};
 % endfor
 
 #ifdef DEBUG

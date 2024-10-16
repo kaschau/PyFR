@@ -19,7 +19,7 @@
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${Yix+n}] - q[${Yix+n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${Yix+n}] - q[${Yix+n}]*rho_y);
-      fpdtype_t hs = qh[${3+n}];
+      fpdtype_t hs = qh[${4+n}];
       fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
@@ -29,7 +29,7 @@
 % endfor
     // Compute Yns component
     <% n = ns-1 %>
-    fpdtype_t hs = qh[${3+n}];
+    fpdtype_t hs = qh[${4+n}];
     fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
     e_Y_Y_x += e_Y * Yns_x;
     e_Y_Y_y += e_Y * Yns_y;
@@ -51,7 +51,7 @@
       fpdtype_t Y_x =  invrho*(gradu[0][${Yix+n}] - q[${Yix+n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${Yix+n}] - q[${Yix+n}]*rho_y);
       fpdtype_t Y_z =  invrho*(gradu[2][${Yix+n}] - q[${Yix+n}]*rho_z);
-      fpdtype_t hs = qh[${3+n}];
+      fpdtype_t hs = qh[${4+n}];
       fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
@@ -63,7 +63,7 @@
 % endfor
     // Compute Yns component
     <% n = ns-1 %>
-    fpdtype_t hs = qh[${3+n}];
+    fpdtype_t hs = qh[${4+n}];
     fpdtype_t e_Y = hs - T*(${c['Ru']/c['MW'][n]});
     e_Y_Y_x += e_Y * Yns_x;
     e_Y_Y_y += e_Y * Yns_y;

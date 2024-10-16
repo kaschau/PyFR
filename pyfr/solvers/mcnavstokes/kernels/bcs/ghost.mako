@@ -14,7 +14,7 @@
     // Right states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
     fpdtype_t qr[${nvars + 1}];
-    fpdtype_t qhr[${3 + ns}];
+    fpdtype_t qhr[${4 + ns}];
 
     ${pyfr.expand('bc_ldg_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
     ${pyfr.expand('bc_ldg_grad_state', 'ul', 'ql', 'qhl', 'nl', 'gradul', 'gradur')};

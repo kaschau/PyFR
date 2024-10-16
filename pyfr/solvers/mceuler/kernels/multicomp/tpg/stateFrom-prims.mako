@@ -50,7 +50,7 @@
     }
     h += hs * q[${Yix+n}];
     cp += cps * q[${Yix+n}];
-    qh[${3+n}] = hs;
+    qh[${4+n}] = hs;
     }
 % endfor
 
@@ -62,9 +62,10 @@
     u[${Yix+n}] = q[${Yix+n}]*rho;
 % endfor
 
-    // Store gamma, cp, c
+    // Store gamma, cp, c, rhoe
     qh[0] = cp/(cp-R);
     qh[1] = cp;
     qh[2] = sqrt(qh[0]*R*q[${ndims+1}]);
+    qh[3] = rhoe
 
 </%pyfr:macro>

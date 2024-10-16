@@ -29,18 +29,19 @@
 
     // Total Energy
     fpdtype_t e = (cp-R) * T;
-    u[${ndims+1}] = rho*(e + 0.5*${pyfr.dot('q[{i}]', i=(1,ndims+1))});
+    u[${ndims + 1}] = rho*(e + 0.5*${pyfr.dot('q[{i}]', i=(1,ndims+1))});
 
 % for n in range(ns-1):
     u[${Yix+n}] = rho*q[${Yix+n}];
 % endfor
 
-    // Store gamma, cp, c, hs
+    // Store gamma, cp, c, rhoe, hs
     qh[0] = cp/(cp-R);
     qh[1] = cp;
     qh[2] = sqrt(qh[0]*R*T);
+    qh[3] = rho*e;
 % for n in range(ns):
-    qh[${3+n}] = T*${c['cp0'][n]};
+    qh[${4 + n}] = T*${c['cp0'][n]};
 % endfor
 
 </%pyfr:macro>
