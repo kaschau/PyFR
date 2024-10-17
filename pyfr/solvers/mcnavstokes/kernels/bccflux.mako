@@ -10,7 +10,8 @@
 % if bccfluxstate:
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.${bccfluxstate}'/>
 % endif
-<% ns = c['ns'] %>
+
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 
 <%pyfr:kernel name='bccflux' ndim='1'
               ul='inout view fpdtype_t[${str(nvars)}]'
@@ -22,7 +23,7 @@
 
 
     // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars + 1}];
+    fpdtype_t ql[${nvars + 2}];
     fpdtype_t qhl[${4 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 

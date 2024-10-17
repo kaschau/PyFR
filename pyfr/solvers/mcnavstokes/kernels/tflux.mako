@@ -28,7 +28,8 @@
     ${pyfr.expand('calc_smats_detj', 'verts', 'upts', smats, 'djac')};
     fpdtype_t ${rcpdjac} = 1 / djac;
 % endif
-<% ns = c['ns'] %>
+
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 
 % if 'fused' in ktype:
     // Transform the corrected gradient
@@ -38,7 +39,7 @@
     // Compute the flux (F = Fi + Fv)
 
     // Compute thermodynamic properties
-    fpdtype_t q[${nvars + 1}];
+    fpdtype_t q[${nvars + 2}];
     fpdtype_t qh[${4 + ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
