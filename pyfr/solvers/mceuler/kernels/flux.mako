@@ -1,63 +1,53 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='inviscid_flux' params='u, f, q'>
-    fpdtype_t rho = u[0];
-    fpdtype_t p = q[0];
+    fpdtype_t rho = q[${rhoix}];
+    fpdtype_t p = q[${pix}];
     fpdtype_t invrho = 1.0/rho;
-    fpdtype_t rhoE = u[${ndims + 1}];
+    fpdtype_t rhoE = u[${Eix}];
 
-    // Compute the velocities
-    fpdtype_t rhov[${ndims}], v[${ndims}];
-% for i in range(ndims):
-    rhov[${i}] = u[${i + 1}];
-    v[${i}] = q[${i+1}];
-% endfor
-
-    // Density and energy fluxes
-% for i in range(ndims):
-    f[${i}][0] = rhov[${i}];
-    f[${i}][${ndims + 1}] = (rhoE + p)*v[${i}];
+   // Species fluxes
+% for i, n in pyfr.ndrange(ndims,ns):
+   f[${i}][${n}] = q[${vix + i}]*u[${n}];
 % endfor
 
     // Momentum fluxes
 % for i, j in pyfr.ndrange(ndims, ndims):
-    f[${i}][${j + 1}] = rhov[${i}]*v[${j}]${' + p' if i == j else ''};
+    f[${i}][${vix + j}] = u[${vix + i}]*q[${vix + j}]${' + p' if i == j else ''};
 % endfor
 
-   // Species fluxes
-% for i, n in pyfr.ndrange(ndims,ns-1):
-   f[${i}][${Yix+n}] = v[${i}]*u[${Yix+n}];
+    // Energy flux
+% for i in range(ndims):
+    f[${i}][${Eix}] = (rhoE + p)*q[${vix + i}];
 % endfor
 
 </%pyfr:macro>
 
 <%pyfr:macro name='inviscid_flux_1d' params='u, f, q'>
-    fpdtype_t invrho = 1.0/u[0];
-    fpdtype_t rhoE = u[${ndims + 1}];
-    fpdtype_t p = q[0];
+    fpdtype_t invrho = 1.0/q[${rhoix}];
+    fpdtype_t rhoE = u[${Eix}];
+    fpdtype_t p = q[${pix}];
 
     // Compute the velocities
     fpdtype_t v[${ndims}];
 % for i in range(ndims):
-    v[${i}] = q[${i + 1}];
-% endfor
-
-    // Density and energy fluxes
-    f[0] = u[1];
-    f[${ndims + 1}] = (rhoE + q[0])*v[0];
-
-    // Momentum fluxes
-    f[1] = u[1]*v[0] + q[0];
-% for j in range(1, ndims):
-    f[${j + 1}] = u[1]*v[${j}];
+    v[${i}] = q[${vix + i}];
 % endfor
 
     // Species fluxes
-% for n in range(ns - 1):
-    f[${Yix + n}] = u[${Yix + n}]*v[0];
+% for n in range(ns):
+    f[${n}] = u[${n}]*v[0];
 % endfor
+
+    // Momentum fluxes
+    f[${vix}] = u[${vix}]*v[0] + q[${pix}];
+% for j in range(vix, vix + ndims):
+    f[${vix + j}] = u[${vix + j}]*v[${j}];
+% endfor
+
+    // Energy fluxes
+    f[${Eix}] = (rhoE + q[${pix}])*v[0];
 
 </%pyfr:macro>

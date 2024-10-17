@@ -1,36 +1,47 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='stateFrom-prims' params='u, q, qh'>
-    ## q is an array of length nvars + 1
-    ## storing all primatives
-    ## 0, 1:ndims, ndims+1, ndims+2 ... nvars
-    ## p, u,v(,w),   T    ,   Y0    ...  Yns
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
+
+<%pyfr:macro name='stateFrom-prims' params='u, q, qh'>
+
+    ## q is an array of length nvars + 2
+    ## storing all primatives
+    ## 0:ns-1,    ns:ns+ndims, ns+ndims+1, ns+ndims+2, nvars + 2
+    ## Y0...Ynsp, u,v(,w),  rho          , p,          T
+
+    ## qh stores mixture thermodynamic properties
+    ## 0,  1,     2, 3, 4..4 + ns
+    ## cp, gamma, c, e, hi1..hins
+
 
     // Compute mixture properties
     fpdtype_t R = 0.0;
 % for n in range(ns):
-    R += q[${Yix+n}]*${1.0/MW[n]};
+    R += q[${n}]*${1.0/MW[n]};
 % endfor
     R *= ${Ru};
 
     // Compute density
-    fpdtype_t rho = q[0]/(R*q[${ndims+1}]);
-    u[0] = rho;
+    fpdtype_t rho = q[${pix}]/(R*q[${Tix}]);
+    q[$[rhoix]] = rho;
+
+    // Species mass
+% for n in range(ns):
+    u[${n}] = q[${n}]*rho;
+% endfor
 
     // Compute momentum
 % for i in range(ndims):
-    u[${i+1}] = q[${i+1}]*rho;
+    u[${i + vix}] = q[${i + vix}]*rho;
 % endfor
 
     // Total energy
-    fpdtype_t T = q[${ndims+1}];
+    fpdtype_t T = q[${Tix}];
     fpdtype_t h = 0.0;
     fpdtype_t cp = 0.0;
 % for n in range(ns):
@@ -48,24 +59,22 @@
         cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
         hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
     }
-    h += hs * q[${Yix+n}];
-    cp += cps * q[${Yix+n}];
-    qh[${4+n}] = hs;
+    h += hs * q[${n}];
+    cp += cps * q[${n}];
+    qh[${4 + n}] = hs;
     }
 % endfor
 
-    fpdtype_t rhoe = rho*h - q[0];
-    u[${ndims+1}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(1,ndims+1))};
-
-    // Species mass
-% for n in range(ns-1):
-    u[${Yix+n}] = q[${Yix+n}]*rho;
-% endfor
+    fpdtype_t rhoe = rho*h - q[${rhoix}];
+    u[${Eix}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(vix,vix + ndims))};
 
     // Store gamma, cp, c, rhoe
-    qh[0] = cp/(cp-R);
+    qh[0] = cp / (cp - R);
     qh[1] = cp;
-    qh[2] = sqrt(qh[0]*R*q[${ndims+1}]);
+    qh[2] = sqrt(qh[0]*R*q[${Tix}]);
     qh[3] = rhoe
+
+    // Store species enthalpy (per mass)
+    // ^ done up there
 
 </%pyfr:macro>

@@ -1,15 +1,16 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
 <% div = [1.0, 2.0, 3.0, 4.0] %>\
 
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
-    fpdtype_t rho = u[0];
-    fpdtype_t T = q[${ndims + 1}];
+    fpdtype_t rho = q[${rhoix}];
+    fpdtype_t T = q[${Tix}];
     fpdtype_t lnT = log(T);
     e = 0.0;
     // Compute mixture entropy
@@ -30,7 +31,7 @@
           es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
-      e += es * rho * q[${Yix+n}];
+      e += es * u[${n}];
     }
 % endfor
 </%pyfr:macro>

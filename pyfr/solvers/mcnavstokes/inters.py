@@ -17,14 +17,14 @@ class TplargsMixin:
         visc_corr = self.cfg.get('solver', 'viscosity-correction', 'none')
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
         if shock_capturing == 'entropy-filter':
-            self.Y_tol = self.cfg.getfloat('solver-entropy-filter', 'Y-tol',
-                                           1e-12)
-            self.p_min = self.cfg.getfloat('solver-entropy-filter', 'p-min',
+            self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
+                                           1e-6)
+            self.inte_min = self.cfg.getfloat('solver-entropy-filter', 'inte-min',
                                            1e-6)
         else:
-            self.Y_tol = self.cfg.getfloat('solver-interfaces', 'Y-tol',
+            self.d_min = self.cfg.getfloat('solver-interfaces', 'd-min',
                                            5*self._be.fpdtype_eps)
-            self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
+            self.inte_min = self.cfg.getfloat('solver-interfaces', 'inte-min',
                                            5*self._be.fpdtype_eps)
         mcfluid = MCFluid(self.cfg)
         self.c |= mcfluid.consts
@@ -33,7 +33,7 @@ class TplargsMixin:
                              rsolver=rsolver, visc_corr=visc_corr,
                              eos = mcfluid.eos, trans = mcfluid.trans,
                              shock_capturing=shock_capturing, c=self.c,
-                             Y_tol=self.Y_tol, p_min=self.p_min)
+                             d_min=self.d_min, inte_min=self.inte_min)
 
 
 class MCNavierStokesIntInters(TplargsMixin,
@@ -136,9 +136,9 @@ class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'mdot-per-area']
-        bcvars += self.c['names'][:-1]
+        bcvars += self.c['names']
 
-        default = {spn: 0 for spn in self.c['names'][:-1]}
+        default = {spn: 0 for spn in self.c['names']}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
 
@@ -173,9 +173,9 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names'][:-1]
+        bcvars += self.c['names']
 
-        default = {spn: 0 for spn in self.c['names'][:-1]}
+        default = {spn: 0 for spn in self.c['names']}
         self.c |= self._exp_opts(bcvars, lhs, default=default)
 
 

@@ -7,26 +7,26 @@ from pyfr.multicomp.mcfluid import MCFluid
 class BaseMCFluidElements:
     @staticmethod
     def privars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)
 
         if ndims == 2:
-            return ['p', 'u', 'v', 'T'] + species_names
+            return ['p', 'u', 'v', 'T'] + species_names[0:-1]
         elif ndims == 3:
-            return ['p', 'u', 'v', 'w', 'T'] + species_names
+            return ['p', 'u', 'v', 'w', 'T'] + species_names[0:-1]
 
     @staticmethod
     def convars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)
         if ndims == 2:
-            return ['rho', 'rhou', 'rhov', 'E'] + species_names
+            return species_names + ['rhou', 'rhov', 'E']
         elif ndims == 3:
-            return ['rho', 'rhou', 'rhov', 'rhow', 'E'] + species_names
+            return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'rhow', 'E']
 
     dualcoeffs = convars
 
     @staticmethod
     def visvars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)[0:-1]
+        species_names = MCFluid.get_species_names(cfg)
         if ndims == 2:
             varmap = {
                 'pressure': ['p'],
@@ -39,7 +39,7 @@ class BaseMCFluidElements:
                 'velocity': ['u', 'v', 'w'],
                 'temperature': ['T']
             }
-        for sn in species_names:
+        for sn in species_names[0:-1]:
             varmap[sn] = [sn]
 
         return varmap
@@ -56,23 +56,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
-        rho, *rhouvw = cons[:-1]
-        diff_rho, *diff_rhouvw, diff_E = diff_cons
-
-        # Divide momentum components by ρ
-        uvw = [rhov / rho for rhov in rhouvw]
-
-        # Velocity gradients: ∂u⃗ = 1/ρ·[∂(ρu⃗) - u⃗·∂ρ]
-        diff_uvw = [(diff_rhov - v*diff_rho) / rho
-                    for diff_rhov, v in zip(diff_rhouvw, uvw)]
-
-        # Pressure gradient: ∂p = (γ - 1)·[∂E - 1/2*(u⃗·∂(ρu⃗) + ρu⃗·∂u⃗)]
-        gamma = cfg.getfloat('constants', 'gamma')
-        diff_p = diff_E - 0.5*(sum(u*dru for u, dru in zip(uvw, diff_rhouvw)) +
-                               sum(ru*du for ru, du in zip(rhouvw, diff_uvw)))
-        diff_p *= gamma - 1
-
-        return [diff_rho, *diff_uvw, diff_p]
+        return None
 
     @staticmethod
     def validate_formulation(ctrl):
@@ -124,11 +108,11 @@ class BaseMCFluidElements:
                 raise ValueError('Entropy filter not compatible with '
                                  'anti-aliasing.')
 
-            # Minimum Mass fraction/pressure constraints
+            # Minimum density / internal energy* constraints
             eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'd-min', 1e-6)
-            eftplargs['p_min'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'p-min', 1e-6)
+            eftplargs['inte_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'inte-min', 1e-6)
 
             # Entropy tolerance
             eftplargs['e_tol'] = self.cfg.getfloat('solver-entropy-filter',

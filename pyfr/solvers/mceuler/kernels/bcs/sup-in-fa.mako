@@ -1,20 +1,22 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-prims'/>
 
-<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
-<% Yix = ndims + 2 %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
-    fpdtype_t qr[${nvars + 1}];
-    qr[0] = ${c['p']};
-% for i, v in enumerate('uvw'[:ndims]):
-    qr[${i + 1}] = ${c[v]};
-% endfor
-    qr[${ndims+1}] = ${c['T']};
-    qr[${nvars}] = 1.0;
-%  for n,spn in enumerate(c['names'][:-1]):
-    qr[${Yix+n}] = ${c[spn]};
-    qr[${nvars}] -= ${c[spn]};
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
+
+    fpdtype_t qr[${nvars + 2}];
+
+%  for n,spn in enumerate(c['names']):
+    qr[${n}] = ${c[spn]};
 %  endfor
+
+% for i, v in enumerate('uvw'[:ndims]):
+    qr[${i + vix}] = ${c[v]};
+% endfor
+
+    qr[${pix}] = ${c['p']};
+    qr[${Tix}] = ${c['T']};
 
     ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 

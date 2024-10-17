@@ -1,12 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
+
+<%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
     fpdtype_t tol = 1e-8;
     fpdtype_t error = ${fpdtype_max};
@@ -30,8 +31,8 @@
             cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
             hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
         }
-        cp += cps * q[${Yix+n}];
-        h += hs * q[${Yix+n}];
+        cp += cps * q[${n}];
+        h += hs * q[${ix+n}];
         qh[${4 + n}] = hs;
         }
 % endfor

@@ -184,3 +184,12 @@ def kernel(context, name, ndim, **kwargs):
 def alias(context, name, func):
     context['_macros'][name] = context['_macros'][func]
     return ''
+
+
+def thermix(context, ns, ndims):
+    vix = ns
+    Eix = ns + ndims
+    rhoix = ns + ndims
+    pix = rhoix + 1
+    Tix = pix + 1
+    return ns, vix, Eix, rhoix, pix, Tix
