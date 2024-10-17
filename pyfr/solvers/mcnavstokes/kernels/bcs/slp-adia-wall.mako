@@ -3,19 +3,24 @@
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.common'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
-<% ns = c['ns'] %>
-<% Yix = ndims + 2 %>
+
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr'>
-    fpdtype_t nor = ${' + '.join(f'ul[{i + 1}]*nl[{i}]' for i in range(ndims))};
-    ur[0] = ul[0];
+    fpdtype_t nor = ${' + '.join(f'ul[{i + vix}]*nl[{i}]' for i in range(ndims))};
+
+    // Species
+% for n in range(ns):
+    ur[${n}] = ul[${n}];
+% endfor
+
+    // Momentum
 % for i in range(ndims):
-    ur[${i + 1}] = ul[${i + 1}] - 2*nor*nl[${i}];
+    ur[${i + vix}] = ul[${i + vix}] - 2*nor*nl[${i}];
 % endfor
-    ur[${ndims + 1}] = ul[${ndims + 1}];
-% for n in range(ns-1):
-    ur[${Yix + n}] = ul[${Yix + n}];
-% endfor
+
+    // Total energy
+    ur[${Eix}] = ul[${Eix}];
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 </%pyfr:macro>
 
@@ -25,7 +30,7 @@
 
     // Ghost state r
     fpdtype_t ur[${nvars}];
-    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qr[${nvars + 2}];
     fpdtype_t qhr[${4 + ns}];
     ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
 

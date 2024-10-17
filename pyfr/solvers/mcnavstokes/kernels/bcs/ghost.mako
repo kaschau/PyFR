@@ -7,13 +7,13 @@
 ## bc_ldg_state AND bc_rsolve_state must fill in ur, qr, qhr
 
 <% tau = c['ldg-tau'] %>
-<% ns = c['ns'] %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='bc_common_flux_state' params='ul, ql, qhl, gradul, artviscl, nl, magnl'>
 
     // Right states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
-    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qr[${nvars + 2}];
     fpdtype_t qhr[${4 + ns}];
 
     ${pyfr.expand('bc_ldg_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
