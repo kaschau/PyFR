@@ -3,8 +3,7 @@
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
-<% ns = c['ns'] %>
-<% Yix = ndims + 2 %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:kernel name='entropylocal' ndim='1'
               u='in fpdtype_t[${str(nupts)}][${str(nvars)}]'
@@ -21,7 +20,7 @@
     % endfor
 
         // Compute thermodynamic properties
-        fpdtype_t qi[${nvars + 1}];
+        fpdtype_t qi[${nvars + 2}];
         fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
@@ -37,7 +36,7 @@
         uf[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
         // Compute thermodynamic properties
-        fpdtype_t qf[${nvars+1}];
+        fpdtype_t qf[${nvars + 2}];
         fpdtype_t qhf[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
 

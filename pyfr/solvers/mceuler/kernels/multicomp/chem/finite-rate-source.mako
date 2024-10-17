@@ -1,6 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <%def name="rateConst(A, m, Ea)">
 % if m == 0.0 and Ea == 0.0:
   ${A}
@@ -34,30 +36,28 @@
 </%def>\
 
 <%pyfr:macro name='finite_rate_source' params='t, u, ploc, src'>
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
 <% nr = c['Ea_f'].shape[0] %>\
 <% MW = c['MW'] %>\
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
-  fpdtype_t rho = u[0];
-  fpdtype_t tSub = ${dt} / ${nsub_steps};
-
   // Compute thermodynamic properties
-  fpdtype_t q[${nvars + 1}];
+  fpdtype_t q[${nvars + 2}];
   fpdtype_t qh[${4 + ns}];
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
-  fpdtype_t T = q[${ndims+1}];
+  fpdtype_t rho = q[${rhoix}];
+  fpdtype_t tSub = ${dt} / ${nsub_steps};
+
+  fpdtype_t T = q[${Tix}];
 
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
 
   // Concentrations
   fpdtype_t cs[${ns}];
 % for n in range(ns):
-  cs[${n}] = rho*q[${Yix+n}]*${1.0/c['MW'][n]};
+  cs[${n}] = rho*q[${n}]*${1.0/c['MW'][n]};
 % endfor
 
   // Gibbs energy
@@ -78,7 +78,7 @@
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
             qh[${4 + n}] = hi;
-            cp += cps*q[${Yix + n}];
+            cp += cps*q[${n}];
         }else
         {
 <% m = 1 %>\
@@ -88,7 +88,7 @@
                             T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
             gbs[${n}] = hi - scs;
             qh[${4 + n}] = hi;
-            cp += cps*q[${Yix + n}];
+            cp += cps*q[${n}];
         }
 % endfor
   }
@@ -171,37 +171,39 @@
     fpdtype_t dYdt = 0.0;
 % endif
     dTdt -= qh[${4 + n}] * dYdt;
-    q[${Yix + n}] += dYdt / rho * tSub;
-    q[${Yix + n}] = fmin(1.0, fmax(0.0, q[${Yix + n}]));
-    tempsum += q[${Yix + n}];
+    q[${n}] += dYdt / rho * tSub;
+    q[${n}] = fmax(0.0, q[${n}]);
+    tempsum += q[${n}];
   }
 % endfor
+// Normalize
 % for n in range(ns):
-    q[${Yix + n}] /= tempsum;
+    q[${n}] /= tempsum;
 % endfor
 
   dTdt /= cp*rho;
   T += dTdt*tSub;
   }
 
-  // Output source terms
-  src[0] = 0.0;
-% for i in range(ndims):
-  src[${i+1}] = 0.0;
-% endfor
-  src[${ndims+1}] = 0.0;
   // Chemical source terms
   // Reconstruct d(rhoY)/dt based on where we ended up
-% for n in range(ns-1):
+% for n in range(ns):
   // ${c['names'][n]}
-  src[${Yix+n}] = (q[${Yix + n}] * rho - u[${Yix + n}]) / ${dt};
+  src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
 % endfor
+
+% for i in range(ndims):
+  src[${i + vix}] = 0.0;
+% endfor
+
+  src[${Eix}] = 0.0;
+
 
 #ifdef DEBUG
   printf("*********************************\n");
   printf("CHEMICAL SOURCE TERMS\n");
 % for n in range(ns):
-  printf("chem&omega_${c['names'][n]} = %.14f\n", src[${Yix+n}]);
+  printf("chem&omega_${c['names'][n]} = %.14f\n", src[${n}]);
 % endfor
   printf("*********************************\n");
 #endif

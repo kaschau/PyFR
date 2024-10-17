@@ -1,6 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
 
     // Compute left fluxes
@@ -12,7 +14,7 @@
     ${pyfr.expand('inviscid_flux', 'ur', 'fr', 'qr')};
 
     // Sum the left and right velocities and take the normal
-    fpdtype_t nv = ${' + '.join(f'n[{i}]*(ql[{i+1}]+qr[{i+1}])' for i in range(ndims))};
+    fpdtype_t nv = ${' + '.join(f'n[{i}]*(ql[{i + vix}]+qr[{i + vix}])' for i in range(ndims))};
 
     // Estimate the maximum wave speed / 2
     fpdtype_t a = 0.25*(qhl[2]+qhr[2]) + 0.5*fabs(nv);

@@ -23,22 +23,23 @@ class TplargsMixin:
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
         if self._ef_enabled:
-            self.Y_tol = self.cfg.getfloat('solver-entropy-filter', 'Y-tol',
-                                           1e-12)
-            self.p_min = self.cfg.getfloat('solver-entropy-filter', 'p-min',
+            self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
+                                           1e-6)
+            self.inte_min = self.cfg.getfloat('solver-entropy-filter', 'inte-min',
                                            1e-6)
         else:
-            self.Y_tol = self.cfg.getfloat('solver-interfaces', 'Y-tol',
+            self.d_min = self.cfg.getfloat('solver-interfaces', 'd-min',
                                            5*self._be.fpdtype_eps)
-            self.p_min = self.cfg.getfloat('solver-interfaces', 'p-min',
+            self.inte_min = self.cfg.getfloat('solver-interfaces', 'inte-min',
                                            5*self._be.fpdtype_eps)
+
         self.mcfluid = MCFluid(self.cfg)
         self.c |= self.mcfluid.consts
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              eos=self.mcfluid.eos,
                              rsolver=rsolver, c=self.c,
-                             Y_tol=self.Y_tol, p_min=self.p_min)
+                             d_min=self.d_min, inte_min=self.inte_min)
 
 
 class MCFluidMPIIntersMixin:
@@ -111,9 +112,9 @@ class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names'][:-1]
+        bcvars += self.c['names']
 
-        default = {spn: 0 for spn in self.c['names'][:-1]}
+        default = {spn: 0 for spn in self.c['names']}
 
         self.c |= self._exp_opts(bcvars, lhs, default)
 
@@ -145,8 +146,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         bcvars = ['T', 'mdot-per-area']
-        bcvars += self.c['names'][:-1]
+        bcvars += self.c['names']
 
-        default = {spn: 0 for spn in self.c['names'][:-1]}
+        default = {spn: 0 for spn in self.c['names']}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)

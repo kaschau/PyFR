@@ -5,6 +5,7 @@
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:kernel name='tflux' ndim='2'
               u='in fpdtype_t[${str(nvars)}]'
@@ -17,10 +18,9 @@
     fpdtype_t ${smats}[${ndims}][${ndims}], djac;
     ${pyfr.expand('calc_smats_detj', 'verts', 'upts', smats, 'djac')};
 % endif
-<% ns = c['ns'] %>
 
     // Compute thermodynamic properties
-    fpdtype_t q[${nvars + 1}];
+    fpdtype_t q[${nvars + 2}];
     fpdtype_t qh[${4 + ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 

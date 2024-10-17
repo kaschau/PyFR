@@ -1,21 +1,22 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
-<% ns = c['ns'] %>
-<% Yix = ndims+2 %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
     // set right side primatives
-    // fix pressure
-    qr[0] = ${c['p']};
+% for n in range(ns):
+    qr[${n}] = ql[${n}];
+% endfor
 
 % for i in range(ndims):
-    qr[${i+1}] = ql[${i+1}];
+    qr[${i + vix}] = ql[${i + vix}];
 % endfor
-    qr[${ndims+1}] = ql[${ndims+1}];
-% for n in range(ns):
-    qr[${Yix+n}] = ql[${Yix+n}];
-% endfor
+
+    // fix pressure
+    qr[${pix}] = ${c['p']};
+
+    qr[${Tix}] = ql[${Tix}];
 
 ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 

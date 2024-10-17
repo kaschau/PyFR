@@ -5,9 +5,8 @@ from pyfr.solvers.mceuler.elements import BaseMCFluidElements
 from pyfr.multicomp.mcfluid import MCFluid
 
 
-class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements):
-    # Use the density field for shock sensing
-    shockvar = 'rho'
+class MCNavierStokesElements(BaseMCFluidElements,
+                             BaseAdvectionDiffusionElements):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -16,23 +15,7 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
 
     @staticmethod
     def grad_con_to_pri(cons, grad_cons, cfg):
-        rho, *rhouvw = cons[:-1]
-        grad_rho, *grad_rhouvw, grad_E = grad_cons
-
-        # Divide momentum components by ρ
-        uvw = [rhov / rho for rhov in rhouvw]
-
-        # Velocity gradients: ∇u⃗ = 1/ρ·[∇(ρu⃗) - u⃗ ⊗ ∇ρ]
-        grad_uvw = [(grad_rhov - v*grad_rho) / rho
-                    for grad_rhov, v in zip(grad_rhouvw, uvw)]
-
-        # Pressure gradient: ∇p = (γ - 1)·[∇E - 1/2*(u⃗·∇(ρu⃗) - ρu⃗·∇u⃗)]
-        gamma = cfg.getfloat('constants', 'gamma')
-        grad_p = grad_E - 0.5*(np.einsum('ijk,iljk->ljk', uvw, grad_rhouvw) +
-                               np.einsum('ijk,iljk->ljk', rhouvw, grad_uvw))
-        grad_p *= (gamma - 1)
-
-        return [grad_rho, *grad_uvw, grad_p]
+        return None, None
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -45,11 +28,8 @@ class MCNavierStokesElements(BaseMCFluidElements, BaseAdvectionDiffusionElements
         kprefix = 'pyfr.solvers.mcnavstokes.kernels'
         self._be.pointwise.register(f'{kprefix}.tflux')
 
-        # Handle shock capturing and Sutherland's law
+        # Handle shock capturing
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
-        visc_corr = self.cfg.get('solver', 'viscosity-correction', 'none')
-        if visc_corr not in {'sutherland', 'none'}:
-            raise ValueError('Invalid viscosity-correction option')
 
         # Template parameters for the flux kernels
         consts = self.cfg.items_as('constants', float)

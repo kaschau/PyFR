@@ -6,23 +6,22 @@
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mceuler.kernels.bcs.${bctype}'/>
 
-##
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:kernel name='bccflux' ndim='1'
               ul='inout view fpdtype_t[${str(nvars)}]'
               nl='in fpdtype_t[${str(ndims)}]'>
     fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
     fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
-<% ns = c['ns'] %>
 
     // Compute left thermodynamic quantities
-    fpdtype_t ql[${nvars + 1}];
+    fpdtype_t ql[${nvars + 2}];
     fpdtype_t qhl[${4 + ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 
     // Compute the right BC state
     fpdtype_t ur[${nvars}];
-    fpdtype_t qr[${nvars + 1}];
+    fpdtype_t qr[${nvars + 2}];
     fpdtype_t qhr[${4 + ns}];
     ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'norm_nl', 'ur', 'qr', 'qhr')};
 

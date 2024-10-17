@@ -1,31 +1,31 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<% ns = c['ns'] %>
-<% Yix = ndims+2 %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
     // set right side primatives
-    qr[0] = ql[0];
-% for i in range(ndims):
-    qr[${i + 1}] = 0.0;
-% endfor
-    qr[${ndims+1}] = ${c['T']};
-    qr[${nvars}] = 1.0;
-%  for n,spn in enumerate(c['names'][:-1]):
-    qr[${Yix+n}] = ${c[spn]};
-    qr[${nvars}] -= ${c[spn]};
+%  for n,spn in enumerate(c['names']):
+    qr[${n}] = ${c[spn]};
 %  endfor
+
+% for i in range(ndims):
+    qr[${i + vix}] = 0.0;
+% endfor
+
+    qr[${pix}] = ql[${pix}];
+    qr[${Tix}] = ${c['T']};
 
     ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
 
     // We now have a valid density value, set momentums to reach input mdot
-    fpdtype_t invrho = 1.0/ur[0];
+    fpdtype_t invrho = 1.0/qr[${rhoix}];
 % for i in range(ndims):
-    ur[${i + 1}] = -2*nl[${i}]*${c['mdot-per-area']} - ul[${i+1}];
-    qr[${i + 1}] = ur[${i+1}]*invrho;
+    ur[${i + vix}] = -2*nl[${i}]*${c['mdot-per-area']} - ul[${i + vix}];
+    qr[${i + vix}] = ur[${i + 1}]*invrho;
 % endfor
 
    // We have added ke, so we need to update total energy
-    ur[${ndims+1}] += 0.5*invrho*${pyfr.dot('ur[{i}]', i=(1,ndims+1))};
+    ur[${Eix}] += 0.5*invrho*${pyfr.dot('ur[{i}]', i=(vix,vix + ndims))};
 
 </%pyfr:macro>

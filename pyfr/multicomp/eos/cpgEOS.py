@@ -60,36 +60,36 @@ class cpgEOS(BaseEOS):
         rhoE = rhoe + rhok
 
         # Species mass
-        rhoYk = [rho * c for c in pris[ndims + 2::]]
+        rhoYk = [rho * c for c in it.chain(pris[ndims+2::],[Yns])]
 
-        return [rho, *rhovs, rhoE, *rhoYk]
+        return [*rhoYk, *rhovs, rhoE]
 
     def con_to_pri(self, cons):
         consts = self.consts
         ns = consts['ns']
-        ndims = len(cons)-(ns-1)-2
+        ndims = len(cons) - (ns - 1) - 2
 
-        rho, rhoE = cons[0], cons[ndims + 1]
+        rhoY = cons[0 : ns]
+        rho = sum(rhoY)
+        rhoE = cons[-1]
 
         # Divide momentum components by rho
-        vs = [rhov / rho for rhov in cons[1 : ndims + 1]]
+        vs = [rhov / rho for rhov in cons[ns : ns + ndims]]
 
         # Species Mass Fraction
-        Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
+        Yk = [rhoYk / rho for rhoYk in rhoY]
 
-        # Compute ns species
-        Yns = 1.0 - sum(Yk)
         # Compute mixture properties
         Rmix = 0.0
         cp = 0.0
-        for n,Y in enumerate(it.chain(Yk,[Yns])):
-            Rmix += Y/consts['MW'][n]
-            cp += Y*consts['cp0'][n]
-        Rmix *= consts['Ru']
+        for n, Y in enumerate(Yk):
+            Rmix += Y / consts["MW"][n]
+            cp += Y * consts["cp0"][n]
+        Rmix *= consts["Ru"]
 
         # Compute the temperature, pressure
-        e = rhoE/rho - 0.5 * sum(v * v for v in vs)
-        T = e/(cp-Rmix)
-        p = rho*Rmix*T
+        e = rhoE / rho - 0.5 * sum(v * v for v in vs)
+        T = e / (cp - Rmix)
+        p = rho * Rmix * T
 
-        return [p, *vs, T, *Yk]
+        return [p, *vs, T, *Yk[0:-1]]
