@@ -22,7 +22,7 @@
     fpdtype_t invrho = 1.0/qr[${rhoix}];
 % for i in range(ndims):
     ur[${i + vix}] = -2*nl[${i}]*${c['mdot-per-area']} - ul[${i + vix}];
-    qr[${i + vix}] = ur[${i + 1}]*invrho;
+    qr[${i + vix}] = ur[${i + vix}]*invrho;
 % endfor
 
    // We have added ke, so we need to update total energy
