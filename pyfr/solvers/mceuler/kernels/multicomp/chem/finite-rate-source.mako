@@ -1,7 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+
+<% nr = c['Ea_f'].shape[0] %>\
+<% MW = c['MW'] %>\
+<% N7 = c['NASA7'] %>\
+<% Ru = c['Ru'] %>\
+<% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
 <%def name="rateConst(A, m, Ea)">
 % if m == 0.0 and Ea == 0.0:
@@ -36,11 +42,6 @@
 </%def>\
 
 <%pyfr:macro name='finite_rate_source' params='t, u, ploc, src'>
-<% nr = c['Ea_f'].shape[0] %>\
-<% MW = c['MW'] %>\
-<% N7 = c['NASA7'] %>\
-<% Ru = c['Ru'] %>\
-<% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
 
   // Compute thermodynamic properties
   fpdtype_t q[${nvars + 2}];

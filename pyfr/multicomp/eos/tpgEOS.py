@@ -80,21 +80,20 @@ class tpgEOS(BaseEOS):
         ns = consts['ns']
         ndims = len(cons)-(ns-1)-2
 
-        rho, rhoE = cons[0], cons[ndims + 1]
-
+        rhoY = cons[0 : ns]
+        rho = sum(rhoY)
+        rhoE = cons[-1]
         # Divide momentum components by rho
-        vs = [rhov / rho for rhov in cons[1 : ndims + 1]]
+        vs = [rhov / rho for rhov in cons[ns : ns + ndims]]
 
         # Species Mass Fraction
-        Yk = [rhoY / rho for rhoY in cons[ndims + 2 ::]]
+        Yk = [rhoYk / rho for rhoYk in rhoY]
 
-        # Compute ns species
-        Yns = 1.0 - sum(Yk)
         # Compute mixture properties
         Rmix = 0.0
-        for k,Y in enumerate(it.chain(Yk,[Yns])):
-            Rmix += Y/consts['MW'][k]
-        Rmix *= consts['Ru']
+        for n, Y in enumerate(Yk):
+            Rmix += Y / consts["MW"][n]
+        Rmix *= consts["Ru"]
 
         # Internal energu
         e = rhoE/rho - 0.5 * sum(v * v for v in vs)
@@ -109,7 +108,7 @@ class tpgEOS(BaseEOS):
         while np.max(np.abs(error)) > tol and niter < 100:
             h = 0.0
             cp = 0.0
-            for n, Y in enumerate(it.chain(Yk,[Yns])):
+            for n, Y in enumerate(Yk):
                 m = np.where(T <= N7[n,0], 8, 1)
                 cp += (     N7[n, m + 0]
                        + T*(N7[n, m + 1]
@@ -131,4 +130,4 @@ class tpgEOS(BaseEOS):
 
         p = rho*Rmix*T
 
-        return [p, *vs, T, *Yk]
+        return [p, *vs, T, *Yk[0:-1]]
