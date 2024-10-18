@@ -18,11 +18,15 @@
 
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-    fpdtype_t rho = ${" + ".join([f"u[{n}]" for n in range(ns)])};
+% for n in range(ns):
+    ur[${n}] = ul[${n}];
+% endfor
 
 % for i in range(ndims):
     ur[${i + vix}] = 0.0;
 % endfor
+
+    fpdtype_t rho = ${" + ".join([f"ul[{n}]" for n in range(ns)])};
     ur[${Eix}] = ul[${Eix}]
                      - (0.5/rho)*${pyfr.dot('ul[{i}]', i=(vix,vix + ndims))};
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
