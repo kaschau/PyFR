@@ -1,16 +1,17 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <% MW = c['MW'] %>\
 <% muPoly = c['muPoly'] %>\
 <% kappaPoly = c['kappaPoly'] %>\
 ## Dij is a symmetric matrix, so just store half and index appropriately
 <% DijPoly = c['DijPoly'] %>\
 <% Dijix = lambda n,n2 : int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>\
-  fpdtype_t p = q[0];
-  fpdtype_t T = q[${ndims+1}];
+
+<%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
+  fpdtype_t p = q[${pix}];
+  fpdtype_t T = q[${Tix}];
 
   fpdtype_t mu_sp[${ns}] = {0};
   fpdtype_t kappa_sp[${ns}] = {0};
@@ -22,10 +23,10 @@
   {
     fpdtype_t mass = 0.0;
 % for n in range(ns):
-    X[${n}] = q[${Yix+n}]*${1.0/MW[n]};
+    X[${n}] = q[${n}] * ${1.0 / MW[n]};
     mass += X[${n}];
 % endfor
-    fpdtype_t invmass = 1.0/mass;
+    fpdtype_t invmass = 1.0 / mass;
 % for n in range(ns):
     X[${n}] *= invmass;
     MWmix += X[${n}] * ${MW[n]};
@@ -48,7 +49,7 @@
   kappa_sp[${n}] *= sqrtT;
 % for n2 in range(n, ns):
 <% ix = Dijix(n,n2)%>\
-    invDij[${ix}] = 1.0/((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
+    invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
 % endfor
 % endfor
 
@@ -116,11 +117,11 @@
   printf("*********************************\n");
   printf("TRANSPORT PROPERTIES\n");
   printf("INPUT STATE\n");
-  printf("trans&rho = %.14f\n", u[0]);
-  printf("trans&p = %.14f\n", q[0]);
-  printf("trans&T = %.14f\n", q[${ndims+1}]);
+  printf("trans&rho = %.14f\n", q[${rhoix}]);
+  printf("trans&p = %.14f\n", q[${pix}]);
+  printf("trans&T = %.14f\n", q[${Tix}]);
 % for n in range(ns):
-  printf("trans&Y_${c['names'][n]} = %.14f\n", q[${Yix+n}]);
+  printf("trans&Y_${c['names'][n]} = %.14f\n", q[${n}]);
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");

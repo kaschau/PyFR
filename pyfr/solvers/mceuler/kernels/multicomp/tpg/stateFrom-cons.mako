@@ -15,10 +15,7 @@
     ## cp, gamma, c, e, hi1..hins
 
     // Compute rho
-    fpdtype_t rho = 0.0;
-% for n in range(ns):
-    rho += u[${n}];
-% endfor
+    fpdtype_t rho = ${" + ".join([f"u[{n}]" for n in range(ns)])};
     fpdtype_t invrho = 1.0/rho;
     fpdtype_t rhoE = u[${Eix}];
 

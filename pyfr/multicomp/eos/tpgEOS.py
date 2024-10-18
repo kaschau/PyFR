@@ -71,9 +71,9 @@ class tpgEOS(BaseEOS):
         rhoE = rhoe + rhok
 
         # Species mass
-        rhoYk = [rho * c for c in pris[ndims + 2::]]
+        rhoYk = [rho * c for c in it.chain(pris[ndims+2::],[Yns])]
 
-        return [rho, *rhovs, rhoE, *rhoYk]
+        return [*rhoYk, *rhovs, rhoE]
 
     def con_to_pri(self, cons):
         consts = self.consts
