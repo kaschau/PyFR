@@ -4,7 +4,7 @@
 
 % if ndims == 2:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
-    fpdtype_t rho = qin[${rhoix}];
+    fpdtype_t rho = q[${rhoix}];
     fpdtype_t rhou = uin[${vix}], rhov = uin[${vix + 1}];
     fpdtype_t rhoE = uin[${Eix}];
 
@@ -13,8 +13,8 @@
     fpdtype_t mu = qt[0];
     fpdtype_t kappa = qt[1];
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(ns)])};
 
     // Velocity derivatives (d[u,v]/d[x,y])
     fpdtype_t u_x = rcprho*(grad_uin[0][${vix}] - u*rho_x);
@@ -47,15 +47,17 @@
     fout[1][${Eix}] += u*t_xy + v*t_yy + -kappa*T_y;
 
     // Species diffusion
+    fpdtype_t Y_x, Y_y;
+    fpdtype_t Jx, Jy;
 %   for n in range(ns):
     // Species derivative (rho*dY/d[x,y])
-      fpdtype_t Y_x = grad_uin[0][${n}] - q[${n}]*rho_x;
-      fpdtype_t Y_y = grad_uin[1][${n}] - q[${n}]*rho_y;
+      Y_x = grad_uin[0][${n}] - q[${n}]*rho_x;
+      Y_y = grad_uin[1][${n}] - q[${n}]*rho_y;
 
       // Species mass diffusion
-      fpdtype_t Jx = qt[${2 + n}]*Y_x[${n}];
+      Jx = qt[${2 + n}]*Y_x;
       fout[0][${n}] -= Jx;
-      fpdtype_t Jy = qt[${2 + n}]*Y_y[${n}];
+      Jy = qt[${2 + n}]*Y_y;
       fout[1][${n}] -= Jy;
 
       // Species thermal diffusion
@@ -75,9 +77,9 @@
     fpdtype_t mu = qt[0];
     fpdtype_t kappa = qt[1];
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_z = ${" + ".join([f"grad_uin[2][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_uin[2][{n}]" for n in range(ns)])};
 
     // Velocity derivatives (grad[u,v,w])
     fpdtype_t u_x = rcprho*(grad_uin[0][${vix    }] - u*rho_x);
@@ -122,18 +124,20 @@
     fout[2][${Eix}] += u*t_xz + v*t_yz + w*t_zz + -kappa*T_z;
 
     // Species diffusion
+    fpdtype_t Y_x, Y_y, Y_z;
+    fpdtype_t Jx, Jy, Jz;
 %   for n in range(ns):
       // Species derivative (rho*dY/d[x,y,z])
-      fpdtype_t Y_x = grad_uin[0][${n}] - q[${n}]*rho_x;
-      fpdtype_t Y_y = grad_uin[1][${n}] - q[${n}]*rho_y;
-      fpdtype_t Y_z = grad_uin[2][${n}] - q[${n}]*rho_z;
+      Y_x = grad_uin[0][${n}] - q[${n}]*rho_x;
+      Y_y = grad_uin[1][${n}] - q[${n}]*rho_y;
+      Y_z = grad_uin[2][${n}] - q[${n}]*rho_z;
 
       // Species mass diffusion
-      fpdtype_t Jx = qt[${2 + n}]*Y_x[${n}];
+      Jx = qt[${2 + n}]*Y_x;
       fout[0][${n}] -= Jx;
-      fpdtype_t Jy = qt[${2 + n}]*Y_y[${n}];
+      Jy = qt[${2 + n}]*Y_y;
       fout[1][${n}] -= Jy;
-      fpdtype_t Jz = qt[${2 + n}]*Y_z[${n}];
+      Jz = qt[${2 + n}]*Y_z;
       fout[2][${n}] -= Jz;
 
       // Species thermal diffusion

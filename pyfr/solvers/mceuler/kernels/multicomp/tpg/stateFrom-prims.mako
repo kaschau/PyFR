@@ -72,7 +72,7 @@
     qh[0] = cp / (cp - R);
     qh[1] = cp;
     qh[2] = sqrt(qh[0]*R*q[${Tix}]);
-    qh[3] = rhoe
+    qh[3] = rhoe;
 
     // Store species enthalpy (per mass)
     // ^ done up there

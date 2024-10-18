@@ -32,7 +32,7 @@
             hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
         }
         cp += cps * q[${n}];
-        h += hs * q[${ix+n}];
+        h += hs * q[${n}];
         qh[${4 + n}] = hs;
         }
 % endfor
