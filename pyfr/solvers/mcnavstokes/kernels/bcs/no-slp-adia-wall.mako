@@ -52,8 +52,8 @@
 
 % if ndims == 2:
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
 
     // Velocity
     fpdtype_t u = ql[${vix}];
@@ -78,9 +78,9 @@
 %   endfor
 
 % elif ndims == 3:
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(ns)])};
 
     // Velocity
     fpdtype_t u = ql[${vix}];

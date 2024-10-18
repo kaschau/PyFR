@@ -55,8 +55,8 @@
 % if ndims == 2:
 
     // Enforce zero normal species gradient in wall
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
 
     fpdtype_t Y;
 %   for n in range(ns-1):
@@ -68,9 +68,9 @@
 % elif ndims == 3:
 
     // Enforce zero normal species gradient in wall
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]]" for n in range(ns)])};
-    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(ns)])};
 
     fpdtype_t Y;
 %   for n in range(ns-1):

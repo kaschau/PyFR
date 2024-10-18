@@ -16,36 +16,37 @@
     fpdtype_t R = 0.0;
     fpdtype_t cp = 0.0;
 % for n in range(ns):
-    R += q[${n}]*${1.0/c['MW'][n]};
-    cp += q[${n}]*${c['cp0'][n]};
+    R += q[${n}] * ${1.0/c['MW'][n]};
+    cp += q[${n}] * ${c['cp0'][n]};
 % endfor
     R *= ${c['Ru']};
 
     // Compute density
-    fpdtype_t rho = q[${pix}]/(R*q[${Tix}]);
+    fpdtype_t rho = q[${pix}] / (R*q[${Tix}]);
     q[${rhoix}] = rho;
 
     // Species mass
 % for n in range(ns):
-    u[${n}] = q[${n}]*rho;
+    u[${n}] = q[${n}] * rho;
 % endfor
 
     // Compute momentum
 % for i in range(ndims):
-    u[${i + vix}] = q[${i + vix}]*rho;
+    u[${i + vix}] = q[${i + vix}] * rho;
 % endfor
 
     // Total energy
-    fpdtype_t e = (cp-R) * q[${Tix}];
-    u[${Eix}] = rho*(e + 0.5*${pyfr.dot('q[{i}]', i=(vix,vix + ndims))});
+    fpdtype_t e = (cp - R) * q[${Tix}];
+    u[${Eix}] = rho*(e + 0.5 * ${pyfr.dot('q[{i}]', i=(vix,vix + ndims))});
 
     // Store gamma, cp, c, rhoe, hs
-    qh[0] = cp/(cp-R);
+    qh[0] = cp / (cp - R);
     qh[1] = cp;
-    qh[2] = sqrt(qh[0]*R*q[${Tix}]);
-    qh[3] = rhoe
+    qh[2] = sqrt(qh[0] * R * q[${Tix}]);
+    qh[3] = rho * e;
+
 % for n in range(ns):
-    qh[${4 + n}] = q[${Tix}]*${c['cp0'][n]};
+    qh[${4 + n}] = q[${Tix}] * ${c['cp0'][n]};
 % endfor
 
 #ifdef DEBUG
