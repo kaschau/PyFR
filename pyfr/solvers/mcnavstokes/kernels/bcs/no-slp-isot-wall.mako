@@ -3,7 +3,6 @@
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
-    fpdtype_t invrho = 1.0/(${" + ".join([f"ul[{n}]" for n in range(ns)])});
 
     // Set right primatives
     qr[${pix}] = ql[${pix}];
@@ -15,8 +14,8 @@
     qr[${Tix}] = ${c['T']};
 
     // Set species
-% for n in range(ns-1):
-    qr[${n}] = ul[${n}]*invrho;
+% for n in range(ns):
+    qr[${n}] = ql[${n}];
 % endfor
 
     ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
@@ -24,7 +23,6 @@
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
-    fpdtype_t invrho = 1.0/(${" + ".join([f"ul[{n}]" for n in range(ns)])});
 
     // Set right primatives
     qr[${pix}] = ql[${pix}];
@@ -36,8 +34,8 @@
     qr[${Tix}] = ${c['T']};
 
     // Set species
-% for n in range(ns-1):
-    qr[${n}] = ul[${n}]*invrho;
+% for n in range(ns):
+    qr[${n}] = ql[${n}];
 % endfor
 
     ${pyfr.expand('stateFrom-prims', 'ur', 'qr', 'qhr')};
