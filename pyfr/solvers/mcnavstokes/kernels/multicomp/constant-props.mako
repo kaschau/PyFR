@@ -1,19 +1,19 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+
 <%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
-  fpdtype_t rho = u[0];
+  fpdtype_t rho = q[${rhoix}];
 
   // Mole fraction
-<% Yix = ndims + 2 %>
-<% ns = c['ns'] %>
   fpdtype_t X[${ns}];
   {
     fpdtype_t mass = 0.0;
 % for n in range(ns):
-    X[${n}] = q[${Yix+n}]*${1.0/c['MW'][n]};
+    X[${n}] = q[${n}] * ${1.0 / c['MW'][n]};
     mass += X[${n}];
 % endfor
-    fpdtype_t invmass = 1.0/mass;
+    fpdtype_t invmass = 1.0 / mass;
 % for n in range(ns):
     X[${n}] *= invmass;
 % endfor
@@ -58,7 +58,7 @@
 
   // Lewis number approximation
 % for n in range(ns):
-  qt[${2+n}] = kappa/(rho*qh[1]*${c['Le'][n]});
+  qt[${2 + n}] = kappa/(rho * qh[1] * ${c['Le'][n]});
 % endfor
 
 </%pyfr:macro>
