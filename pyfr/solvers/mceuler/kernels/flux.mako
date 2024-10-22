@@ -43,8 +43,8 @@
 
     // Momentum fluxes
     f[${vix}] = u[${vix}]*v[0] + q[${pix}];
-% for j in range(vix, vix + ndims):
-    f[${vix + j}] = u[${vix + j}]*v[${j}];
+% for j in range(1, ndims):
+    f[${j + vix}] = u[${vix}]*v[${j}];
 % endfor
 
     // Energy fluxes

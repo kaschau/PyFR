@@ -2,45 +2,44 @@
 
 <%include file='pyfr.solvers.baseadvec.kernels.transform'/>
 
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     fpdtype_t utl[${nvars}], utr[${nvars}], ntf[${nvars}];
-    fpdtype_t qtransl[${nvars + 1}], qtransr[${nvars + 1}];
+    fpdtype_t qtransl[${nvars + 2}], qtransr[${nvars + 2}];
 
-    utl[0] = ul[0];
-    qtransl[0] = ql[0];
-    utr[0] = ur[0];
-    qtransr[0] = qr[0];
-    utl[${ndims + 1}] = ul[${ndims + 1}];
-    qtransl[${ndims + 1}] = ql[${ndims + 1}];
-    utr[${ndims + 1}] = ur[${ndims + 1}];
-    qtransr[${ndims + 1}] = qr[${ndims + 1}];
-
-    % for n in range(ns - 1):
-      utl[${Yix + n}] = ul[${Yix + n}];
-      qtransl[${Yix + n}] = ql[${Yix + n}];
-      utr[${Yix + n}] = ur[${Yix + n}];
-      qtransr[${Yix + n}] = qr[${Yix + n}];
+    % for n in range(ns):
+      utl[${n}] = ul[${n}];
+      qtransl[${n}] = ql[${n}];
+      utr[${n}] = ur[${n}];
+      qtransr[${n}] = qr[${n}];
     % endfor
-    qtransl[${nvars}] = ql[${nvars}];
-    qtransr[${nvars}] = qr[${nvars}];
 
-    ${pyfr.expand('transform_to', 'n', 'ul', 'utl', off=1)};
-    ${pyfr.expand('transform_to', 'n', 'ur', 'utr', off=1)};
+    utl[${Eix}] = ul[${Eix}];
+    utr[${Eix}] = ur[${Eix}];
+
+    qtransl[${rhoix}] = ql[${rhoix}];
+    qtransr[${rhoix}] = qr[${rhoix}];
+    qtransl[${pix}] = ql[${pix}];
+    qtransr[${pix}] = qr[${pix}];
+    qtransl[${Tix}] = ql[${Tix}];
+    qtransr[${Tix}] = qr[${Tix}];
+
+
+    ${pyfr.expand('transform_to', 'n', 'ul', 'utl', off=vix)};
+    ${pyfr.expand('transform_to', 'n', 'ur', 'utr', off=vix)};
+
     % for i in range(ndims):
-      qtransl[${i+1}] = utl[${i+1}]/utl[0];
-      qtransr[${i+1}] = utr[${i+1}]/utr[0];
+      qtransl[${i+vix}] = utl[${i+vix}]/qtransl[${rhoix}];
+      qtransr[${i+vix}] = utr[${i+vix}]/qtransr[${rhoix}];
     % endfor
 
     ${pyfr.expand('rsolve_1d', 'utl', 'utr', 'qtransl', 'qtransr', 'qhl', 'qhr', 'n', 'ntf')};
 
-    nf[0] = ntf[0];
-    nf[${ndims + 1}] = ntf[${ndims + 1}];
-    % for n in range(ns - 1):
-      nf[${Yix + n}] = ntf[${Yix + n}];
+    % for n in range(ns):
+      nf[${n}] = ntf[${n}];
     % endfor
+    nf[${Eix}] = ntf[${Eix}];
 
-    ${pyfr.expand('transform_from', 'n', 'ntf', 'nf', off=1)};
+    ${pyfr.expand('transform_from', 'n', 'ntf', 'nf', off=vix)};
 </%pyfr:macro>
