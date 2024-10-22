@@ -108,7 +108,7 @@ class BaseMCFluidElements:
                 raise ValueError('Entropy filter not compatible with '
                                  'anti-aliasing.')
 
-            # Minimum density / internal energy* constraints
+            # Minimum density / shifted internal energy constraints
             eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'd-min', 1e-6)
             eftplargs['inte_min'] = self.cfg.getfloat('solver-entropy-filter',
@@ -148,7 +148,6 @@ class BaseMCFluidElements:
                 u=self.scal_upts[uin], entmin_int=self.entmin_int,
                 vdm=self.vdm_ef, invvdm=self.invvdm, m0=self.m0
             )
-
 
         if self.cfg.getbool('multi-component', 'chemistry', default=False):
 
