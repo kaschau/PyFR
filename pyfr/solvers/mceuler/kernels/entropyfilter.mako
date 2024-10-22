@@ -1,30 +1,21 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.intestar'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
-<% ns = c['ns'] %>
-<% Yix = ndims + 2 %>
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 
-<%pyfr:macro name='get_min_rhoY' params='u, q, rhoYmin'>
-
-    rhoYmin = ${fpdtype_max};
-    % for n in range(ns - 1):
-    rhoYmin = fmin(rhoYmin, u[${Yix + n}]);
-    % endfor
-    // Check ns species
-    rhoYmin = fmin(rhoYmin, q[${Yix + ns - 1}]*u[0]);
-
-</%pyfr:macro>
-
-<%pyfr:macro name='get_minima' params='u, m0, rhomin, rhoYmin, intemin, emin'>
+<%pyfr:macro name='get_minima' params='u, m0, rhomin, tot_rhoYmin, rhoYmin, intemin, emin, Xmin, entmin'>
 
     rhomin = ${fpdtype_max};
+    tot_rhoYmin = ${fpdtype_max};
+    % for n in range(ns):
+    rhoYmin[${ns}] = ${fpdtype_max};
+    % endfor
     intemin = ${fpdtype_max};
     emin = ${fpdtype_max};
-    % for i in range(ns - 1):
-
-    % endfor
+    Xmin = ${fpdtype_max};
 
     for (int i = 0; i < ${nupts}; i++)
     {
@@ -34,43 +25,43 @@
     % endfor
 
         // Compute thermodynamic properties
-        fpdtype_t qi[${nvars+1}];
+        fpdtype_t qi[${nvars + 2}];
         fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
-        % for i in range(ns - 1):
 
+        fpdtype_t intestar;
+        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'intestar')};
+
+        rhomin = fmin(rhomin, qi[${rhoix}]);
+        % for n in range(ns):
+          rhoYmin[${n}] = fmin(rhoYmin[${n}], ui[${n}]);
+          tot_rhoYmin = fmin(tot_rhoYmin, ui[${n}]);
         % endfor
-
-        rhomin = fmin(rhomin, ui[0]);
-        rhoYmin = fmin(rhoYmin, rhoYmintemp);
-        intemin = fmin(pmin, qhi[3]);
+        intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
+        Xmin = fmin(Xmin, q[${rhoix}*(e - entmin)])
     }
 
     % if not fpts_in_upts:
-    fpdtype_t uf[${nvars}];
     for (int fidx = 0; fidx < ${nfpts}; fidx++)
     {
         % for vidx in range(nvars):
-        uf[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
+        ui[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
 
-        // Compute thermodynamic properties
-        fpdtype_t qf[${nvars+1}];
-        fpdtype_t qhf[${4 + ns}];
-        ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
+        ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+        ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
+        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'intestar')};
 
-        fpdtype_t e;
-        ${pyfr.expand('compute_entropy', 'uf', 'qf', 'e')};
-        fpdtype_t rhoYmintemp;
-        ${pyfr.expand('get_min_rhoY', 'uf', 'qf', 'rhoYmintemp')};
-
-        rhomin = fmin(rhomin, uf[0]);
-        rhoYmin = fmin(rhoYmin, rhoYmintemp);
-        intemin = fmin(pmin, qhf[3]);
+        rhomin = fmin(rhomin, qi[${rhoix}]);
+        % for n in range(ns):
+          rhoYmin[${n}] = fmin(rhoYmin[${n}], ui[${n}]);
+          tot_rhoYmin = fmin(tot_rhoYmin, ui[${n}]);
+        % endfor
+        intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
     }
     % endif
@@ -108,7 +99,7 @@
 <%pyfr:macro name='apply_filter_single' params='up, f, rho, rhoY, inte, e'>
 
     fpdtype_t u[${nvars}];
-    fpdtype_t q[${nvars+1}];
+    fpdtype_t q[${nvars + 2}];
     fpdtype_t qh[${4 + ns}];
 
     // Start accumulation
@@ -143,45 +134,96 @@
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               m0='in broadcast fpdtype_t[${str(nfpts)}][${str(nupts)}]'>
 
-    fpdtype_t rhomin, intemin, emin;
-    fpdtype_t rhoYmin[${ns}];
+    fpdtype_t rhomin, tot_rhoYmin, rhoYmin[${ns}], intemin, emin, Xmin;
 
     // Compute minimum entropy from current and adjacent elements
     fpdtype_t entmin = ${fpdtype_max};
     for (int fidx = 0; fidx < ${nfaces}; fidx++) entmin = fmin(entmin, entmin_int[fidx]);
 
     // Check if solution is within bounds
-    ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'rhoYmin', 'intemin', 'emin')};
+    ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
 
     // Filter if out of bounds
-    if (rhomin < ${d_min} || rhoYmin < 0.0 || intemin < ${inte_min} || emin < entmin - ${e_tol})
+    if (rhomin < ${d_min} || tot_rhoYmin < 0.0 || intemin < ${inte_min} || emin < entmin - ${e_tol})
     {
         % if linearise:
-        // Compute mean quantities
-        fpdtype_t uavg[${nvars}], davg, inteavg, eavg;
+
+        // Compute mean state
+        fpdtype_t uavg[${nvars}], rhoYavg[${ns}], intestaravg, eavg;
         % for vidx in range(nvars):
         uavg[${vidx}] = ${' + '.join(f'{jx}*u[{j}][{vidx}]'
                                      for j, jx in enumerate(meanwts) if jx != 0)};
         % endfor
 
-        // FIX ME
-        ${pyfr.expand('compute_entropy', 'uavg', 'davg', 'inteavg', 'eavg')};
+        fpdtype_t qavg[${nvars + 2}];
+        fpdtype_t qhavg[${4 + ns}];
+        ${pyfr.expand('stateFrom-cons', 'uavg', 'qavg', 'qhavg')};
+        ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'eavg')};
+        ${pyfr.expand('compute_entropy', 'uavg', 'qavg', 'qhavg', 'eavg')};
+
+        fpdtype_t Xavg = qavg[${rhoix}]*(eavg - entmin);
+
 
         // Apply density, species, internal energy, and entropy limiting sequentially
-        fpdtype_t alpha;
-        % for (fvar, bound) in [('d', d_min), ('rhoY', 0) ('p', p_min), ('e', f'entmin - {e_tol}')]:
-        if (${fvar}min < ${bound})
-        {
-            alpha = (${fvar}min - (${bound}))/(${fvar}min - ${fvar}avg);
+        // Density positivity
+        if (rhomin < ${d_min}){
+            fpdtype_t alpha = (rhomin - ${d_min})/(rhomin - qavg[${rhoix}]);
             alpha = fmin(fmax(alpha, 0.0), 1.0);
 
-            % for uidx, vidx in pyfr.ndrange(nupts, 1 if fvar == 'd' else nvars):
+            % for uidx, sidx in pyfr.ndrange(nupts, ns):
+            u[${uidx}][${sidx}] += alpha*(uavg[${sidx}] - u[${uidx}][${sidx}]);
+            % endfor
+
+            // Get new updated values
+            ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
+        }
+
+        // Species mass >= 0
+        % for n in range(ns):
+        {
+            if (rhoYmin[${n}] < 0.0){
+                fpdtype_t rYmin = rhoYmin[${n}];
+                fpdtype_t alpha = (rYmin - 0.0)/(rYmin - uavg[${n}]);
+                alpha = fmin(fmax(alpha, 0.0), 1.0);
+
+                % for uidx in range(nupts):
+                u[${uidx}][${n}] += alpha*(uavg[${n}] - u[${uidx}][${n}]);
+                % endfor
+
+                // Get new updated values
+                ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
+            }
+        }
+        % endfor
+
+        // Shifted internal energy positivity
+        if (intemin < ${inte_min}){
+            fpdtype_t alpha = (intemin - ${inte_min})/(intemin - intestaravg);
+            alpha = fmin(fmax(alpha, 0.0), 1.0);
+
+            % for uidx, vidx in pyfr.ndrange(nupts, nvar):
             u[${uidx}][${vidx}] += alpha*(uavg[${vidx}] - u[${uidx}][${vidx}]);
             % endfor
 
-            ${pyfr.expand('get_minima', 'u', 'm0', 'dmin', 'pmin', 'emin')};
+            // Get new updated values
+            ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
         }
-        % endfor
+
+        // Apply minimum entropy principle X = r*(s - s0)
+        if (Xmin < -{e_tol}){
+            // Filter to X = 0 (not tolerance)
+            fpdtype_t alpha = (Xmin - (0.0))/(Xmin - Xavg);
+            alpha = fmin(fmax(alpha, 0.0), 1.0);
+
+            % for uidx, vidx in pyfr.ndrange(nupts, nvar):
+            u[${uidx}][${vidx}] += alpha*(uavg[${vidx}] - u[${uidx}][${vidx}]);
+            % endfor
+
+            // Get new updated values
+            ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
+        }
+
+        // Bisection
         % else:
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
