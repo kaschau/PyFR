@@ -29,18 +29,16 @@
         entmin = fmin(entmin, e);
     }
     % if not fpts_in_upts:
-    fpdtype_t uf[${nvars}];
     for (int fidx = 0; fidx < ${nfpts}; fidx++)
     {
         % for vidx in range(nvars):
-        uf[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
+        ui[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
         // Compute thermodynamic properties
-        fpdtype_t qf[${nvars + 2}];
-        fpdtype_t qhf[${4 + ns}];
-        ${pyfr.expand('stateFrom-cons', 'uf', 'qf', 'qhf')};
+        ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
-        ${pyfr.expand('compute_entropy', 'uf', 'qf', 'e')};
+        // Compute specific entropy
+        ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         entmin = fmin(entmin, e);
     }
     % endif
