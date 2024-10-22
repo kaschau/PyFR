@@ -5,7 +5,6 @@
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
     e = 0.0;
-    fpdtype_t rhoYmin = ${fpdtype_max};
     // Compute mixture entropy
     % for n in range(ns):
     // ${c['names'][n]} Entropy
@@ -15,11 +14,10 @@
       <% gammak = c['cp0'][n]/cvk %>\
       fpdtype_t rhoYk = u[${n}];
       fpdtype_t Yk = q[${n}];
-      e += (rhoYk > 0.0) ? Yk*(${cvk}*log(q[${Tix}]) - ${Rk}*log(rhoYk)) : 0.0;
-      rhoYmin = fmin(rhoYk, rhoYmin);
+      e += (rhoYk > 0.0) ? rhoYk*(${cvk}*log(q[${Tix}]) - ${Rk}*log(rhoYk)) : 0.0;
     }
     % endfor
 
     // Return the specific thermodynamic entropy (mass basis)
-    e = (q[${Tix}] > 0.0) && (rhoYmin > 0.0) ? e : ${-fpdtype_max};
+    e = (q[${Tix}] > 0.0) ? e : ${-fpdtype_max};
 </%pyfr:macro>

@@ -32,7 +32,7 @@
           es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
-      e += u[${n}] > 0.0 ? q[${n}] * (es - Rk*log(u[${n}])) : 0.0;
+      e += u[${n}] > 0.0 ? u[${n}] * (es - Rk*log(u[${n}])) : 0.0;
     }
 
     // Return the specific thermodynamic entropy (mass basis)

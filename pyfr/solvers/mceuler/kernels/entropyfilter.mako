@@ -44,7 +44,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
-        Xmin = fmin(Xmin, qi[${rhoix}]*(e - entmin));
+        Xmin = fmin(Xmin, (e - entmin));
     }
 
     % if not fpts_in_upts:
@@ -70,7 +70,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
-        Xmin = fmin(Xmin, qi[${rhoix}]*(e - entmin));
+        Xmin = fmin(Xmin, (e - entmin));
     }
     % endif
 </%pyfr:macro>
@@ -136,7 +136,7 @@
     % for n in range(ns):
       rhoY = fmin(rhoY, ui[${n}]);
     % endfor
-    X = rho*(e - entmin);
+    X = (e - entmin);
 
 </%pyfr:macro>
 
