@@ -44,7 +44,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
-        Xmin = fmin(Xmin, q[${rhoix}*(e - entmin)])
+        Xmin = fmin(Xmin, qi[${rhoix}]*(e - entmin));
     }
 
     % if not fpts_in_upts:
@@ -70,6 +70,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         emin = fmin(emin, e);
+        Xmin = fmin(Xmin, qi[${rhoix}]*(e - entmin));
     }
     % endif
 </%pyfr:macro>
@@ -208,7 +209,7 @@
             fpdtype_t alpha = (intemin - ${inte_min})/(intemin - intestaravg);
             alpha = fmin(fmax(alpha, 0.0), 1.0);
 
-            % for uidx, vidx in pyfr.ndrange(nupts, nvar):
+            % for uidx, vidx in pyfr.ndrange(nupts, nvars):
             u[${uidx}][${vidx}] += alpha*(uavg[${vidx}] - u[${uidx}][${vidx}]);
             % endfor
 
@@ -217,12 +218,12 @@
         }
 
         // Apply minimum entropy principle X = r*(s - s0)
-        if (Xmin < -{e_tol}){
+        if (Xmin < ${-e_tol}){
             // Filter to X = 0 (not tolerance)
             fpdtype_t alpha = (Xmin - (0.0))/(Xmin - Xavg);
             alpha = fmin(fmax(alpha, 0.0), 1.0);
 
-            % for uidx, vidx in pyfr.ndrange(nupts, nvar):
+            % for uidx, vidx in pyfr.ndrange(nupts, nvars):
             u[${uidx}][${vidx}] += alpha*(uavg[${vidx}] - u[${uidx}][${vidx}]);
             % endfor
 
