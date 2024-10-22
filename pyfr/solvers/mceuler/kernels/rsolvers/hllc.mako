@@ -1,8 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 
-<% Yix = ndims + 2 %>\
-<% ns = c['ns'] %>\
+<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='rsolve_1d' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     // Compute the left and right fluxes + velocities and pressures
@@ -15,19 +14,21 @@
     ${pyfr.expand('inviscid_flux_1d', 'ur', 'fr', 'qr')};
 
     % for i in range(ndims):
-      vl[${i}] = ql[${i+1}];
-      vr[${i}] = qr[${i+1}];
+      vl[${i}] = ql[${i + vix}];
+      vr[${i}] = qr[${i + vix}];
     % endfor
-    pl = ql[0];
-    pr = qr[0];
+    pl = ql[${pix}];
+    pr = qr[${pix}];
 
-    fpdtype_t sqrtrl = sqrt(ul[0]);
-    fpdtype_t sqrtrr = sqrt(ur[0]);
+    fpdtype_t sqrtrl = sqrt(ql[${rhoix}]);
+    fpdtype_t sqrtrr = sqrt(qr[${rhoix}]);
+    fpdtype_t rr = qr[${rhoix}];
+    fpdtype_t rl = ql[${rhoix}];
 
     // Compute the Roe-averaged enthalpy
-    fpdtype_t H = (sqrtrl*(pr + ur[${ndims + 1}])
-                 + sqrtrr*(pl + ul[${ndims + 1}]))
-                / (sqrtrl*ur[0] + sqrtrr*ul[0]);
+    fpdtype_t H = (sqrtrl*(pr + ur[${Eix}])
+                 + sqrtrr*(pl + ul[${Eix}]))
+                / (sqrtrl*rr + sqrtrr*rl);
 
     // Roe average sound speed
     fpdtype_t u = (sqrtrl*vl[0] + sqrtrr*vr[0]) /
@@ -40,37 +41,37 @@
     // Estimate the left and right wave speed, sl and sr
     fpdtype_t sl = u - a;
     fpdtype_t sr = u + a;
-    fpdtype_t sstar = (pr - pl + ul[0]*vl[0]*(sl - vl[0])
-                               - ur[0]*vr[0]*(sr - vr[0])) /
-                      (ul[0]*(sl - vl[0]) - ur[0]*(sr - vr[0]));
+    fpdtype_t sstar = (pr - pl + rl*vl[0]*(sl - vl[0])
+                               - rr*vr[0]*(sr - vr[0])) /
+                      (rl*(sl - vl[0]) - rr*(sr - vr[0]));
 
     // Star state common factors
     fpdtype_t ul_com = (sl - vl[0]) / (sl - sstar);
     fpdtype_t ur_com = (sr - vr[0]) / (sr - sstar);
 
     // Star state mass
-    usl[0] = ul_com*ul[0];
-    usr[0] = ur_com*ur[0];
+    fpdtype_t rusl = ul_com*rl;
+    fpdtype_t rusr = ur_com*rr;
+    // Star state species
+% for n in range(ns):
+    usl[${n}] = rusl*ql[${n}];
+    usr[${n}] = rusr*qr[${n}];
+% endfor
 
     // Star state momenetum
-    usl[1] = ul_com*ul[0]*sstar;
-    usr[1] = ur_com*ur[0]*sstar;
-% for i in range(2, ndims + 1):
-    usl[${i}] = ul_com*ul[${i}];
-    usr[${i}] = ur_com*ur[${i}];
+    usl[${vix}] = ul_com*rl*sstar;
+    usr[${vix}] = ur_com*rr*sstar;
+
+% for i in range(1, ndims):
+    usl[${i + vix}] = ul_com*ul[${i + vix}];
+    usr[${i + vix}] = ur_com*ur[${i + vix}];
 % endfor
 
     // Star state energy
-    usl[${ndims + 1}] = ul_com*(ul[${ndims + 1}] + (sstar - vl[0])*
-                                (ul[0]*sstar + pl/(sl - vl[0])));
-    usr[${ndims + 1}] = ur_com*(ur[${ndims + 1}] + (sstar - vr[0])*
-                                (ur[0]*sstar + pr/(sr - vr[0])));
-
-    // Star state species
-% for n in range(ns - 1):
-    usl[${Yix + n}] = usl[0]*ql[${Yix + n}];
-    usr[${Yix + n}] = usr[0]*qr[${Yix + n}];
-% endfor
+    usl[${Eix}] = ul_com*(ul[${Eix}] + (sstar - vl[0])*
+                                (rl*sstar + pl/(sl - vl[0])));
+    usr[${Eix}] = ur_com*(ur[${Eix}] + (sstar - vr[0])*
+                                (rr*sstar + pr/(sr - vr[0])));
 
     // Output
 % for i in range(nvars):
