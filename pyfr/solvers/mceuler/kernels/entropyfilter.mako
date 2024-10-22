@@ -104,15 +104,15 @@
     }
 </%pyfr:macro>
 
-<%pyfr:macro name='apply_filter_single' params='up, f, rho, rhoY, inte, e'>
+<%pyfr:macro name='apply_filter_single' params='up, f, rho, rhoY, inte, e, X, entmin'>
 
-    fpdtype_t u[${nvars}];
-    fpdtype_t q[${nvars + 2}];
-    fpdtype_t qh[${4 + ns}];
+    fpdtype_t ui[${nvars}];
+    fpdtype_t qi[${nvars + 2}];
+    fpdtype_t qhi[${4 + ns}];
 
     // Start accumulation
     % for vidx in range(nvars):
-        u[${vidx}] = up[0][${vidx}];
+        ui[${vidx}] = up[0][${vidx}];
     % endfor
 
     // Apply filter to local value
@@ -124,14 +124,19 @@
         v *= f;
 
         % for vidx in range(nvars):
-        u[${vidx}] += v2*up[pidx][${vidx}];
+        ui[${vidx}] += v2*up[pidx][${vidx}];
         % endfor
     }
-    rho = u[0];
-    ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
-    ##${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoY')};
-    inte = qh[3];
-    ${pyfr.expand('compute_entropy', 'u', 'q', 'e')};
+
+    ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+    ${pyfr.expand('compute_intestar', 'ui', 'qi', 'qhi', 'inte')};
+    ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
+    rho = qi[${rhoix}];
+    rhoY = ${fpdtype_max};
+    % for n in range(ns):
+      rhoY = fmin(rhoY, ui[${n}]);
+    % endfor
+    X = rho*(e - entmin);
 
 </%pyfr:macro>
 
@@ -152,7 +157,7 @@
     ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
 
     // Filter if out of bounds
-    if (rhomin < ${d_min} || tot_rhoYmin < 0.0 || intemin < ${inte_min} || emin < entmin - ${e_tol})
+    if (rhomin < ${d_min} || tot_rhoYmin < 0.0 || intemin < ${inte_min} || Xmin < ${-e_tol})
     {
         % if linearise:
 
@@ -231,7 +236,7 @@
             ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
         }
 
-        // Bisection
+        // Non-linear filtering
         % else:
         // Compute modal basis
         fpdtype_t umodes[${nupts}][${nvars}];
@@ -247,10 +252,11 @@
         fpdtype_t f = 1.0;
         fpdtype_t f_low, f_high, fnew;
 
-        fpdtype_t rho, rhoY, p, e;
+        fpdtype_t rho, rhoY, inte, e, X;
 
         // Compute f on a rolling basis per solution point
         fpdtype_t up[${order+1}][${nvars}];
+
         for (int uidx = 0; uidx < ${nefpts}; uidx++)
         {
             // Group nodal contributions by common filter factor
@@ -260,10 +266,10 @@
             % endfor
 
             // Compute constraints with current minimum f value
-            ${pyfr.expand('apply_filter_single', 'up', 'f', 'rho', 'rhoY', 'p', 'e')};
+            ${pyfr.expand('apply_filter_single', 'up', 'f', 'rho', 'rhoY', 'inte', 'e', 'X', 'entmin')};
 
             // Update f if constraints aren't satisfied
-            if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+            if (rho < ${d_min} || rhoY < 0.0 || inte < ${inte_min} || X < ${-e_tol})
             {
                 // Set root-finding interval
                 f_high = f;
@@ -275,10 +281,10 @@
                     fnew = 0.5*(f_low + f_high);
 
                     // Compute filtered state
-                    ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'rho', 'rhoY', 'p', 'e')};
+                    ${pyfr.expand('apply_filter_single', 'up', 'fnew', 'rho', 'rhoY', 'inte', 'e', 'X', 'entmin')};
 
                     // Update brackets
-                    if (rho < ${d_min} || rhoY < 0.0 || p < ${p_min} || e < entmin - ${e_tol})
+                    if (rho < ${d_min} || rhoY < 0.0 || inte < ${inte_min} || X < ${-e_tol})
                         f_high = fnew;
                     else
                         f_low = fnew;
@@ -293,7 +299,7 @@
         ${pyfr.expand('apply_filter_full', 'umodes', 'vdm', 'u', 'f')};
 
         // Calculate minimum entropy from filtered solution
-        ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'rhoYmin', 'pmin', 'emin')};
+        ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
         %endif
     }
 
