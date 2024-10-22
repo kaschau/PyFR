@@ -17,23 +17,25 @@
     emin = ${fpdtype_max};
     Xmin = ${fpdtype_max};
 
+    fpdtype_t ui[${nvars}];
+    fpdtype_t qi[${nvars + 2}];
+    fpdtype_t qhi[${4 + ns}];
+
     for (int i = 0; i < ${nupts}; i++)
     {
-    fpdtype_t ui[${nvars}];
+
     % for j in range(nvars):
         ui[${j}] = u[i][${j}];
     % endfor
 
         // Compute thermodynamic properties
-        fpdtype_t qi[${nvars + 2}];
-        fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
 
         fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
         fpdtype_t intestar;
-        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'intestar')};
+        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'qhi', 'intestar')};
 
         rhomin = fmin(rhomin, qi[${rhoix}]);
         % for n in range(ns):
@@ -52,9 +54,14 @@
         ui[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
 
+        // Compute thermodynamic properties
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
+
+        fpdtype_t e;
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
-        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'intestar')};
+
+        fpdtype_t intestar;
+        ${pyfr.expand('compute_intestar', 'ui', 'qi', 'qhi', 'intestar')};
 
         rhomin = fmin(rhomin, qi[${rhoix}]);
         % for n in range(ns):
@@ -121,7 +128,7 @@
     }
     rho = u[0];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
-    ${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoY')};
+    ##${pyfr.expand('get_min_rhoY', 'u', 'q', 'rhoY')};
     inte = qh[3];
     ${pyfr.expand('compute_entropy', 'u', 'q', 'e')};
 
@@ -159,7 +166,7 @@
         fpdtype_t qhavg[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uavg', 'qavg', 'qhavg')};
         ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'eavg')};
-        ${pyfr.expand('compute_entropy', 'uavg', 'qavg', 'qhavg', 'eavg')};
+        ${pyfr.expand('compute_entropy', 'uavg', 'qavg', 'eavg')};
 
         fpdtype_t Xavg = qavg[${rhoix}]*(eavg - entmin);
 

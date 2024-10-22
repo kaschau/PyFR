@@ -17,13 +17,14 @@
     fpdtype_t invrho = 1.0/rho;
     fpdtype_t rhoE = u[${Eix}];
 
+    // Compute species mass fraction
+% for n in range(ns):
+    q[${n}] = u[${n}]*invrho;
+% endfor
+
     // Compute velocities
 % for i in range(ndims):
     q[${i + vix}] = u[${i + vix}]*invrho;
-% endfor
-
-% for n in range(ns):
-    q[${n}] = u[${n}]*invrho;
 % endfor
 
     // Compute mixture properties

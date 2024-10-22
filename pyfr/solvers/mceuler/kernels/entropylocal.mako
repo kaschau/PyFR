@@ -11,6 +11,8 @@
               m0='in broadcast fpdtype_t[${str(nfpts)}][${str(nupts)}]'>
     // Compute minimum entropy across element
     fpdtype_t ui[${nvars}], e;
+    fpdtype_t qi[${nvars + 2}];
+    fpdtype_t qhi[${4 + ns}];
 
     fpdtype_t entmin = ${fpdtype_max};
     for (int i = 0; i < ${nupts}; i++)
@@ -20,10 +22,8 @@
     % endfor
 
         // Compute thermodynamic properties
-        fpdtype_t qi[${nvars + 2}];
-        fpdtype_t qhi[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
-
+        // Compute specific entropy
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
 
         entmin = fmin(entmin, e);
@@ -34,9 +34,9 @@
         % for vidx in range(nvars):
         ui[${vidx}] = ${pyfr.dot('m0[fidx][{k}]', f'u[{{k}}][{vidx}]', k=nupts)};
         % endfor
+
         // Compute thermodynamic properties
         ${pyfr.expand('stateFrom-cons', 'ui', 'qi', 'qhi')};
-
         // Compute specific entropy
         ${pyfr.expand('compute_entropy', 'ui', 'qi', 'e')};
         entmin = fmin(entmin, e);
