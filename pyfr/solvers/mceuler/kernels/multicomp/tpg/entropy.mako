@@ -9,7 +9,6 @@
 
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
-    fpdtype_t rho = q[${rhoix}];
     fpdtype_t T = q[${Tix}];
     fpdtype_t lnT = log(T);
     e = 0.0;
@@ -18,6 +17,8 @@
     // ${c['names'][n]} Entropy
     {
       fpdtype_t es;
+      <% Rk = c['Ru']/c['MW'][n] %>\
+      <% cvk = c['cp0'][n] - Rk %>\
       if (T < ${N7[n,0]})
       {
       <% m = 8 %>
@@ -31,7 +32,7 @@
           es += T*(${'+ T*('.join(str(c) for c in N7[n,m+1:m+5]*Ru/MW[n]/div)+')'*3});
           es += ${N7[n,m+6]*Ru/MW[n]};
       }
-      e += es * q[${n}];
+      e += u[${n}] > 0.0 ? q[${n}] * (es - Rk*log(u[${n}])) : 0.0;
     }
 
     // Return the specific thermodynamic entropy (mass basis)
