@@ -18,5 +18,5 @@
     % endfor
 
     // Return the specific thermodynamic entropy (mass basis)
-    e = (T > 0) ? e : ${fpdtype_max};
+    e = (q[${Tix}] > 0) ? e : ${fpdtype_max};
 </%pyfr:macro>
