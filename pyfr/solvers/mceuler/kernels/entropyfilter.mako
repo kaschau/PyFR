@@ -11,7 +11,7 @@
     rhomin = ${fpdtype_max};
     tot_rhoYmin = ${fpdtype_max};
     % for n in range(ns):
-    rhoYmin[${ns}] = ${fpdtype_max};
+    rhoYmin[${n}] = ${fpdtype_max};
     % endfor
     intemin = ${fpdtype_max};
     emin = ${fpdtype_max};
