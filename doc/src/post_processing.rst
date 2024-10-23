@@ -49,7 +49,7 @@ is recommended to start with the following filter pipeline:
 
 To reduce the computational cost associated with exporting boundary data
 it is recommended to use *regions*.  For example, if our ultimate goal
-is to analyse data on a boundary called *wall* then we can configure out
+is to analyse data on a boundary called *wall* then we can configure our
 solution writer as::
 
     [soln-plugin-writer]
