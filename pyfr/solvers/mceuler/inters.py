@@ -41,6 +41,20 @@ class TplargsMixin:
                              rsolver=rsolver, c=self.c,
                              d_min=self.d_min, inte_min=self.inte_min)
 
+    def validate_species(self):
+        Y = []
+        for n in self.c['names']:
+            Y.append(float(self.c[n].replace('(','').replace(')','')))
+
+        test = sum(Y)
+        if test == 0.0:
+            self.c[self.c['names'][-1]] = '(1.)'
+        elif test > 1.0:
+            for i, n in enumerate(self.c['names']):
+                self.c[n] = f'({Y[i]/test})'
+        elif test < 1.0:
+            self.c[self.c['names'][-1]] = f'({1.0 - test})'
+
 
 class MCFluidMPIIntersMixin:
     def __init__(self, *args, **kwargs):
@@ -115,6 +129,7 @@ class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
         bcvars += self.c['names']
 
         default = {spn: 0 for spn in self.c['names']}
+        self.validate_species()
 
         self.c |= self._exp_opts(bcvars, lhs, default)
 
@@ -149,5 +164,6 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
         bcvars += self.c['names']
 
         default = {spn: 0 for spn in self.c['names']}
+        self.validate_species()
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
