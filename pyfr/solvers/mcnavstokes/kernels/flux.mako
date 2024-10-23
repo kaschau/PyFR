@@ -68,7 +68,7 @@
 
 % elif ndims == 3:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
-    fpdtype_t rho = qin[${rhoix}];
+    fpdtype_t rho = q[${rhoix}];
     fpdtype_t rhou = uin[${vix}], rhov = uin[${vix + 1}], rhow = uin[${vix + 2}];
     fpdtype_t rhoE = uin[${Eix}];
 
