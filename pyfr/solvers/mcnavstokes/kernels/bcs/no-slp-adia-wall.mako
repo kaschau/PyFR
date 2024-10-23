@@ -39,14 +39,9 @@
     fpdtype_t rcprho = 1.0/rho;
     fpdtype_t E = rhoE*rcprho;
 
-    // Copy non species fluid-side gradients across to wall-side gradients
-% for i, j in pyfr.ndrange(ndims, ns):
-    gradur[${i}][${j}] = gradul[${i}][${j}];
-% endfor
-
-    // Copy non energy fluid-side gradients across to wall-side gradients
-% for i in range(ndims):
-    gradur[${i}][${Eix}] = gradul[${i}][${Eix}];
+    // Copy non species/energy fluid-side gradients across to wall-side gradients
+% for i, j in pyfr.ndrange(ndims, ndims):
+    gradur[${i}][${j+vix}] = gradul[${i}][${j+vix}];
 % endfor
 
 % if ndims == 2:
