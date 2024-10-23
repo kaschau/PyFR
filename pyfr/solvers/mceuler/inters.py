@@ -69,7 +69,7 @@ class MCFluidMPIIntersMixin:
 
 
 class MCEulerIntInters(TplargsMixin, MCFluidIntIntersMixin,
-                     BaseAdvectionIntInters):
+                       BaseAdvectionIntInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -82,7 +82,7 @@ class MCEulerIntInters(TplargsMixin, MCFluidIntIntersMixin,
 
 
 class MCEulerMPIInters(TplargsMixin, MCFluidMPIIntersMixin,
-                     BaseAdvectionMPIInters):
+                       BaseAdvectionMPIInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -128,9 +128,9 @@ class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
         bcvars += self.c['names']
 
         default = {spn: 0 for spn in self.c['names']}
-        self.validate_species()
 
         self.c |= self._exp_opts(bcvars, lhs, default)
+        self.validate_species()
 
 
 class MCEulerSupOutflowBCInters(MCEulerBaseBCInters):
@@ -163,6 +163,6 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
         bcvars += self.c['names']
 
         default = {spn: 0 for spn in self.c['names']}
-        self.validate_species()
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
+        self.validate_species()

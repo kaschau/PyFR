@@ -189,8 +189,8 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
         bcvars += self.c['names']
 
         default = {spn: 0 for spn in self.c['names']}
-        self.validate_species()
         self.c |= self._exp_opts(bcvars, lhs, default=default)
+        self.validate_species()
 
 
 class MCNavierStokesSupOutflowBCInters(MCNavierStokesBaseBCInters):
