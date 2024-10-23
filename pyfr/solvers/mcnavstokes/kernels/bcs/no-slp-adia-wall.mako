@@ -89,7 +89,7 @@
     // Velocity derivatives (rho*d[u,v]/d[x,y])
     fpdtype_t u_x = grad_ul[0][${vix}] - u*rho_x;
     fpdtype_t u_y = grad_ul[1][${vix}] - u*rho_y;
-    fpdtype_t u_y = grad_ul[2][${vix}] - u*rho_z;
+    fpdtype_t u_z = grad_ul[2][${vix}] - u*rho_z;
     fpdtype_t v_x = grad_ul[0][${vix + 1}] - v*rho_x;
     fpdtype_t v_y = grad_ul[1][${vix + 1}] - v*rho_y;
     fpdtype_t v_z = grad_ul[2][${vix + 1}] - v*rho_z;
