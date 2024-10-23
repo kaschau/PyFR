@@ -57,7 +57,7 @@
     fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
 
     fpdtype_t Y;
-%   for n in range(ns-1):
+%   for n in range(ns):
     Y = ql[${n}];
     grad_ur[0][${n}] = Y*rhol_x;
     grad_ur[1][${n}] = Y*rhol_y;
@@ -71,7 +71,7 @@
     fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(ns)])};
 
     fpdtype_t Y;
-%   for n in range(ns-1):
+%   for n in range(ns):
     Y = ql[${n}];
     grad_ur[0][${n}] = Y*rhol_x;
     grad_ur[1][${n}] = Y*rhol_y;
