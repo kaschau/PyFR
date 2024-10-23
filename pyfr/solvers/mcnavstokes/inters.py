@@ -44,8 +44,7 @@ class TplargsMixin:
         if test == 0.0:
             self.c[self.c['names'][-1]] = '(1.)'
         elif test > 1.0:
-            for i, n in enumerate(self.c['names']):
-                self.c[n] = f'({Y[i]/test})'
+            raise ValueError('Invalid BC species mass fraction specification.')
         elif test < 1.0:
             self.c[self.c['names'][-1]] = f'({1.0 - test})'
 
