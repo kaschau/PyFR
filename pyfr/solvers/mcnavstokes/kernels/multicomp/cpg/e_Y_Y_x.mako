@@ -12,6 +12,9 @@
     fpdtype_t Yns_x = 0.0;
     fpdtype_t Yns_y = 0.0;
 
+    e_Y_Y_x = 0.0;
+    e_Y_Y_y = 0.0;
+
 % for n in range(ns):
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${n}] - q[${n}]*rho_x);
@@ -31,6 +34,9 @@
     fpdtype_t rho_y = ${" + ".join([f"gradu[1][{n}]" for n in range(ns)])};
     fpdtype_t rho_z = ${" + ".join([f"gradu[2][{n}]" for n in range(ns)])};
 
+    e_Y_Y_x = 0.0;
+    e_Y_Y_y = 0.0;
+    e_Y_Y_z = 0.0;
 % for n in range(ns):
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${n}] - q[${n}]*rho_x);
