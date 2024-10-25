@@ -28,8 +28,8 @@
     // Compute temperature derivatives (dT/d[x,y])
     fpdtype_t rcpcv = qh[0]/qh[1];
     fpdtype_t E = rhoE*rcprho;
-    fpdtype_t e_Y_Y_x = 0.0;
-    fpdtype_t e_Y_Y_y = 0.0;
+    fpdtype_t e_Y_Y_x;
+    fpdtype_t e_Y_Y_y;
     ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'uin', 'q', 'qh', 'grad_uin')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - e_Y_Y_y);
@@ -99,9 +99,9 @@
     // Compute temperature derivatives (dT/d[x,y,z])
     fpdtype_t rcpcv = qh[0]/qh[1];
     fpdtype_t E = rhoE*rcprho;
-    fpdtype_t e_Y_Y_x = 0.0;
-    fpdtype_t e_Y_Y_y = 0.0;
-    fpdtype_t e_Y_Y_z = 0.0;
+    fpdtype_t e_Y_Y_x;
+    fpdtype_t e_Y_Y_y;
+    fpdtype_t e_Y_Y_z;
     ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'uin', 'q', 'qh', 'grad_uin')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - w*w_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - w*w_y - e_Y_Y_y);
