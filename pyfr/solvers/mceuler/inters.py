@@ -166,3 +166,20 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()
+
+class MCEulerCharRiemInvBCInters(MCEulerBaseBCInters):
+    type = 'char-riem-inv'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg):
+        super().__init__(be, lhs, elemap, cfgsect, cfg)
+
+        self.c |= self._exp_opts(
+            ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
+        )
+
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
+        bcvars += self.c['names']
+        default = {spn: 0 for spn in self.c['names']}
+
+        self.c |= self._exp_opts(bcvars, lhs, default=default)
+        self.validate_species()

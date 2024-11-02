@@ -113,7 +113,6 @@ class EulerSupInflowBCInters(EulerBaseBCInters):
 
 class EulerSupOutflowBCInters(EulerBaseBCInters):
     type = 'sup-out-fn'
-    cflux_state = 'ghost'
 
 
 class EulerCharRiemInvBCInters(EulerBaseBCInters):
