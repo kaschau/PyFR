@@ -59,8 +59,8 @@
     fpdtype_t Y;
 %   for n in range(ns):
     Y = ql[${n}];
-    grad_ur[0][${n}] = Y*rhol_x;
-    grad_ur[1][${n}] = Y*rhol_y;
+    grad_ur[0][${n}] = Y*rho_x;
+    grad_ur[1][${n}] = Y*rho_y;
 %   endfor
 
 % elif ndims == 3:
@@ -73,9 +73,9 @@
     fpdtype_t Y;
 %   for n in range(ns):
     Y = ql[${n}];
-    grad_ur[0][${n}] = Y*rhol_x;
-    grad_ur[1][${n}] = Y*rhol_y;
-    grad_ur[2][${n}] = Y*rhol_z;
+    grad_ur[0][${n}] = Y*rho_x;
+    grad_ur[1][${n}] = Y*rho_y;
+    grad_ur[2][${n}] = Y*rho_z;
 %   endfor
 
 % endif
