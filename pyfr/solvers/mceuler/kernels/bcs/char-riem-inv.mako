@@ -48,8 +48,8 @@
                     : ql[${rhoix}]*pow(ql[${rhoix}]*c_b*c_b/(gammal*p_i), 1.0/gmol);
     fpdtype_t p_b = 1.0/gammal*rho_b*c_b*c_b;
 
-%  for n in range(ns):
-    ur[${n}] = qr[${n}]*rho_b;
+%  for n,spn in enumerate(c['names']):
+    ur[${n}] = ${c[spn]}*rho_b;
 %  endfor
 
 % for i in range(ndims):
