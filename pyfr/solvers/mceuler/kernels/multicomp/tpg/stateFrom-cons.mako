@@ -54,7 +54,7 @@
     qh[1] = cp;
 
     // Mixture speed of sound
-    qh[2] = sqrt(qh[0] * R * q[${ndims + 1}]);
+    qh[2] = sqrt(qh[0] * R * T);
 
     // internal energy
     qh[3] = rho*e;

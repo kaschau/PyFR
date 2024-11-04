@@ -65,7 +65,7 @@
     }
 % endfor
 
-    fpdtype_t rhoe = rho*h - q[${rhoix}];
+    fpdtype_t rhoe = rho*h - q[${pix}];
     u[${Eix}] = rhoe + 0.5*rho*${pyfr.dot('q[{i}]', i=(vix,vix + ndims))};
 
     // Store gamma, cp, c, rhoe
