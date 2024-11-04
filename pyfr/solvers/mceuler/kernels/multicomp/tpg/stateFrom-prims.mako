@@ -28,7 +28,7 @@
 
     // Compute density
     fpdtype_t rho = q[${pix}]/(R*q[${Tix}]);
-    q[$[rhoix]] = rho;
+    q[${rhoix}] = rho;
 
     // Species mass
 % for n in range(ns):
