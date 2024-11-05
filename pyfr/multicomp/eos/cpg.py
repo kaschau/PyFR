@@ -1,12 +1,12 @@
-from pyfr.multicomp.eos.baseEOS import BaseEOS
+from pyfr.multicomp.eos.base import BaseEOS
 import itertools as it
 import numpy as np
 
 
 class cpgEOS(BaseEOS):
     name = 'cpg'
-    def __init__(self):
-        super().__init__()
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         self.input_props = {
             'MW': None,
@@ -17,10 +17,6 @@ class cpgEOS(BaseEOS):
             'MW': None,
             'cp0': None,
         }
-
-    @staticmethod
-    def validate_data(consts):
-        pass
 
     @staticmethod
     def compute_consts(props, consts):

@@ -7,7 +7,7 @@
 <% MW = c['MW'] %>\
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
-<% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
+<% strict = N7.shape[1] == 15 %>\
 
 <%def name="rateConst(A, m, Ea)">
 % if m == 0.0 and Ea == 0.0:
@@ -69,28 +69,35 @@
   fpdtype_t cp = 0.0;
   {
 % for n in range(ns):
-      // ${c['names'][n]} Properties
+      // ${c['names'][n]} Properties ${str(strict)}
+      % if scrict == False:
+      {
+        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+        fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 0)};
+        fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 0)};
+        gbs[${n}] = hi - scs;
+        qh[${4 + n}] = hi;
+        cp += cps*q[${n}];
+      }
+      % else:
       if (T < ${N7[n,0]})
       {
-<% m = 8 %>\
-            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
-            fpdtype_t scs = ${N7[n, m + 0]} * logT +
-                            T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
-            gbs[${n}] = hi - scs;
-            qh[${4 + n}] = hi;
-            cp += cps*q[${n}];
+          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 8)};
+          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 8)};
+          gbs[${n}] = hi - scs;
+          qh[${4 + n}] = hi;
+          cp += cps*q[${n}];
         }else
         {
-<% m = 1 %>\
-            fpdtype_t cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            fpdtype_t hi = ${f'+ T*('.join(str(c) for c in N7[n,m:m+5]/div)+')'*4} + ${N7[n, m + 5]}*Tinv;
-            fpdtype_t scs = ${N7[n, m + 0]} * logT +
-                            T*(${f'+ T*('.join(str(c) for c in N7[n,m+1:m+5]/div[0:-1])+')'*3}) + ${N7[n, m + 6]};
-            gbs[${n}] = hi - scs;
-            qh[${4 + n}] = hi;
-            cp += cps*q[${n}];
+          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
+          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 1)};
+          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 1)};
+          gbs[${n}] = hi - scs;
+          qh[${4 + n}] = hi;
+          cp += cps*q[${n}];
         }
+    % endif
 % endfor
   }
 

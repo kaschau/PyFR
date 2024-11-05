@@ -1,11 +1,11 @@
-from pyfr.multicomp.transport.base_transport import BaseTransport
+from pyfr.multicomp.transport.base import BaseTransport
 
 
 class ConstantProperties(BaseTransport):
     name = 'constant-props'
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         self.input_props = {
             'mu0': None,

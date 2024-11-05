@@ -5,6 +5,7 @@
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
+<% strict = N7.shape[1] == 15 %>\
 
 <%pyfr:macro name='compute_intestar' params='u, q, qh, intestar'>
 
@@ -13,14 +14,17 @@
     intestar = qh[3]/q[${rhoix}];
     // Compute shifted internal energy
 % for n in range(ns):
+
+    % if not strict:
+      intestar -= q[${n}] * ${N7[n,5] * Ru/MW[n]};
+    % else:
       if (T < ${N7[n,0]})
       {
-      <% m = 8 %>
-          intestar -= q[${n}] * ${N7[n,m + 5] * Ru/MW[n]};
+        intestar -= q[${n}] * ${N7[n,8 + 5] * Ru/MW[n]};
       }else
       {
-      <% m = 1 %>
-          intestar -= q[${n}] * ${N7[n,m + 5] * Ru/MW[n]};
+        intestar -= q[${n}] * ${N7[n,1 + 5] * Ru/MW[n]};
       }
+    % endif
 % endfor
 </%pyfr:macro>

@@ -5,7 +5,7 @@
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% div = [1.0, 2.0, 3.0, 4.0, 5.0] %>\
+<% strict = N7.shape[1] == 15 %>\
 
 <%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
@@ -20,17 +20,20 @@
         // ${c['names'][n]} Properties
         {
         fpdtype_t cps, hs;
-        if (T < ${N7[n,0]})
-        {
-        <% m = 8 %>
-            cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-        }else
-        {
-        <% m = 1 %>
-            cps = ${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n])+')'*4};
-            hs = T*(${'+ T*('.join(str(c) for c in N7[n,m:m+5]*Ru/MW[n]/div)+')'*4}) + ${N7[n, m + 5] * Ru/MW[n]};
-        }
+        % if not strict:
+            cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+            hs = ${pyfr.nasa_hs(N7[n,:], Ru, MW[n], 0)};
+        % else:
+          if (T < ${N7[n,0]})
+          {
+            cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+            hs = ${pyfr.nasa_hs(N7[n,:], Ru, MW[n], 8)};
+          }else
+          {
+            cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
+            hs = ${pyfr.nasa_hs(N7[n,:], Ru, MW[n], 1)};
+          }
+        % endif
         cp += cps * q[${n}];
         h += hs * q[${n}];
         qh[${4 + n}] = hs;

@@ -1,4 +1,4 @@
-from pyfr.multicomp.transport.base_transport import BaseTransport
+from pyfr.multicomp.transport.base import BaseTransport
 from pyfr.multicomp.MM_Tables import (delta,
                                       tstar22,
                                       omega22_table,
@@ -12,8 +12,8 @@ from scipy import interpolate as intrp
 class KineticTheory(BaseTransport):
     name = 'kinetic-theory'
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         self.input_props = {
             'MW': None,

@@ -9,6 +9,7 @@ import numpy as np
 class MCFluid:
     def __init__(self, cfg):
 
+        self.cfg = cfg
         self.eos = cfg.get('multi-component','eos')
         system = cfg.get('solver', 'system')
         if system == 'mcnavier-stokes':
@@ -16,9 +17,9 @@ class MCFluid:
         else:
             self.trans = None
 
-        eos_data = subclass_where(BaseEOS, name=self.eos)()
+        eos_data = subclass_where(BaseEOS, name=self.eos)(cfg)
         if self.trans is not None:
-            trans_data = subclass_where(BaseTransport, name=self.trans)()
+            trans_data = subclass_where(BaseTransport, name=self.trans)(cfg)
 
         # Save the prims <-> cons functions
         self.pri_to_con = eos_data.pri_to_con
@@ -63,7 +64,7 @@ class MCFluid:
             self.input_props[key] = complete_species(key, usersp, refsp)
 
         # Now we can compute/fill in any constants
-        eos_data.compute_consts(self.input_props, self.consts)
+        eos_data.compute_consts()
         if self.trans is not None:
             trans_data.compute_consts(self.input_props, self.consts, self.eos)
 
@@ -76,8 +77,6 @@ class MCFluid:
                     self.consts[key] = np.array(data)
                 else:
                     self.consts[key] = data
-
-        eos_data.validate_data(self.consts)
 
     @staticmethod
     def get_species_names(cfg):
