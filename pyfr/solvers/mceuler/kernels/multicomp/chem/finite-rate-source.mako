@@ -7,7 +7,7 @@
 <% MW = c['MW'] %>\
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
-<% strict = N7.shape[1] == 15 %>\
+<% fast_props = N7.shape[1] == 7 %>\
 
 <%def name="rateConst(A, m, Ea)">
 % if m == 0.0 and Ea == 0.0:
@@ -69,8 +69,8 @@
   fpdtype_t cp = 0.0;
   {
 % for n in range(ns):
-      // ${c['names'][n]} Properties ${str(strict)}
-      % if scrict == False:
+      // ${c['names'][n]} Properties
+      % if fast_props:
       {
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
         fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 0)};

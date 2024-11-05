@@ -5,7 +5,7 @@
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% strict = N7.shape[1] == 15 %>\
+<% fast_props = N7.shape[1] == 7 %>\
 
 <%pyfr:macro name='compute_entropy' params='u, q, e'>
 
@@ -17,7 +17,7 @@
     // ${c['names'][n]} Entropy
     {
       fpdtype_t es;
-      % if not strict:
+      % if fast_props:
         es = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 0)};
       % else:
         if (T < ${N7[n,0]})

@@ -5,7 +5,7 @@
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% strict = N7.shape[1] == 15 %>\
+<% fast_props = N7.shape[1] == 7 %>\
 
 <%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
@@ -20,7 +20,7 @@
         // ${c['names'][n]} Properties
         {
         fpdtype_t cps, hs;
-        % if not strict:
+        % if fast_props:
             cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
             hs = ${pyfr.nasa_hs(N7[n,:], Ru, MW[n], 0)};
         % else:
