@@ -10,7 +10,7 @@
 <%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
     <% tol = 1e-8 %>\
-    <% niter_max = 1e-8 %>\
+    <% niter_max = 50 %>\
     fpdtype_t error = ${fpdtype_max};
     for (int niter = 0; niter < ${niter_max} && abs(error) > ${tol}; niter++)
     {
