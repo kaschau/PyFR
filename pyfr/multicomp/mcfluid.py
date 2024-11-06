@@ -26,18 +26,9 @@ class MCFluid:
         self.con_to_pri = eos_data.con_to_pri
 
         # Merge the lists of required data
-        self.input_props = eos_data.input_props
+        self.input_props = {k:None for k in eos_data.input_props}
         if self.trans is not None:
-            self.input_props |= trans_data.input_props
-
-        # Merge the constants lists
-        self.consts = eos_data.consts
-        if self.trans is not None:
-            self.consts |= trans_data.consts
-        self.consts['Ru'] = 8314.46261815324
-        self.consts['avogadro'] = 6.02214076e+26
-        self.consts['kb'] = 1.380649e-23
-        self.consts['epsilon0'] = 8.854187812773345e-12
+            self.input_props |= {k:None for k in trans_data.input_props}
 
         # Get our species names
         file_or_list = cfg.get('multi-component', 'species')
@@ -51,9 +42,6 @@ class MCFluid:
                     usersp[key]['Le'] = 1.0
         # HACK: Default to unity lewis
 
-        self.consts['ns'] = len(usersp)
-        self.consts['names'] = [key for key in usersp]
-
         # Now load reference species
         relpath = str(Path(__file__).parent)
         with open(f"{relpath}/database/species_library.yaml", "r") as f:
@@ -63,20 +51,28 @@ class MCFluid:
         for key in self.input_props.keys():
             self.input_props[key] = complete_species(key, usersp, refsp)
 
-        # Now we can compute/fill in any constants
-        eos_data.compute_consts()
+        # Now we can compute/fill in constants
+        self.consts = {}
+        self.consts['Ru'] = 8314.46261815324
+        self.consts['avogadro'] = 6.02214076e+26
+        self.consts['kb'] = 1.380649e-23
+        self.consts['epsilon0'] = 8.854187812773345e-12
+
+        self.consts['ns'] = len(usersp)
+        self.consts['names'] = [key for key in usersp]
+
+        eos_data.compute_consts(self.input_props, self.consts)
         if self.trans is not None:
-            trans_data.compute_consts(self.input_props, self.consts, self.eos)
+            trans_data.compute_consts(self.input_props, self.consts)
 
         # Finally, merge reactions data to the consts, make them numpy arrays
         chem = cfg.getbool('multi-component','chemistry', False)
         if chem:
-            for key in userdata['reactions']:
-                data = userdata['reactions'][key]
-                if not isinstance(data[0], str):
-                    self.consts[key] = np.array(data)
+            for k,v in userdata['reactions'].items():
+                if not isinstance(v[0], str):
+                    self.consts[k] = np.array(v)
                 else:
-                    self.consts[key] = data
+                    self.consts[k] = v
 
     @staticmethod
     def get_species_names(cfg):

@@ -1,45 +1,35 @@
 from pyfr.multicomp.transport.base import BaseTransport
-from pyfr.multicomp.MM_Tables import (delta,
-                                      tstar22,
-                                      omega22_table,
-                                      tstar,
-                                      astar_table)
+from pyfr.multicomp.MM_Tables import delta, tstar22, omega22_table, tstar, astar_table
 import numpy as np
 from scipy import interpolate as intrp
 
 
-
 class KineticTheory(BaseTransport):
-    name = 'kinetic-theory'
+    name = "kinetic-theory"
 
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.input_props = {
-            'MW': None,
-            'well': None,
-            'diam': None,
-            'dipole': None,
-            'polarize': None,
-            'zrot': None,
-            'geometry': None,
-        }
+        # required properties
+        self.input_props = [
+            "MW",
+            "well",
+            "diam",
+            "dipole",
+            "polarize",
+            "zrot",
+            "geometry",
+        ]
 
-        self.consts = {
-            'MW' : None,
-            'muPoly' : None,
-            'kappaPoly' : None,
-            'DPoly' : None,
-        }
+    def compute_consts(self, props, consts):
+        self.consts = consts
+        ns = consts["ns"]
+        Ru = consts["Ru"]
+        avogadro = consts["avogadro"]
+        kb = consts["kb"]
+        eps0 = consts["epsilon0"]
 
-    @staticmethod
-    def compute_consts(props, consts, eos):
-        ns = len(consts['names'])
-        Ru = consts['Ru']
-        avogadro = consts['avogadro']
-        kb = consts['kb']
-        eps0 = consts['epsilon0']
-
+        eos = self.cfg.get("multi-component", "eos")
         if eos == "cpg":
             cp0 = props["cp0"]
             NASA7 = [None for n in range(ns)]
@@ -52,12 +42,21 @@ class KineticTheory(BaseTransport):
             cp0 = [None for n in range(ns)]
 
             def cp_R(cp0, poly, T, MW):
-                if T <= poly[0]:
-                    return sum([poly[i + 1 + 7] * T ** (i) for i in range(5)])
+                if len(poly == 15):  # strict
+                    if T <= poly[0]:
+                        return sum([poly[i + 1 + 7] * T ** (i) for i in range(5)])
+                    else:
+                        return sum([poly[i + 1] * T ** (i) for i in range(5)])
                 else:
                     return sum([poly[i + 1] * T ** (i) for i in range(5)])
 
-        deg = 4
+        maxdeg = 4
+        prop_calc = self.cfg.get("multi-component", "property-calc", "strict")
+        if prop_calc == "strict":
+            from np.polynomial.Polynomial import fit
+        else:
+            from pyfr.multicomp.eos.base import poly_reduce as fit
+
         # Maximum and minumum temperatures to generate poly'l
         # NOTE: These ranges vary by input file in Cantera. It seems to set the
         # minTemp and maxTemp based on the min/max ranges of the NASA7 poly'l
@@ -65,17 +64,15 @@ class KineticTheory(BaseTransport):
         # in thermodynamic testing against Cantera.
         # (i.e. takes error from 1% to 0.001%).
         # For now we just use sensible values here.
-        Tmin = 200
-        Tmax = 5000
+        Tmin = self.cfg.getfloat("multi-component", "T-min", 300.0)
+        Tmax = self.cfg.getfloat("multi-component", "T-max", 3500.0)
         # Generate range of temperatures
-        npts = 50
+        npts = 400
         Ts = np.linspace(Tmin, Tmax, npts)
 
         # Collision integral interpolations
-        intrp_o22 = intrp.RectBivariateSpline(tstar22, delta,
-                                              omega22_table, kx=5, ky=5)
-        intrp_Astar = intrp.RectBivariateSpline(tstar, delta,
-                                                astar_table, kx=5, ky=5)
+        intrp_o22 = intrp.RectBivariateSpline(tstar22, delta, omega22_table, kx=5, ky=5)
+        intrp_Astar = intrp.RectBivariateSpline(tstar, delta, astar_table, kx=5, ky=5)
 
         # Get molecular mass
         MW = props["MW"]
@@ -172,7 +169,8 @@ class KineticTheory(BaseTransport):
             Tstar = T * kb / well
             omga22 = intrp_o22(Tstar, r_deltastar.diagonal(), grid=False)
             visc[i, :] = (
-                (5.0 / 16.0) * np.sqrt(np.pi * mass * kb * T)
+                (5.0 / 16.0)
+                * np.sqrt(np.pi * mass * kb * T)
                 / (np.pi * diam**2 * omga22)
             )
 
@@ -265,39 +263,27 @@ class KineticTheory(BaseTransport):
         # we also reverse the numpy poly'l so lowest order is first
         visc = np.sqrt(visc / sqrtTs[:, None])
         w = 1.0 / (visc**2)
-        consts['muPoly'] = np.flip(
-            np.array(
-                [list(
-                    np.polyfit(logTs, visc[:, k], deg=deg, w=w[:, k])
-                    ) for k in range(ns)]
-            ),
-            -1,
-        )
+        consts["muPoly"] = [
+            list(fit(logTs, visc[:, k], maxdeg, w=w[:, k]).convert().coef) for k in range(ns)
+        ]
 
         # We fit the cond pol'y to the sqrtT as cond is proportional to sqrtT
         # we also reverse the numpy poly'l so lowest order is first
         cond = cond / np.sqrt(Ts[:, None])
         w = 1.0 / (cond**2)
-        consts['kappaPoly'] = np.flip(
-            np.array(
-                [list(
-                    np.polyfit(logTs, cond[:, k], deg=deg, w=w[:, k])
-                    ) for k in range(ns)]
-            ),
-            -1,
-        )
+        consts["kappaPoly"] = [
+            list(fit(logTs, cond[:, k], maxdeg, w=w[:, k]).convert().coef) for k in range(ns)
+        ]
 
-        Dij = np.empty((int((ns + 1)*ns/2), deg+1))
+        Dij = []
         diff = diff / Ts[:, None, None] ** 1.5
         w = 1.0 / (diff**2)
-        icc = 0
         for n in range(ns):
             for n2 in range(n, ns):
-                poly=np.polyfit(logTs, diff[:, n, n2], deg=deg, w=w[:, n, n2])
-                Dij[icc,:] = np.flip(poly)
-                icc += 1
+                poly = fit(logTs, diff[:, n, n2], maxdeg, w=w[:, n, n2]).convert().coef
+                Dij.append(list(poly))
 
-        consts['DijPoly'] = Dij
+        consts["DijPoly"] = Dij
 
         # MW should already be populated from the eos, but we redo it here anyway
-        consts['MW'] = MW
+        consts["MW"] = MW

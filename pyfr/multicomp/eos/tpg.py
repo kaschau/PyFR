@@ -10,31 +10,27 @@ class tpgEOS(BaseEOS):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.input_props = {
-            'MW': None,
-            'NASA7': None,
-        }
+        self.input_props = [
+            'MW',
+            'NASA7',
+        ]
 
-        self.consts = {
-            'MW': None,
-            'NASA7': None,
-        }
-
-    def compute_consts(self):
-        self.consts['MW'] = self.input_props['MW']
+    def compute_consts(self, props, consts):
+        self.consts = consts
+        consts['MW'] = props['MW']
 
         # Determine if we are using strict property cals or fast
         prop_calc = self.cfg.get('multi-component', 'property-calc', 'strict')
         if prop_calc == 'strict':
-            self.consts['NASA7'] = self.input_props['NASA7']
+            consts['NASA7'] = props['NASA7']
         elif prop_calc == 'fast':
-            N7 = self.input_props['NASA7']
+            N7 = props['NASA7']
             Tmin = self.cfg.getfloat('multi-component', 'T-min', 300.0)
             Tmax = self.cfg.getfloat('multi-component', 'T-max', 3500.0)
             Ts = np.linspace(Tmin, Tmax, 500)
 
-            self.consts['NASA7'] = np.empty((self.consts['ns'], 7))
-            for n in range(self.consts['ns']):
+            consts['NASA7'] = np.empty((consts['ns'], 7))
+            for n in range(consts['ns']):
 
                 m = np.where(Ts <= N7[n, 0], 8, 1)
 
@@ -98,7 +94,7 @@ class tpgEOS(BaseEOS):
                 # plt.legend()
                 # plt.show()
 
-                self.consts['NASA7'][n, :] = coeffs
+                consts['NASA7'][n, :] = coeffs
         else:
             print(type(prop_calc))
             raise ValueError(f'Unknown property-calc method "{prop_calc}".')

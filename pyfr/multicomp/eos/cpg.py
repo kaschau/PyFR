@@ -8,18 +8,13 @@ class cpgEOS(BaseEOS):
     def __init__(self, cfg):
         super().__init__(cfg)
 
-        self.input_props = {
-            'MW': None,
-            'cp0': None,
-        }
+        self.input_props = [
+            'MW',
+            'cp0',
+        ]
 
-        self.consts = {
-            'MW': None,
-            'cp0': None,
-        }
-
-    @staticmethod
-    def compute_consts(props, consts):
+    def compute_consts(self, props, consts):
+        self.consts = consts
         consts['MW'] = props['MW']
         consts['cp0'] = props['cp0']
 

@@ -41,16 +41,19 @@
 
 % for n in range(ns):
 // ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
-  mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n,:])+')'*4};
-  kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n,:])+')'*4};
+  <% deg = len(muPoly[n]) - 1%>\
+  mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
+  <% deg = len(kappaPoly[n]) - 1 %>\
+  kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n])+')'*deg};
   // Set to correct dimensions
   mu_sp[${n}] *= sqrtsqrtT;
   mu_sp[${n}] *= mu_sp[${n}];
   kappa_sp[${n}] *= sqrtT;
-% for n2 in range(n, ns):
-<% ix = Dijix(n,n2)%>\
-    invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix,:])+')'*4})*T_3o2);
-% endfor
+  % for n2 in range(n, ns):
+    <% ix = Dijix(n,n2)%>\
+    <% deg = len(DijPoly[ix]) - 1 %>\
+        invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_3o2);
+  % endfor
 % endfor
 
   // Now every species' property is computed, generate mixture values

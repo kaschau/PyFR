@@ -1,5 +1,22 @@
 import numpy as np
 
+def poly_reduce(x, y, maxdeg, tol = 0.01, w = None):
+
+    ref_poly = np.polynomial.Polynomial.fit(x, y, maxdeg, w=w)
+    test_x = np.linspace(min(x), max(x), 500)
+    ref_y = ref_poly(test_x)
+    deg = 0
+    error = np.inf
+    while deg <= maxdeg:
+        poly = np.polynomial.Polynomial.fit(x, y, deg, w=w)
+        trial_y = poly(test_x)
+        error = np.max(np.abs(trial_y-ref_y)/np.abs(ref_y))
+        deg += 1
+        if error <= tol:
+            break
+
+    return poly
+
 class BaseEOS:
     name = None
 
@@ -16,18 +33,3 @@ class BaseEOS:
             Ysum += Y
         if np.max(Ysum) > 1.0:
             raise ValueError('Species mass fraction sum > 1.0 detected in ICs')
-
-
-    @staticmethod
-    def poly_reduce(x, y, maxdeg, tol = 5.0):
-
-        ref_poly = np.polynomial.Polynomial.fit(x, y, maxdeg)
-        test_x = np.linspace(min(x), max(x), 500)
-        ref_y = ref_poly(test_x)
-        deg = 0
-        while error <= tol or deg <= maxdeg:
-            poly = np.polynomial.Polynomial.fit(x, y, deg)
-            trial_y = poly(test_x)
-            error = np.max(np.abs(trial_y-ref_y)/np.abs(ref_y))
-
-        return poly.convert().coef
