@@ -53,7 +53,7 @@ class KineticTheory(BaseTransport):
         maxdeg = 4
         prop_calc = self.cfg.get("multi-component", "property-calc", "strict")
         if prop_calc == "strict":
-            from np.polynomial.Polynomial import fit
+            fit = np.polynomial.Polynomial.fit
         else:
             from pyfr.multicomp.eos.base import poly_reduce as fit
 

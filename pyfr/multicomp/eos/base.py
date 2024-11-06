@@ -31,5 +31,5 @@ class BaseEOS:
             elif np.min(Y) < 0.0:
                 raise ValueError('Species mass fraction < 0.0 detected in ICs')
             Ysum += Y
-        if np.max(Ysum) > 1.0:
+        if np.max(Ysum) > 1.0 + 1e-8:
             raise ValueError('Species mass fraction sum > 1.0 detected in ICs')
