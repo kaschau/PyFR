@@ -38,6 +38,9 @@ class tpgEOS(BaseEOS):
 
                 m = np.where(Ts <= N7[n, 0], 8, 1)
 
+                # weight the low temperature region
+                w = np.where(Ts < N7[n,0], 10, 1)
+
                 # Fit cp
                 cp = (       N7[n, m + 0]
                        + Ts*(N7[n, m + 1]
@@ -45,10 +48,10 @@ class tpgEOS(BaseEOS):
                        + Ts*(N7[n, m + 3]
                        + Ts*(N7[n, m + 4] )))))
 
-                cp_poly = np.polynomial.Polynomial.fit(Ts, cp, 4)
+                cp_poly = np.polynomial.Polynomial.fit(Ts, cp, 4, w=w)
                 coeffs = list(cp_poly.convert().coef)
 
-                #import matplotlib.pyplot as plt
+                # import matplotlib.pyplot as plt
                 # plt.plot(Ts, cp, label="ref")
                 # cp_new = (   coeffs[0]
                 #        + Ts*(coeffs[1]
