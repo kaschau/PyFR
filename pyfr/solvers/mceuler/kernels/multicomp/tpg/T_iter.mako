@@ -9,10 +9,10 @@
 
 <%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
-    fpdtype_t tol = 1e-8;
+    <% tol = 1e-8 %>\
+    <% niter_max = 1e-8 %>\
     fpdtype_t error = ${fpdtype_max};
-    fpdtype_t niter = 0;
-    while ((abs(error) > tol) && (niter < 50))
+    for (int niter = 0; niter < ${niter_max} && abs(error) > ${tol}; niter++)
     {
         fpdtype_t h = 0.0;
         cp = 0.0;
@@ -42,6 +42,5 @@
     error = e - (h - Rmix * T);
     // Newton's Method
     T = T - error / (-cp - Rmix);
-    niter += 1;
     }
 </%pyfr:macro>

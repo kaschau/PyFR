@@ -125,7 +125,7 @@ class tpgEOS(BaseEOS):
         # Compute h
         h = 0.0
         for n, Y in enumerate(it.chain(pris[ndims+2::],[Yns])):
-            N7 = NASA7[n]
+            N7 = np.copy(NASA7[n])
             if len(N7) == 15: # strict
                 m = np.where(T <= N7[0], 8, 1)
                 N7[1::] *= Ru/MW[n]
