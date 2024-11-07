@@ -274,16 +274,23 @@ def nasa_hs(context, N7, Ru, MW, m):
         return 'T*('+ '+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW/div)+')'*5 + f' + {N7[m + 5] * Ru/MW}'
     except ValueError:
         return ''
-def nasa_hi(context, N7, Ru, MW, m):
+def nasa_hi(context, N7, m):
     div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     try:
         return f'+ T*('.join(str(c) for c in N7[m:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv'
     except ValueError:
         return ''
 
-def nasa_scs(context, N7, Ru, MW, m):
+def nasa_scs(context, N7, m):
     div = np.array([1.0, 2.0, 3.0, 4.0])
     try:
-        return str(N7[m + 0]) + '* logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 6]}'
+        return f'{N7[m + 0]} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 6]}'
+    except ValueError:
+        return ''
+
+def nasa_s(context, N7, Ru, MW, m):
+    div = np.array([1.0, 2.0, 3.0, 4.0])
+    try:
+        return f'{N7[m + 0]*Ru/MW} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]*(Ru/MW)/div)+')'*4 + f'+ {N7[m + 6]*Ru/MW}'
     except ValueError:
         return ''

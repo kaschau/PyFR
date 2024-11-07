@@ -18,13 +18,13 @@
     {
       fpdtype_t es;
       % if fast_props:
-        es = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 0)};
+        es = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 0)};
       % else:
         if (T < ${N7[n,0]})
         {
-          es = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 8)};
+          es = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 8)};
         }else{
-          es = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 1)};
+          es = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 1)};
         }
       % endif
 

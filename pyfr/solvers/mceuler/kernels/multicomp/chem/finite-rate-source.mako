@@ -73,8 +73,8 @@
       % if fast_props:
       {
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
-        fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 0)};
-        fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 0)};
+        fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
+        fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 0)};
         gbs[${n}] = hi - scs;
         qh[${4 + n}] = hi;
         cp += cps*q[${n}];
@@ -83,16 +83,16 @@
       if (T < ${N7[n,0]})
       {
           fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 8)};
-          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 8)};
+          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 8)};
+          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 8)};
           gbs[${n}] = hi - scs;
           qh[${4 + n}] = hi;
           cp += cps*q[${n}];
         }else
         {
           fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], Ru, MW[n], 1)};
-          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], Ru, MW[n], 1)};
+          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 1)};
+          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 1)};
           gbs[${n}] = hi - scs;
           qh[${4 + n}] = hi;
           cp += cps*q[${n}];
