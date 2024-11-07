@@ -96,7 +96,6 @@ class tpgEOS(BaseEOS):
 
                 consts['NASA7'][n, :] = coeffs
         else:
-            print(type(prop_calc))
             raise ValueError(f'Unknown property-calc method "{prop_calc}".')
 
 
