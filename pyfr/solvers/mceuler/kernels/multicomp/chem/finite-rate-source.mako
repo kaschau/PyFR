@@ -181,12 +181,12 @@
 <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
 % if max(abs(nu_sum)) > 0.0:
     fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-% else:
-    fpdtype_t dYdt = 0.0;
-% endif
     dTdt -= qh[${4 + n}] * dYdt;
     q[${n}] += dYdt / rho * tSub;
     q[${n}] = fmax(0.0, q[${n}]);
+% else:
+    fpdtype_t dYdt = 0.0;
+% endif
     tempsum += q[${n}];
   }
 % endfor
@@ -203,7 +203,12 @@
   // Reconstruct d(rhoY)/dt based on where we ended up
 % for n in range(ns):
   // ${c['names'][n]}
-  src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+  <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+  % if max(abs(nu_sum)) > 0.0:
+    src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+  % else:
+    src[${n}] = 0.0;
+  % endif
 % endfor
 
 % for i in range(ndims):
