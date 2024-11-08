@@ -183,8 +183,6 @@
     dTdt -= qh[${4 + n}] * dYdt;
     q[${n}] += dYdt / rho * tSub;
     q[${n}] = fmax(0.0, q[${n}]);
-% else:
-    fpdtype_t dYdt = 0.0;
 % endif
     tempsum += q[${n}];
   }
