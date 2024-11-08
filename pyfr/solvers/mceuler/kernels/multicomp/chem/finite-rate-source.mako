@@ -136,7 +136,6 @@
     k_f *= cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction
-    fpdtype_t Fcent = 1.0;
     fpdtype_t k0 = ${rateConst(A_o[i], m_o[i], Ea_o[i])};
     fpdtype_t Pr = cTBC*k0/k_f;
     fpdtype_t pmod = Pr/(1.0 + Pr);
