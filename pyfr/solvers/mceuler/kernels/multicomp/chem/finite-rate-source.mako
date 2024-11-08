@@ -138,9 +138,9 @@
   % elif c['r_type'][i] == 'falloff-Troe':
     // Troe Reaction
     % if Tss == 0: #Three Parameter Troe form
-      fpdtype_t Fcent = (1.0 - (${alpha}))*exp(-T/(${Tsss})) + (${alpha})*exp(-T/({Ts}));
+      fpdtype_t Fcent = (1.0 - ${alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts});
     % else: # Four Parameter Troe form
-      fpdtype_t Fcent = (1.0 - (${alpha}))*exp(-T/(${Tsss})) + (${alpha})*exp(-T/(${Ts})) + exp(-(${Tss})*Tinv);
+      fpdtype_t Fcent = (1.0 - ${alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv);
     % endif
     fpdtype_t C = -0.4 - 0.67*log10(Fcent);
     fpdtype_t N = 0.75 - 1.27*log10(Fcent);

@@ -3,6 +3,11 @@
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
+<% N7 = c['NASA7'] %>\
+<% Ru = c['Ru'] %>\
+<% MW = c['MW'] %>\
+<% fast_props = N7.shape[1] == 7 %>\
+
 <%pyfr:macro name='stateFrom-cons' params='u, q, qh'>
 
     ## q is an array of length nvars + 2
@@ -41,7 +46,13 @@
 
     // Iterate on T
     fpdtype_t cp;
+    % if fast_props:
+    // Linear guess for T
+    fpdtype_t T = (e - (${'+'.join([f'{N7[n,5]*Ru/MW[n]}*q[{n}]' for n in range(ns)])})) /
+                  (${'+'.join([f'{N7[n,0]*Ru/MW[n]}*q[{n}]' for n in range(ns)])} - R);
+    % else:
     fpdtype_t T = 300.0; // Initial guess
+    % endif
     ${pyfr.expand('T_iter', 'e', 'cp', 'R', 'T', 'q', 'qh')};
 
     // Equilibrium T, p
