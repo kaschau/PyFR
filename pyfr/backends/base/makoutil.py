@@ -268,12 +268,20 @@ def nasa_cps(context, N7, Ru, MW, m):
     except ValueError:
         return ''
 
+def nasa_cpp(context, N7, Ru, MW, m):
+    try:
+        mult = np.array([1.0, 2.0, 3.0, 4.0])
+        return '+ T*('.join(str(c) for c in N7[m+1:m+5]*Ru/MW*mult)+')'*3
+    except ValueError:
+        return ''
+
 def nasa_hs(context, N7, Ru, MW, m):
     div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     try:
         return 'T*('+ '+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW/div)+')'*5 + f' + {N7[m + 5] * Ru/MW}'
     except ValueError:
         return ''
+
 def nasa_hi(context, N7, m):
     div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     try:
