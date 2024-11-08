@@ -10,29 +10,33 @@
 <% fast_props = N7.shape[1] == 7 %>\
 
 <%def name="rateConst(A, m, Ea)">
+<% m = float(m) %>\
 % if m == 0.0 and Ea == 0.0:
   ${A}
 % elif m == 0.0 and Ea != 0.0:
   exp(log(${A})-(${Ea}*Tinv))
-% elif abs(int(m) - m) < 1e-14 and Ea == 0.0:
-%   if m < 0:
+% elif m.is_integer() and Ea == 0.0:
+%   if m < 0.0:
   ${A}${"".join("*Tinv" for _ in range(int(abs(m))))}
-%   elif m > 0:
+%   elif m > 0.0:
   ${A}${"".join("*T" for _ in range(int(m)))}
 %   endif
 % elif m != 0.0 and Ea == 0.0:
   exp(log(${A})+(${m}*logT))
-% elif Ea !=0:
+% elif Ea != 0.0:
   exp(log(${A})+(${m}*logT)-(${Ea}*Tinv))
 % endif
-</%def>
+</%def>\
 
 <%def name="eqConst(nusum)">
+<% nusum = float(nusum) %>\
 % if nusum != 0.0:
 %   if nusum == 1.0:
   prefRuT*exp(-dG)
-%   elif nusum == -1:
+%   elif nusum == -1.0:
   exp(-dG)/prefRuT
+%   elif nusum.is_integer():
+  ${pyfr.intpow(prefRuT, nusum)}*exp(-dG)
 %   else:
   pow(prefRuT,${nusum})*exp(-dG)
 %   endif
@@ -108,6 +112,8 @@
 <% A_o = c['A_o'] %>\
 <% m_o = c['m_o'] %>\
 <% Ea_o = c['Ea_o'] %>\
+<% nu_f = c['nu_f'] %>\
+<% nu_b = c['nu_b'] %>\
   fpdtype_t rp[${nr}];
 
 % for i in range(nr):
@@ -115,7 +121,7 @@
   <% Tsss = c['fall_coeffs'][i][1]%>\
   <% Ts = c['fall_coeffs'][i][2]%>\
   <% Tss = c['fall_coeffs'][i][3]%>\
-  <% nu_sum = c['nu_b'][:,i] - c['nu_f'][:,i] %>\
+  <% nu_sum = nu_b[:,i] - nu_f[:,i] %>\
 
   // Reaction ${i} - ${c['r_type'][i]}
   {
@@ -138,9 +144,9 @@
   % elif c['r_type'][i] == 'falloff-Troe':
     // Troe Reaction
     % if Tss == 0: #Three Parameter Troe form
-      fpdtype_t Fcent = (1.0 - ${alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts});
+      fpdtype_t Fcent = (${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts});
     % else: # Four Parameter Troe form
-      fpdtype_t Fcent = (1.0 - ${alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv);
+      fpdtype_t Fcent = (${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv);
     % endif
     fpdtype_t C = -0.4 - 0.67*log10(Fcent);
     fpdtype_t N = 0.75 - 1.27*log10(Fcent);
@@ -155,12 +161,12 @@
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
   % if c['r_type'][i] == "Arrhenius Custom Order":
-  fpdtype_t rp_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['orders'][i]) if s != 0.0])};
+  fpdtype_t rp_f = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
   % else:
-  fpdtype_t rp_f = k_f * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_f'][:,i]) if s != 0.0])};
+  fpdtype_t rp_f = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
   % if c['reversible'][i] == 1.0:
-  fpdtype_t rp_b = -k_f/K_c * ${"*".join([f"pow(cs[{j}],{s})" for j,s in enumerate(c['nu_b'][:,i]) if s != 0.0])};
+  fpdtype_t rp_b = -k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if s != 0.0])};
   rp[${i}] = rp_f + rp_b;
   % else:
   rp[${i}] = rp_f;
@@ -172,8 +178,8 @@
   fpdtype_t tempsum = 0.0;
 % for n in range(ns):
   {
-<% nu_sum = c['nu_b'][n,:] - c['nu_f'][n,:] %>\
-% if max(abs(nu_sum)) > 0:
+<% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+% if max(abs(nu_sum)) > 0.0:
     fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
 % else:
     fpdtype_t dYdt = 0.0;
