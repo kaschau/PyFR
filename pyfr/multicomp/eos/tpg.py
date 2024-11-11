@@ -34,8 +34,7 @@ class tpgEOS(BaseEOS):
 
                 m = np.where(Ts <= N7[n, 0], 8, 1)
 
-                # weight the low temperature region
-                w = np.where(Ts < N7[n,0], 10, 1)
+                w = np.ones(500)
 
                 # Fit cp
                 cp = (       N7[n, m + 0]
@@ -55,6 +54,7 @@ class tpgEOS(BaseEOS):
                 #        + Ts*(coeffs[3]
                 #        + Ts*(coeffs[4] )))))
                 # plt.plot(Ts, cp_new, '--', label="new")
+                # plt.title(f'c_p {consts['names'][n]}')
                 # plt.legend()
                 # plt.show()
 
@@ -70,8 +70,10 @@ class tpgEOS(BaseEOS):
                           + Ts*(coeffs[4] / 5.0))))))
                 a5 = np.mean(h - h_new)
                 coeffs.append(a5)
+
                 # plt.plot(Ts, h, label="ref")
                 # plt.plot(Ts, h_new + a5, "--", label="new")
+                # plt.title(f'Enthalpy {consts['names'][n]}')
                 # plt.legend()
                 # plt.show()
 
@@ -89,8 +91,10 @@ class tpgEOS(BaseEOS):
                                +  Ts*(coeffs[4] / 4.0))))))
                 a6 = np.mean(s - s_new)
                 coeffs.append(a6)
+
                 # plt.plot(Ts, s, label="ref")
                 # plt.plot(Ts, s_new + a6, "--", label="new")
+                # plt.title(f'Entropy {consts['names'][n]}')
                 # plt.legend()
                 # plt.show()
 
