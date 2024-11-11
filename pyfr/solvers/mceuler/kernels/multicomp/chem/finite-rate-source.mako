@@ -125,9 +125,9 @@
 
   // Reaction ${i} - ${c['r_type'][i]}
   {
-  fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
-  fpdtype_t dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
-  fpdtype_t K_c = ${eqConst(sum(nu_sum))};
+  double k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
+  double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
+  double K_c = ${eqConst(sum(nu_sum))};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
   fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{j}])" for j,eff in enumerate(c['aij'][i]) if eff != 0.0])};
