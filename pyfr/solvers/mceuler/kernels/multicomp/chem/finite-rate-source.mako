@@ -165,7 +165,7 @@
   fpdtype_t rp_f = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
   % if c['reversible'][i] == 1.0:
-  fpdtype_t rp_b = -k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if s != 0.0])};
+  fpdtype_t rp_b = -k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   rp[${i}] = rp_f + rp_b;
   % else:
   rp[${i}] = rp_f;
