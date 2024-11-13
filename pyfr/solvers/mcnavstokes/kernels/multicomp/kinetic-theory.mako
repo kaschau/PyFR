@@ -30,6 +30,8 @@
 % for n in range(ns):
     X[${n}] *= invmass;
     MWmix += X[${n}] * ${MW[n]};
+    // Avoid pure species condition
+    X[${n}] = fmax(X[${n}], ${fpdtype_eps});
 % endfor
   }
 
@@ -105,14 +107,8 @@
 % endfor
     // account for pressure
     sum1 *= p;
-    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}] + 1e-12);
-    // HACK
-    fpdtype_t temp = sum1 + sum2;
-    if (fabs(temp) > 1e-10){
-      qt[${2+n}] = 1.0 / temp;
-    }else{
-      qt[${2+n}] = 0.0;
-    }
+    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+    qt[${2+n}] = 1.0 / (sum1 + sum2);
   }
 % endfor
 

@@ -72,6 +72,7 @@ class BaseBackend:
         dfltargs = {
             'fpdtype': self.fpdtype, 'ixdtype': self.ixdtype,
             'fpdtype_max': self.fpdtype_max, 'csubsz': self.csubsz,
+            'fpdtype_eps': self.fpdtype_eps,
             'soasz': self.soasz, 'math': math
         }
 
