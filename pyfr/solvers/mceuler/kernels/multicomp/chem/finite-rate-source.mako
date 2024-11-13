@@ -219,7 +219,7 @@
   printf("*********************************\n");
   printf("CHEMICAL SOURCE TERMS\n");
 % for n in range(ns):
-  printf("chem&omega_${c['names'][n]} = %.14f\n", src[${n}]);
+  printf("chem&omega_${c['names'][n]} = %f\n", src[${n}]);
 % endfor
   printf("*********************************\n");
 #endif
