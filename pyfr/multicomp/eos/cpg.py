@@ -23,7 +23,6 @@ class cpgEOS(BaseEOS):
         ns = consts['ns']
         ndims = len(pris) - (ns - 1) - 2
 
-
         # Compute ns species
         Yns = 1.0 - sum(pris[ndims+2::])
 
@@ -84,3 +83,60 @@ class cpgEOS(BaseEOS):
         p = rho * Rmix * T
 
         return [p, *vs, T, *Yk[0:-1]]
+
+    def diff_con_to_pri(self, cons, diff_cons):
+        consts = self.consts
+        cp0 = consts["cp0"]
+        MW = consts["MW"]
+        Ru = consts["Ru"]
+        ns = consts['ns']
+        ndims = len(cons) - (ns - 1) - 2
+
+        rhoYk = cons[0:ns]
+        *rhouvw, rhoE = cons[ns::]
+        diff_rhoY= diff_cons[0:ns]
+        *diff_rhouvw, diff_rhoE = diff_cons[ns::]
+
+        rho = sum(rhoYk)
+        diff_rho = sum(diff_rhoY)
+
+        # Compute primiatives
+        pris = self.con_to_pri(cons)
+        p = pris[0]
+        uvw = pris[1:ndims+1]
+        T = pris[ndims+1]
+
+        # Divide rhoY by ρ
+        Yk = [rhoY / rho for rhoY in rhoYk]
+
+        # Compute mixture properties
+        Rmix = 0.0
+        cp = 0.0
+        for n, Y in enumerate(Yk):
+            Rmix += Y / MW[n]
+            cp += Y * cp0[n]
+        Rmix *= Ru
+
+        # Compute the temperature, pressure
+        e = rhoE / rho - 0.5 * sum(v * v for v in uvw)
+
+        # Velocity gradients: ∂u⃗ = 1/ρ·[∂(ρu⃗) - u⃗·∂ρ]
+        diff_uvw = [(diff_rhov - v*diff_rho) / rho
+                    for diff_rhov, v in zip(diff_rhouvw, uvw)]
+
+        # Species gradients: ∂Y⃗ = 1/ρ·[∂(ρY⃗) - Y⃗·∂ρ]
+        diff_Yk = [(diff_rhoY - Y*diff_rho) / rho
+                    for diff_rhoY, Y in zip(diff_rhoY, Yk)]
+
+        # Build temperature gradient
+        diff_T = 1.0/rho*(diff_rhoE - rhoE/rho*diff_rho) - sum([i*j for i,j in zip(uvw,diff_uvw)])
+
+        for n, (Y, diff_Y) in enumerate(zip(Yk, diff_Yk)):
+            e_Y =  T*(cp0[n] - Ru/MW[n])
+            diff_T -= e_Y*diff_Y
+        diff_T /= (cp - Rmix)
+
+        # Build pressure gradient
+        diff_p = Rmix*T*diff_rho + rho*Rmix*diff_T + rho*T*Ru*sum([dY/M for dY,M in zip(diff_Yk,MW)])
+
+        return [diff_p, *diff_uvw, diff_T, *diff_Yk[0:-1]]

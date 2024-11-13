@@ -56,7 +56,8 @@ class BaseMCFluidElements:
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
-        return None
+        fluid = MCFluid(cfg)
+        return fluid.diff_con_to_pri(cons, diff_cons)
 
     @staticmethod
     def validate_formulation(ctrl):

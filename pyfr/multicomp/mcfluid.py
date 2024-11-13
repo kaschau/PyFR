@@ -24,6 +24,7 @@ class MCFluid:
         # Save the prims <-> cons functions
         self.pri_to_con = eos_data.pri_to_con
         self.con_to_pri = eos_data.con_to_pri
+        self.diff_con_to_pri = eos_data.diff_con_to_pri
 
         # Merge the lists of required data
         self.input_props = {k:None for k in eos_data.input_props}

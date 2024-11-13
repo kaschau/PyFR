@@ -186,11 +186,8 @@ class tpgEOS(BaseEOS):
         e = rhoE/rho - 0.5 * sum(v * v for v in vs)
 
         # Iterate on T, start at 300K
-        T = np.ones(rho.shape)*300.0
-        error = np.ones(rho.shape)
-        niter = 0
-        tol = 1e-8
-        while np.max(np.abs(error)) > tol and niter < 100:
+        T = np.ones(e.shape)*300.0
+        for _ in range(10):
             h = 0.0
             cp = 0.0
             for n, Y in enumerate(Yk):
@@ -218,10 +215,85 @@ class tpgEOS(BaseEOS):
                       +    N7[m + 5]) * Y
             error = e - (h - Rmix * T)
             # Newtons Method
-            T = T - error / (-cp - Rmix)
-            niter += 1
-            # print(niter, np.max(T), np.max(np.abs(error)))
+            T -= error / (-cp + Rmix)
 
         p = rho*Rmix*T
 
         return [p, *vs, T, *Yk[0:-1]]
+
+    def diff_con_to_pri(self, cons, diff_cons):
+        consts = self.consts
+        NASA7 = consts['NASA7']
+        Ru = consts['Ru']
+        MW = consts['MW']
+        ns = consts['ns']
+        ndims = len(cons) - (ns - 1) - 2
+
+        rhoYk = cons[0:ns]
+        *rhouvw, rhoE = cons[ns::]
+        diff_rhoY= diff_cons[0:ns]
+        *diff_rhouvw, diff_rhoE = diff_cons[ns::]
+
+        rho = sum(rhoYk)
+        diff_rho = sum(diff_rhoY)
+
+        # Compute primiatives
+        pris = self.con_to_pri(cons)
+        p = pris[0]
+        uvw = pris[1:ndims+1]
+        T = pris[ndims+1]
+
+        # Divide rhoY by ρ
+        Yk = [rhoY / rho for rhoY in rhoYk]
+
+        # Compute the temperature, pressure
+        e = rhoE / rho - 0.5 * sum(v * v for v in uvw)
+
+        # Velocity gradients: ∂u⃗ = 1/ρ·[∂(ρu⃗) - u⃗·∂ρ]
+        diff_uvw = [(diff_rhov - v*diff_rho) / rho
+                    for diff_rhov, v in zip(diff_rhouvw, uvw)]
+
+        # Species gradients: ∂Y⃗ = 1/ρ·[∂(ρY⃗) - Y⃗·∂ρ]
+        diff_Yk = [(diff_rhoY - Y*diff_rho) / rho
+                    for diff_rhoY, Y in zip(diff_rhoY, Yk)]
+
+        # Begin building temperature gradient
+        diff_T = 1.0/rho*(diff_rhoE - rhoE/rho*diff_rho) - sum([i*j for i,j in zip(uvw,diff_uvw)])
+
+        Rmix = 0.0
+        cp = 0.0
+        for n, (Y, diff_Y) in enumerate(zip(Yk, diff_Yk)):
+            Rmix += Y / MW[n]
+            N7 = np.copy(NASA7[n])
+            if len(N7) == 15: # strict
+                m = np.where(T <= N7[0], 8, 1)
+                N7[1::] *= Ru/MW[n]
+            elif len(NASA7[n]) == 7:
+                m = 0
+                N7 *= Ru/MW[n]
+            else:
+                raise ValueError("NASA7 Issue.")
+
+            cp += (     N7[m + 0]
+                   + T*(N7[m + 1]
+                   + T*(N7[m + 2]
+                   + T*(N7[m + 3]
+                   + T*(N7[m + 4] ))))) * Y
+
+            hk = (  T*(N7[m + 0]
+                  + T*(N7[m + 1] /2.0
+                  + T*(N7[m + 2] /3.0
+                  + T*(N7[m + 3] /4.0
+                  + T*(N7[m + 4] /5.0)))))
+                  +    N7[m + 5])
+
+            e_Y =  hk - T*Ru/MW[n]
+            diff_T -= e_Y*diff_Y
+
+        Rmix *= Ru
+        diff_T /= (cp - Rmix)
+
+        # Build pressure gradient
+        diff_p = Rmix*T*diff_rho + rho*Rmix*diff_T + rho*T*Ru*sum([dY/M for dY,M in zip(diff_Yk,MW)])
+
+        return [diff_p, *diff_uvw, diff_T, *diff_Yk[0:-1]]
