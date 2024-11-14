@@ -9,6 +9,8 @@
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% fast_props = N7.shape[1] == 7 %>\
+<% reconstruct = nsub_steps > 1 %>\
+<% tSub = dt / float(nsub_steps) %>\
 
 <%def name="rateConst(A, m, Ea)">
 <% m = float(m) %>\
@@ -54,7 +56,6 @@
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t rho = q[${rhoix}];
-  fpdtype_t tSub = ${dt} / ${nsub_steps};
 
   fpdtype_t T = q[${Tix}];
 
@@ -115,8 +116,8 @@
 <% Ea_o = c['Ea_o'] %>\
 <% nu_f = c['nu_f'] %>\
 <% nu_b = c['nu_b'] %>\
-  fpdtype_t rp[${nr}];
 
+  fpdtype_t rp[${nr}];
 % for i in range(nr):
   <% alpha = c['fall_coeffs'][i][0]%>\
   <% Tsss = c['fall_coeffs'][i][1]%>\
@@ -172,28 +173,40 @@
   } // End reaction loop
 % endfor
 
-  // Take sub step in time
-  fpdtype_t dTdt = 0.0;
-  fpdtype_t tempsum = 0.0;
-% for n in range(ns):
-  {
-<% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-% if max(abs(nu_sum)) > 0.0:
-    fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-    dTdt -= qh[${4 + n}] * dYdt;
-    q[${n}] += dYdt / rho * tSub;
-    q[${n}] = fmax(0.0, q[${n}]);
-% endif
-    tempsum += q[${n}];
-  }
-% endfor
-// Normalize
-% for n in range(ns):
-    q[${n}] /= tempsum;
-% endfor
+  % if reconstruct:
+    // Take sub step in time
+    fpdtype_t dTdt = 0.0;
+    fpdtype_t tempsum = 0.0;
+    % for n in range(ns):
+    {
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+        fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+        dTdt -= qh[${4 + n}] * dYdt;
+        q[${n}] += dYdt / rho * ${tSub};
+        q[${n}] = fmax(0.0, q[${n}]);
+      % endif
+        tempsum += q[${n}];
+    }
+    % endfor
+    // Normalize
+    % for n in range(ns):
+      q[${n}] /= tempsum;
+    % endfor
+    dTdt /= cp * rho;
+    T += dTdt * ${tSub};
 
-  dTdt /= cp*rho;
-  T += dTdt*tSub;
+  % else:
+    // Just set the source term
+    % for n in range(ns):
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+        src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+      % else:
+        src[${n}] = 0.0;
+      % endif
+    % endfor
+  % endif
   }
 
   // Chemical source terms
@@ -202,7 +215,9 @@
   // ${c['names'][n]}
   <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
   % if max(abs(nu_sum)) > 0.0:
-    src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+    % if reconstruct:
+      src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+    % endif
   % else:
     src[${n}] = 0.0;
   % endif

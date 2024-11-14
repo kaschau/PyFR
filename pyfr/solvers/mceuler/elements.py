@@ -160,7 +160,7 @@ class BaseMCFluidElements:
                 'nvars': self.nvars,
                 'c': consts,
                 'eos': self.mcfluid.eos,
-                'nsub_steps': self.cfg.get('multi-component', 'nsub-steps', default = 1),
+                'nsub_steps': self.cfg.getint('multi-component', 'nsub-steps', default = 1),
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
             self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-source',
