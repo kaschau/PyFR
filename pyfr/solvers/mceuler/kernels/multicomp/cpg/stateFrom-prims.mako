@@ -53,23 +53,23 @@
   printf("*********************************\n");
   printf("PRIMS TO CONS");
   printf("INPUT STATE\n");
-  printf("therm&p = %f\n", q[${pix}]);
+  printf("therm&p = %e\n", q[${pix}]);
 % for i in range(ndims):
-  printf("therm&v${i + vix} = %f\n", q[${i + vix}]);
+  printf("therm&v${i + vix} = %e\n", q[${i + vix}]);
 % endfor
-  printf("therm&T = %f\n", q[${Tix}]);
+  printf("therm&T = %e\n", q[${Tix}]);
 % for n in range(ns):
-  printf("therm&Y_${c['names'][n]} = %f\n", q[${n}]);
+  printf("therm&Y_${c['names'][n]} = %e\n", q[${n}]);
 % endfor
 
   printf("\nCOMPUTED STATE\n");
-  printf("therm&rho = %f\n", q[${rhoix}]);
+  printf("therm&rho = %e\n", q[${rhoix}]);
 % for i in range(ndims):
-  printf("therm&rhov${i + vix} = %f\n", u[${i + vix}]);
+  printf("therm&rhov${i + vix} = %e\n", u[${i + vix}]);
 % endfor
-  printf("therm&rhoE = %f\n", u[${Eix}]);
+  printf("therm&rhoE = %e\n", u[${Eix}]);
 % for n in range(ns):
-  printf("therm&rhoY_${c['names'][n]} = %f\n", u[${n}]);
+  printf("therm&rhoY_${c['names'][n]} = %e\n", u[${n}]);
 % endfor
   printf("*********************************\n");
 #endif

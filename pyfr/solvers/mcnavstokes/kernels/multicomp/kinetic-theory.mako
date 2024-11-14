@@ -116,19 +116,19 @@
   printf("*********************************\n");
   printf("TRANSPORT PROPERTIES\n");
   printf("INPUT STATE\n");
-  printf("trans&rho = %f\n", q[${rhoix}]);
-  printf("trans&p = %f\n", q[${pix}]);
-  printf("trans&T = %f\n", q[${Tix}]);
+  printf("trans&rho = %e\n", q[${rhoix}]);
+  printf("trans&p = %e\n", q[${pix}]);
+  printf("trans&T = %e\n", q[${Tix}]);
 % for n in range(ns):
-  printf("trans&Y_${c['names'][n]} = %f\n", q[${n}]);
+  printf("trans&Y_${c['names'][n]} = %e\n", q[${n}]);
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");
-  printf("trans&MWmix = %f\n", MWmix);
-  printf("trans&mu = %f\n", qt[0]);
-  printf("trans&kappa = %f\n", qt[1]);
+  printf("trans&MWmix = %e\n", MWmix);
+  printf("trans&mu = %e\n", qt[0]);
+  printf("trans&kappa = %e\n", qt[1]);
 % for n in range(ns):
-  printf("trans&D_${c['names'][n]} = %f\n", qt[${2+n}]);
+  printf("trans&D_${c['names'][n]} = %e\n", qt[${2+n}]);
 % endfor
   printf("*********************************\n");
 

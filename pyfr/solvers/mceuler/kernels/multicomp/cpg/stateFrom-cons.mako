@@ -62,32 +62,32 @@
   printf("CPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
 % for n in range(ns):
-  printf("therm&rhoY_${c['names'][n]} = %f\n", u[${n}]);
+  printf("therm&rhoY_${c['names'][n]} = %e\n", u[${n}]);
 % endfor
 % for i in range(ndims):
-    printf("therm&rhou = %f\n", u[${vix + i}]);
+    printf("therm&rhou = %e\n", u[${vix + i}]);
 % endfor
-  printf("therm&rhoE = %f\n", u[${Eix}]);
+  printf("therm&rhoE = %e\n", u[${Eix}]);
 
   printf("\nCOMPUTED STATE\n");
-  printf("therm&rho = %f\n", q[${rhoix}]);
-  printf("therm&p = %f\n", q[${pix}]);
-  printf("therm&T = %f\n", q[${Tix}]);
+  printf("therm&rho = %e\n", q[${rhoix}]);
+  printf("therm&p = %e\n", q[${pix}]);
+  printf("therm&T = %e\n", q[${Tix}]);
 % for n in range(ns):
-  printf("therm&Y_${c['names'][n]} = %f\n", q[${n}]);
+  printf("therm&Y_${c['names'][n]} = %e\n", q[${n}]);
 % endfor
 % for i in range(ndims):
-    printf("therm&u = %f\n", q[${vix + i}]);
+    printf("therm&u = %e\n", q[${vix + i}]);
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");
-  printf("therm&R = %f\n", R);
-  printf("therm&gamma = %f\n", qh[0]);
-  printf("therm&cp = %f\n", qh[1]);
-  printf("therm&c = %f\n", qh[2]);
-  printf("therm&rhoe = %f\n", qh[3]);
+  printf("therm&R = %e\n", R);
+  printf("therm&gamma = %e\n", qh[0]);
+  printf("therm&cp = %e\n", qh[1]);
+  printf("therm&c = %e\n", qh[2]);
+  printf("therm&rhoe = %e\n", qh[3]);
 % for n in range(ns):
-  printf("therm&h_${c['names'][n]} = %f\n", qh[${4 + n}]);
+  printf("therm&h_${c['names'][n]} = %e\n", qh[${4 + n}]);
 % endfor
   printf("*********************************\n");
 #endif
