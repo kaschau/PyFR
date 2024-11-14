@@ -1,5 +1,6 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<% import math %>\
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 
@@ -14,7 +15,7 @@
 % if m == 0.0 and Ea == 0.0:
   ${A}
 % elif m == 0.0 and Ea != 0.0:
-  exp(log(${A})-(${Ea}*Tinv))
+  exp(${math.log(A)}-(${Ea}*Tinv))
 % elif m.is_integer() and Ea == 0.0:
 %   if m < 0.0:
   ${A}${"".join("*Tinv" for _ in range(int(abs(m))))}
@@ -22,9 +23,9 @@
   ${A}${"".join("*T" for _ in range(int(m)))}
 %   endif
 % elif m != 0.0 and Ea == 0.0:
-  exp(log(${A})+(${m}*logT))
+  exp(${math.log(A)}+(${m}*logT))
 % elif Ea != 0.0:
-  exp(log(${A})+(${m}*logT)-(${Ea}*Tinv))
+  exp(${math.log(A)}+(${m}*logT)-(${Ea}*Tinv))
 % endif
 </%def>\
 
