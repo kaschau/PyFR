@@ -31,20 +31,27 @@
 % endif
 </%def>\
 
-<%def name="eqConst(nusum)">
+<%def name="Kcinv(nusum)">
 <% nusum = float(nusum) %>\
+
 % if nusum != 0.0:
-%   if nusum == 1.0:
-  prefRuT*exp(-dG)
-%   elif nusum == -1.0:
-  exp(-dG)/prefRuT
-%   elif nusum.is_integer():
-  ${pyfr.intpow(prefRuT, nusum)}*exp(-dG)
-%   else:
-  pow(prefRuT,${nusum})*exp(-dG)
-%   endif
+
+  % if nusum == 1.0:
+    prefRuTinv*exp(dG)
+  % elif nusum == -1.0:
+    exp(dG)*prefRuT
+  % elif nusum.is_integer():
+    % if nusum > 0.0:
+      exp(dG)*${pyfr.intpow(prefRuT, nusum)}
+    % else:
+      exp(dG)*${pyfr.intpow(prefRuT, -(nusum))}
+    % endif:
+  % else:
+    pow(prefRuT,-(${nusum}))*exp(dG)
+  %   endif
+
 % else:
-  exp(-dG)
+    exp(dG)
 % endif
 </%def>\
 
@@ -72,6 +79,7 @@
   fpdtype_t logT = log(T);
   fpdtype_t Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
+  fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
   fpdtype_t cp = 0.0;
   {
 % for n in range(ns):
@@ -128,8 +136,6 @@
   // Reaction ${i} - ${c['r_type'][i]}
   {
   double k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
-  double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
-  double K_c = ${eqConst(sum(nu_sum))};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
   fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{j}])" for j,eff in enumerate(c['aij'][i]) if eff != 0.0])};
@@ -168,10 +174,12 @@
   % endif
 
   % if c['reversible'][i] == 1.0:
-    rp[${i}] -= k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
+    double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
+    double K_cinv = ${Kcinv(sum(nu_sum))};
+    rp[${i}] -= k_f*K_cinv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
-  } // End reaction loop
-% endfor
+  }
+% endfor ##// End reaction loop
 
   % if reconstruct:
     // Take sub step in time
@@ -196,7 +204,9 @@
     dTdt /= cp * rho;
     T += dTdt * ${tSub};
 
-  % else:
+  % else: ## Not reconstructing
+
+    // Chemical source terms
     // Just set the source term
     % for n in range(ns):
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -206,22 +216,25 @@
         src[${n}] = 0.0;
       % endif
     % endfor
+
   % endif
   }
 
-  // Chemical source terms
-  // Reconstruct d(rhoY)/dt based on where we ended up
-% for n in range(ns):
-  // ${c['names'][n]}
-  <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-  % if max(abs(nu_sum)) > 0.0:
-    % if reconstruct:
-      src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+% if reconstruct:
+    // Chemical source terms
+    // Reconstruct d(rhoY)/dt based on where we ended up
+  % for n in range(ns):
+    // ${c['names'][n]}
+    <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+    % if max(abs(nu_sum)) > 0.0:
+      % if reconstruct:
+        src[${n}] = (q[${n}] * rho - u[${n}]) / ${dt};
+      % endif
+    % else:
+      src[${n}] = 0.0;
     % endif
-  % else:
-    src[${n}] = 0.0;
-  % endif
-% endfor
+  % endfor
+% endif
 
 % for i in range(ndims):
   src[${i + vix}] = 0.0;

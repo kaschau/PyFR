@@ -305,6 +305,7 @@ def nasa_s(context, N7, Ru, MW, m):
 
 def intpow(context, A, x):
     x = float(x)
+    assert x > 0
     if x.is_integer():
         return '('+ '*'.join([f'{A}' for _ in range(int(x))]) + ')'
     else:
