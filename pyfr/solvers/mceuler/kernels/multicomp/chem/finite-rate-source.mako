@@ -137,8 +137,7 @@
     k_f *= cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction
-    fpdtype_t k0 = ${rateConst(A_o[i], m_o[i], Ea_o[i])};
-    fpdtype_t Pr = cTBC*k0/k_f;
+    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t pmod = Pr/(1.0 + Pr);
     k_f *= pmod;
   % elif c['r_type'][i] == 'falloff-Troe':
@@ -150,8 +149,7 @@
     % endif
     fpdtype_t C = -0.4 - 0.67*log10(Fcent);
     fpdtype_t N = 0.75 - 1.27*log10(Fcent);
-    fpdtype_t k0 = ${rateConst(A_o[i], m_o[i], Ea_o[i])};
-    fpdtype_t Pr = cTBC*k0/k_f;
+    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
     fpdtype_t F_pdr = pow(10.0,log10(Fcent)/(1.0+f1*f1));
