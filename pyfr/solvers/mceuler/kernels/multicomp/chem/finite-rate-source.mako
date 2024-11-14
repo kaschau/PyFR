@@ -158,20 +158,21 @@
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
+
+  // Set rates of progress
   % if c['r_type'][i] == "Arrhenius Custom Order":
-  fpdtype_t rp_f = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
+    rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
   % else:
-  fpdtype_t rp_f = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
+    rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
+
   % if c['reversible'][i] == 1.0:
-  fpdtype_t rp_b = -k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
-  rp[${i}] = rp_f + rp_b;
-  % else:
-  rp[${i}] = rp_f;
+    rp[${i}] -= k_f/K_c * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
-  }
+  } // End reaction loop
 % endfor
 
+  // Take sub step in time
   fpdtype_t dTdt = 0.0;
   fpdtype_t tempsum = 0.0;
 % for n in range(ns):
