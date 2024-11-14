@@ -143,16 +143,16 @@
   % elif c['r_type'][i] == 'falloff-Troe':
     // Troe Reaction
     % if Tss == 0: #Three Parameter Troe form
-      fpdtype_t Fcent = (${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts});
+      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
     % else: # Four Parameter Troe form
-      fpdtype_t Fcent = (${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv);
+      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
     % endif
-    fpdtype_t C = -0.4 - 0.67*log10(Fcent);
-    fpdtype_t N = 0.75 - 1.27*log10(Fcent);
+    fpdtype_t C = -0.4 - 0.67*log10Fcent;
+    fpdtype_t N = 0.75 - 1.27*log10Fcent;
     fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
-    fpdtype_t F_pdr = pow(10.0,log10(Fcent)/(1.0+f1*f1));
+    fpdtype_t F_pdr = pow(10.0,log10Fcent/(1.0+f1*f1));
     fpdtype_t pmod = Pr/(1.0 + Pr) * F_pdr;
     k_f *= pmod;
   % elif c['r_type'][i] == 'SRI':
