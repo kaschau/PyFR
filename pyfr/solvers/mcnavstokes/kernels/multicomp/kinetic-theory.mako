@@ -60,24 +60,23 @@
 
   // Now every species' property is computed, generate mixture values
   // Mixture viscosity
-  {
   fpdtype_t mu = 0.0;
 % for n in range(ns):
     // ${c['names'][n]} viscosity
     {
-    fpdtype_t phitemp = 0.0;
-% for n2 in range(ns):
-      {
-      fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
-      fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
-      phitemp += phi * X[${n2}];
-      }
-% endfor
-    mu += mu_sp[${n}] * X[${n}] / phitemp;
+      fpdtype_t phitemp = 0.0;
+      % for n2 in range(ns):
+        {
+          fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
+          fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
+          phitemp += phi * X[${n2}];
+        }
+      % endfor
+      mu += mu_sp[${n}] * X[${n}] / phitemp;
     }
 % endfor
+
     qt[0] = mu;
-  }
 
   // Mixture thermal conductivity
   {
@@ -108,7 +107,7 @@
     // account for pressure
     sum1 *= p;
     sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-    qt[${2+n}] = 1.0 / (sum1 + sum2);
+    qt[${2 + n}] = 1.0 / (sum1 + sum2);
   }
 % endfor
 
