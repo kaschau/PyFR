@@ -37,9 +37,8 @@
     // Compute mixture properties
     fpdtype_t R = 0.0;
 % for n in range(ns):
-    R += q[${n}]*${1.0/c['MW'][n]};
+    R += q[${n}]*${c['Ru']/c['MW'][n]};
 % endfor
-    R *= ${c['Ru']};
 
     // Internal energy (per mass)
     fpdtype_t e = rhoE*invrho - 0.5*${pyfr.dot('q[{i}]', i=(vix,vix + ndims))};

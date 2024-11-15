@@ -22,9 +22,8 @@
     // Compute mixture properties
     fpdtype_t R = 0.0;
 % for n in range(ns):
-    R += q[${n}]*${1.0/MW[n]};
+    R += q[${n}]*${Ru/MW[n]};
 % endfor
-    R *= ${Ru};
 
     // Compute density
     fpdtype_t rho = q[${pix}]/(R*q[${Tix}]);

@@ -16,10 +16,9 @@
     fpdtype_t R = 0.0;
     fpdtype_t cp = 0.0;
 % for n in range(ns):
-    R += q[${n}] * ${1.0/c['MW'][n]};
+    R += q[${n}] * ${c['Ru']/c['MW'][n]};
     cp += q[${n}] * ${c['cp0'][n]};
 % endfor
-    R *= ${c['Ru']};
 
     // Compute density
     fpdtype_t rho = q[${pix}] / (R*q[${Tix}]);
