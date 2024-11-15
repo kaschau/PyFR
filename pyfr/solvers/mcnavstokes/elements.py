@@ -11,7 +11,7 @@ class MCNavierStokesElements(BaseMCFluidElements,
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.mcfluid = MCFluid(self.cfg)
+        self.mcfluid = MCFluid(self.cfg, justTherm=False)
 
     @staticmethod
     def grad_con_to_pri(cons, grad_cons, cfg):

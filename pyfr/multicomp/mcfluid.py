@@ -7,18 +7,17 @@ import yaml
 import numpy as np
 
 class MCFluid:
-    def __init__(self, cfg):
+    def __init__(self, cfg, justTherm=False):
 
         self.cfg = cfg
         self.eos = cfg.get('multi-component','eos')
-        system = cfg.get('solver', 'system')
-        if system == 'mcnavier-stokes':
-            self.trans = cfg.get('multi-component','transport')
+        if justTherm:
+            self.trans = 'None'
         else:
-            self.trans = None
+            self.trans = cfg.get('multi-component','transport', 'None')
 
         eos_data = subclass_where(BaseEOS, name=self.eos)(cfg)
-        if self.trans is not None:
+        if self.trans != 'None':
             trans_data = subclass_where(BaseTransport, name=self.trans)(cfg)
 
         # Save the prims <-> cons functions
@@ -28,7 +27,7 @@ class MCFluid:
 
         # Merge the lists of required data
         self.input_props = {k:None for k in eos_data.input_props}
-        if self.trans is not None:
+        if self.trans != 'None':
             self.input_props |= {k:None for k in trans_data.input_props}
 
         # Get our species names
@@ -63,7 +62,7 @@ class MCFluid:
         self.consts['names'] = [key for key in usersp]
 
         eos_data.compute_consts(self.input_props, self.consts)
-        if self.trans is not None:
+        if self.trans != 'None':
             trans_data.compute_consts(self.input_props, self.consts)
 
         # Finally, merge reactions data to the consts, make them numpy arrays

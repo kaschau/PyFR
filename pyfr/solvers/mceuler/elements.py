@@ -46,17 +46,17 @@ class BaseMCFluidElements:
 
     @staticmethod
     def pri_to_con(pris, cfg):
-        fluid = MCFluid(cfg)
+        fluid = MCFluid(cfg, justTherm=True)
         return fluid.pri_to_con(pris)
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        fluid = MCFluid(cfg)
+        fluid = MCFluid(cfg, justTherm=True)
         return fluid.con_to_pri(cons)
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
-        fluid = MCFluid(cfg)
+        fluid = MCFluid(cfg, justTherm=True)
         return fluid.diff_con_to_pri(cons, diff_cons)
 
     @staticmethod
@@ -174,7 +174,7 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.mcfluid = MCFluid(self.cfg)
+        self.mcfluid = MCFluid(self.cfg, justTherm=True)
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
