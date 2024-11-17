@@ -33,9 +33,7 @@
 
 <%def name="Kcinv(nusum)">
 <% nusum = float(nusum) %>\
-
 % if nusum != 0.0:
-
   % if nusum == 1.0:
     prefRuTinv*exp(dG)
   % elif nusum == -1.0:
@@ -49,7 +47,6 @@
   % else:
     pow(prefRuT,-(${nusum}))*exp(dG)
   %   endif
-
 % else:
     exp(dG)
 % endif

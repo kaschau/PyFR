@@ -6,7 +6,7 @@
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
 <% fast_props = N7.shape[1] == 7 %>\
-<% niter_max = 4 if fast_props else 6 %>\
+<% niter_max = 5 if fast_props else 8 %>\
 
 <%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
 
