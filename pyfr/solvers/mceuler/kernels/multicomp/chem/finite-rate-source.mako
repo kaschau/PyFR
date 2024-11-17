@@ -42,9 +42,9 @@
     exp(dG)*prefRuT
   % elif nusum.is_integer():
     % if nusum > 0.0:
-      exp(dG)*${pyfr.intpow(prefRuT, nusum)}
+      exp(dG)*${pyfr.intpow("prefRuT", nusum)}
     % else:
-      exp(dG)*${pyfr.intpow(prefRuT, -(nusum))}
+      exp(dG)*${pyfr.intpow("prefRuT", -(nusum))}
     % endif:
   % else:
     pow(prefRuT,-(${nusum}))*exp(dG)
