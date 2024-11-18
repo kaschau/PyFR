@@ -67,9 +67,9 @@
 
   // Concentrations
   fpdtype_t cs[${ns}];
-% for n in range(ns):
-  cs[${n}] = rho*q[${n}]*${1.0/c['MW'][n]};
-% endfor
+  % for n in range(ns):
+    cs[${n}] = rho*q[${n}]*${1.0/c['MW'][n]};
+  % endfor
 
   // Gibbs energy
   fpdtype_t gbs[${ns}];
@@ -77,37 +77,31 @@
   double Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
-  {
-% for n in range(ns):
-      // ${c['names'][n]} Properties
-      % if fast_props:
-      {
-        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 0)};
+  % for n in range(ns):
+    // ${c['names'][n]} Properties
+    % if fast_props:
+      gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 0)};
+    % else:
+      if (T < ${N7[n,0]}){
+        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 8)};
+      }else{
+        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 1)};
       }
-      % else:
-      if (T < ${N7[n,0]})
-      {
-          gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 8)};
-        }else
-        {
-          gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 1)};
-        }
     % endif
-% endfor
-  }
+  % endfor
 
   // Rate constants, Falloff Mods, new rates of progress
-<% A_f = c['A_f'] %>\
-<% m_f = c['m_f'] %>\
-<% Ea_f = c['Ea_f'] %>\
-<% A_o = c['A_o'] %>\
-<% m_o = c['m_o'] %>\
-<% Ea_o = c['Ea_o'] %>\
-<% nu_f = c['nu_f'] %>\
-<% nu_b = c['nu_b'] %>\
+  <% A_f = c['A_f'] %>\
+  <% m_f = c['m_f'] %>\
+  <% Ea_f = c['Ea_f'] %>\
+  <% A_o = c['A_o'] %>\
+  <% m_o = c['m_o'] %>\
+  <% Ea_o = c['Ea_o'] %>\
+  <% nu_f = c['nu_f'] %>\
+  <% nu_b = c['nu_b'] %>\
 
   fpdtype_t rp[${nr}];
-% for i in range(nr):
+  % for i in range(nr):
   <% alpha = c['fall_coeffs'][i][0]%>\
   <% Tsss = c['fall_coeffs'][i][1]%>\
   <% Ts = c['fall_coeffs'][i][2]%>\
@@ -164,24 +158,23 @@
 
 % if reconstruct:
   fpdtype_t cp = 0.0;
-  {
   % for n in range(ns):
+  {
     % if fast_props:
     {
       fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
       cp += cps*q[${n}];
     }
     % else:
-    if (T < ${N7[n,0]})
-    {
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-        cp += cps*q[${n}];
-      }else
-      {
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-        cp += cps*q[${n}];
-      }
+    if (T < ${N7[n,0]}){
+      fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+      cp += cps*q[${n}];
+    }else{
+      fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
+      cp += cps*q[${n}];
+    }
     % endif
+  }
   % endfor
   // Take sub step in time
   fpdtype_t dTdt = 0.0;
@@ -251,6 +244,7 @@
   % endfor
 % endif
 
+// Set non chemical terms to zero
 % for i in range(ndims):
   src[${i + vix}] = 0.0;
 % endfor
