@@ -68,7 +68,10 @@ class tpgEOS(BaseEOS):
                           + Ts*(coeffs[2] / 3.0
                           + Ts*(coeffs[3] / 4.0
                           + Ts*(coeffs[4] / 5.0))))))
-                a5 = np.mean(h - h_new)
+
+                # User smallest h as integration constant
+                hmin = np.argmin(np.abs(h))
+                a5 = np.mean(h[hmin] - h_new[hmin])
                 coeffs.append(a5)
 
                 # plt.plot(Ts, h, label="ref")

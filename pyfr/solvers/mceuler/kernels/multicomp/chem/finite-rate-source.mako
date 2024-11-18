@@ -73,8 +73,8 @@
 
   // Gibbs energy
   fpdtype_t gbs[${ns}];
-  fpdtype_t logT = log(T);
-  fpdtype_t Tinv = 1.0/T;
+  double logT = log(T);
+  double Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
   fpdtype_t cp = 0.0;
@@ -182,13 +182,14 @@
     // Take sub step in time
     fpdtype_t dTdt = 0.0;
     fpdtype_t tempsum = 0.0;
+    fpdtype_t rhoinv = 1.0/rho;
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
         fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
         dTdt -= qh[${4 + n}] * dYdt;
-        q[${n}] += dYdt / rho * ${tSub};
+        q[${n}] += dYdt *rhoinv * ${tSub};
         q[${n}] = fmax(0.0, q[${n}]);
       % endif
         tempsum += q[${n}];
