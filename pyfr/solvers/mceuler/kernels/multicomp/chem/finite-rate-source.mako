@@ -162,81 +162,82 @@
   }
 % endfor ##// End reaction loop
 
-  % if reconstruct:
-    fpdtype_t cp = 0.0;
+% if reconstruct:
+  fpdtype_t cp = 0.0;
+  {
+  % for n in range(ns):
+    % if fast_props:
     {
-    % for n in range(ns):
-      % if fast_props:
+      fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+      cp += cps*q[${n}];
+    }
+    % else:
+    if (T < ${N7[n,0]})
+    {
+        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+        cp += cps*q[${n}];
+      }else
       {
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
         cp += cps*q[${n}];
       }
+    % endif
+  % endfor
+  // Take sub step in time
+  fpdtype_t dTdt = 0.0;
+  fpdtype_t tempsum = 0.0;
+  fpdtype_t rhoinv = 1.0/rho;
+  % for n in range(ns):
+  {
+    <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+    % if max(abs(nu_sum)) > 0.0:
+      fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+      % if fast_props:
+        fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
       % else:
-      if (T < ${N7[n,0]})
-      {
-          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-          cp += cps*q[${n}];
+        fpdtype_t hi;
+        if (T < ${N7[n,0]})
+        {
+          hi = ${pyfr.nasa_hi(N7[n,:], 8)};
         }else
         {
-          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-          cp += cps*q[${n}];
+          hi = ${pyfr.nasa_hi(N7[n,:], 1)};
         }
       % endif
-    % endfor
-    // Take sub step in time
-    fpdtype_t dTdt = 0.0;
-    fpdtype_t tempsum = 0.0;
-    fpdtype_t rhoinv = 1.0/rho;
-    % for n in range(ns):
-    {
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-        fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-        % if fast_props:
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
-        % else:
-          fpdtype_t hi;
-          if (T < ${N7[n,0]})
-          {
-            hi = ${pyfr.nasa_hi(N7[n,:], 8)};
-          }else
-          {
-            hi = ${pyfr.nasa_hi(N7[n,:], 1)};
-          }
-        % endif
-        dTdt -= hi * dYdt;
-        q[${n}] += dYdt *rhoinv * ${tSub};
-        q[${n}] = fmax(0.0, q[${n}]);
-      % endif
-        tempsum += q[${n}];
-    }
-    % endfor
-    // Normalize
-    % for n in range(ns):
-      q[${n}] /= tempsum;
-    % endfor
-    dTdt /= cp * rho;
-    T += dTdt * ${tSub};
-
-  % else: ## Not reconstructing
-
-    // Chemical source terms
-    // Just set the source term
-    % for n in range(ns):
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-        src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-      % else:
-        src[${n}] = 0.0;
-      % endif
-    % endfor
-
-  % endif
+      dTdt -= hi * dYdt;
+      q[${n}] += dYdt *rhoinv * ${tSub};
+      q[${n}] = fmax(0.0, q[${n}]);
+    % endif
+    tempsum += q[${n}];
   }
+  % endfor
+  // Normalize
+  % for n in range(ns):
+    q[${n}] /= tempsum;
+  % endfor
+  dTdt /= cp * rho;
+  T += dTdt * ${tSub};
+
+% else: ## Not reconstructing
+
+  // Chemical source terms
+  // Just set the source term
+  % for n in range(ns):
+    // ${c['names'][n]}
+    <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+    % if max(abs(nu_sum)) > 0.0:
+      src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+    % else:
+      src[${n}] = 0.0;
+    % endif
+  % endfor
+
+% endif
+}
 
 % if reconstruct:
-    // Chemical source terms
-    // Reconstruct d(rhoY)/dt based on where we ended up
+  // Chemical source terms
+  // Reconstruct d(rhoY)/dt based on where we ended up
   % for n in range(ns):
     // ${c['names'][n]}
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\

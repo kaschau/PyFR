@@ -13,9 +13,8 @@
   fpdtype_t p = q[${pix}];
   fpdtype_t T = q[${Tix}];
 
-  fpdtype_t mu_sp[${ns}] = {0};
-  fpdtype_t kappa_sp[${ns}] = {0};
-  fpdtype_t invDij[${int((ns + 1)*ns/2)}] = {0};
+  fpdtype_t mu_sp[${ns}];
+  fpdtype_t invDij[${int((ns + 1)*ns/2)}];
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;
@@ -42,74 +41,68 @@
   fpdtype_t T_3o2 = T*sqrtT;
 
 % for n in range(ns):
-// ${c['names'][n]} viscosity, thermal conductivity, diffusion coefficients
+  // ${c['names'][n]} viscosity, diffusion coefficients
   <% deg = len(muPoly[n]) - 1%>\
   mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
-  <% deg = len(kappaPoly[n]) - 1 %>\
-  kappa_sp[${n}] = ${'+ logT*('.join(str(c) for c in kappaPoly[n])+')'*deg};
+
   // Set to correct dimensions
   mu_sp[${n}] *= sqrtsqrtT;
   mu_sp[${n}] *= mu_sp[${n}];
-  kappa_sp[${n}] *= sqrtT;
+
+  // Dont need to store every kappa!!!
+
   % for n2 in range(n, ns):
     <% ix = Dijix(n,n2)%>\
     <% deg = len(DijPoly[ix]) - 1 %>\
-        invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_3o2);
+    invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_3o2);
   % endfor
 % endfor
 
   // Now every species' property is computed, generate mixture values
-  // Mixture viscosity
   fpdtype_t mu = 0.0;
+  fpdtype_t sum1 = 0.0;
+  fpdtype_t sum2 = 0.0;
+
 % for n in range(ns):
-    // ${c['names'][n]} viscosity
-    {
-      fpdtype_t phitemp = 0.0;
-      % for n2 in range(ns):
-        {
-          fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
-          fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
-          phitemp += phi * X[${n2}];
-        }
-      % endfor
-      mu += mu_sp[${n}] * X[${n}] / phitemp;
-    }
-% endfor
-
-    qt[0] = mu;
-
-  // Mixture thermal conductivity
+  // ${c['names'][n]} viscosity
   {
-    fpdtype_t sum1 = 0.0;
-    fpdtype_t sum2 = 0.0;
-% for n in range(ns):
-      // ${c['names'][n]} thermal conductivity
-      sum1 += X[${n}] * kappa_sp[${n}];
-      sum2 += X[${n}] / kappa_sp[${n}];
-% endfor
-    fpdtype_t kappa = 0.5*(sum1 + 1.0 / sum2);
-    qt[1] = kappa;
-  }
+    fpdtype_t phitemp = 0.0;
+    fpdtype_t sumd1 = 0.0;
+    fpdtype_t sumd2 = 0.0;
+    % for n2 in range(ns):
+      {
+        fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
+        fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
+        phitemp += phi * X[${n2}];
+      }
+      % if n != n2:
+      ##Symmetric
+      <% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
+        sumd1 += X[${n2}] * invDij[${ix}];
+        sumd2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
+      % endif
+    % endfor
+    mu += mu_sp[${n}] * X[${n}] / phitemp;
 
-  // Mixture species diffusion coefficient
-% for n in range(ns):
-  {
-    fpdtype_t sum1 = 0.0;
-    fpdtype_t sum2 = 0.0;
-% for n2 in range(ns):
-% if n != n2:
-##Symmetric
-<% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
-      sum1 += X[${n2}] * invDij[${ix}];
-      sum2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
-% endif
-% endfor
+    // Mixture species diffusion coefficient
     // account for pressure
-    sum1 *= p;
-    sum2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-    qt[${2 + n}] = 1.0 / (sum1 + sum2);
+    sumd1 *= p;
+    sumd2 *= p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+    qt[${2 + n}] = 1.0 / (sumd1 + sumd2);
+
+    // ${c['names'][n]} thermal conductivity
+    <% deg = len(kappaPoly[n]) - 1 %>\
+    fpdtype_t kappa_sp = ${'+ logT*('.join(str(c) for c in kappaPoly[n])+')'*deg};
+    kappa_sp *= sqrtT;
+    sum1 += X[${n}] * kappa_sp;
+    sum2 += X[${n}] / kappa_sp;
   }
 % endfor
+
+fpdtype_t kappa = 0.5*(sum1 + 1.0 / sum2);
+qt[1] = kappa;
+qt[0] = mu;
+
 
 #ifdef DEBUG
   printf("*********************************\n");
