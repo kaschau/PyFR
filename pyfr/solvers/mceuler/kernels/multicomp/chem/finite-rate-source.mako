@@ -77,36 +77,20 @@
   double Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
-  fpdtype_t cp = 0.0;
   {
 % for n in range(ns):
       // ${c['names'][n]} Properties
       % if fast_props:
       {
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
-        fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
-        fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 0)};
-        gbs[${n}] = hi - scs;
-        qh[${4 + n}] = hi;
-        cp += cps*q[${n}];
+        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 0)};
       }
       % else:
       if (T < ${N7[n,0]})
       {
-          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 8)};
-          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 8)};
-          gbs[${n}] = hi - scs;
-          qh[${4 + n}] = hi;
-          cp += cps*q[${n}];
+          gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 8)};
         }else
         {
-          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 1)};
-          fpdtype_t scs = ${pyfr.nasa_scs(N7[n,:], 1)};
-          gbs[${n}] = hi - scs;
-          qh[${4 + n}] = hi;
-          cp += cps*q[${n}];
+          gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 1)};
         }
     % endif
 % endfor
@@ -179,6 +163,26 @@
 % endfor ##// End reaction loop
 
   % if reconstruct:
+    fpdtype_t cp = 0.0;
+    {
+    % for n in range(ns):
+      % if fast_props:
+      {
+        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+        cp += cps*q[${n}];
+      }
+      % else:
+      if (T < ${N7[n,0]})
+      {
+          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+          cp += cps*q[${n}];
+        }else
+        {
+          fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
+          cp += cps*q[${n}];
+        }
+      % endif
+    % endfor
     // Take sub step in time
     fpdtype_t dTdt = 0.0;
     fpdtype_t tempsum = 0.0;
@@ -188,7 +192,19 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
         fpdtype_t dYdt = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
-        dTdt -= qh[${4 + n}] * dYdt;
+        % if fast_props:
+          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
+        % else:
+          fpdtype_t hi;
+          if (T < ${N7[n,0]})
+          {
+            hi = ${pyfr.nasa_hi(N7[n,:], 8)};
+          }else
+          {
+            hi = ${pyfr.nasa_hi(N7[n,:], 1)};
+          }
+        % endif
+        dTdt -= hi * dYdt;
         q[${n}] += dYdt *rhoinv * ${tSub};
         q[${n}] = fmax(0.0, q[${n}]);
       % endif

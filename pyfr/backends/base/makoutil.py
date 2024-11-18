@@ -296,6 +296,13 @@ def nasa_scs(context, N7, m):
     except ValueError:
         return ''
 
+def nasa_gbs(context, N7, m):
+    div = np.array([2.0, 6.0, 12.0, 20.0])
+    try:
+        return f'{N7[m + 0]} *(1.0 - logT) - T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv' f'- {N7[m + 6]}'
+    except ValueError:
+        return ''
+
 def nasa_s(context, N7, Ru, MW, m):
     div = np.array([1.0, 2.0, 3.0, 4.0])
     try:
