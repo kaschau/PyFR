@@ -60,6 +60,7 @@
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t rho = q[${rhoix}];
+  fpdtype_t rhoinv = 1.0/rho;
 
   fpdtype_t T = q[${Tix}];
 
@@ -141,6 +142,7 @@
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
 
+  printf("kf${i} %e\n", k_f);
   // Set rates of progress
   % if c['r_type'][i] == "Arrhenius Custom Order":
     rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
@@ -148,10 +150,15 @@
     rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
 
+  printf("cs1 %e cs21 %e \n", cs[1], cs[21]);
+  printf("rpf${i} %e\n", rp[${i}]);
   % if c['reversible'][i] == 1.0:
-    double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
+    double dG = (double) ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
     double K_cinv = ${Kcinv(sum(nu_sum))};
     rp[${i}] -= k_f*K_cinv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
+    printf("dG${i} %e\n", dG);
+    printf("Kc${i} %e\n", K_cinv);
+    printf("rpr${i} %e\n", k_f*K_cinv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])} );
   % endif
   }
 % endfor ##// End reaction loop
@@ -179,7 +186,6 @@
   // Take sub step in time
   fpdtype_t dTdt = 0.0;
   fpdtype_t tempsum = 0.0;
-  fpdtype_t rhoinv = 1.0/rho;
   % for n in range(ns):
   {
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -198,7 +204,7 @@
         }
       % endif
       dTdt -= hi * dYdt;
-      q[${n}] += dYdt *rhoinv * ${tSub};
+      q[${n}] += dYdt * rhoinv * ${tSub};
       q[${n}] = fmax(0.0, q[${n}]);
     % endif
     tempsum += q[${n}];
