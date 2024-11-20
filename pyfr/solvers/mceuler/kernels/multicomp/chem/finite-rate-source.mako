@@ -128,12 +128,12 @@
       // Three Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
       // Convert to nat log and simplify
-      fpdtype_t log10Fcent = (double) ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
+      double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
     % else: # Four Parameter Troe form
       // Four Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
       // Convert to nat log and simplify
-      fpdtype_t log10Fcent = (double) ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
+      double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
@@ -155,7 +155,7 @@
   % endif
 
   % if c['reversible'][i] == 1.0:
-    double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
+    fpdtype_t dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
     double K_cinv = ${Kcinv(sum(nu_sum))};
     rp[${i}] -= k_f*K_cinv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
