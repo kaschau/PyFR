@@ -280,7 +280,7 @@ class KineticTheory(BaseTransport):
         w = 1.0 / (diff**2)
         for n in range(ns):
             for n2 in range(n, ns):
-                poly = fit(logTs, diff[:, n, n2], maxdeg, w=w[:, n, n2]).convert().coef
+                poly = fit(logTs, 1.0/diff[:, n, n2], maxdeg, w=w[:, n, n2]).convert().coef
                 Dij.append(list(poly))
 
         consts["DijPoly"] = Dij

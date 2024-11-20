@@ -13,9 +13,6 @@
   fpdtype_t p = q[${pix}];
   fpdtype_t T = q[${Tix}];
 
-  fpdtype_t mu_sp[${ns}];
-  fpdtype_t invDij[${int((ns + 1)*ns/2)}];
-
   // Mole fraction
   fpdtype_t MWmix = 0.0;
   fpdtype_t X[${ns}];
@@ -38,8 +35,11 @@
   fpdtype_t logT = log(T);
   fpdtype_t sqrtT = sqrt(T);
   fpdtype_t sqrtsqrtT = sqrt(sqrtT);
-  fpdtype_t T_3o2 = T*sqrtT;
+  fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
 
+  fpdtype_t mu_sp[${ns}];
+  fpdtype_t mu_spinv[${ns}];
+  fpdtype_t invDij[${int((ns + 1)*ns/2)}];
 % for n in range(ns):
   // ${c['names'][n]} viscosity, diffusion coefficients
   <% deg = len(muPoly[n]) - 1%>\
@@ -48,13 +48,14 @@
   // Set to correct dimensions
   mu_sp[${n}] *= sqrtsqrtT;
   mu_sp[${n}] *= mu_sp[${n}];
+  mu_spinv[${n}] = 1.0/mu_sp[${n}];
 
   // Dont need to store every kappa!!!
 
   % for n2 in range(n, ns):
     <% ix = Dijix(n,n2)%>\
     <% deg = len(DijPoly[ix]) - 1 %>\
-    invDij[${ix}] = 1.0 / ((${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_3o2);
+    invDij[${ix}] = (${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_m3o2;
   % endfor
 % endfor
 
@@ -71,19 +72,19 @@
     fpdtype_t sumd2 = 0.0;
     % for n2 in range(ns):
       {
-        fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] / mu_sp[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
+        fpdtype_t num = 1.0 + sqrt(mu_sp[${n}] * mu_spinv[${n2}] * ${math.sqrt(MW[n2] / MW[n])});
         fpdtype_t phi = num*num*${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
         phitemp += phi * X[${n2}];
-      }
       % if n != n2:
       ##Symmetric
       <% ix = Dijix(n,n2) if n2>=n else Dijix(n2,n)%>\
         sumd1 += X[${n2}] * invDij[${ix}];
         sumd2 += X[${n2}] * ${MW[n2]} * invDij[${ix}];
       % endif
+      }
     % endfor
+    {
     mu += mu_sp[${n}] * X[${n}] / phitemp;
-
     // Mixture species diffusion coefficient
     // account for pressure
     sumd1 *= p;
@@ -96,6 +97,7 @@
     kappa_sp *= sqrtT;
     sum1 += X[${n}] * kappa_sp;
     sum2 += X[${n}] / kappa_sp;
+    }
   }
 % endfor
 
