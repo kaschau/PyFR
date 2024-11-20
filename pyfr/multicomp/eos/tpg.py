@@ -71,7 +71,7 @@ class tpgEOS(BaseEOS):
 
                 # User smallest h as integration constant
                 hmin = np.argmin(np.abs(h))
-                a5 = np.mean(h[hmin] - h_new[hmin])
+                a5 = h[hmin] - h_new[hmin]
                 coeffs.append(a5)
 
                 # plt.plot(Ts, h, label="ref")
@@ -92,7 +92,8 @@ class tpgEOS(BaseEOS):
                                +  Ts*(coeffs[2] / 2.0
                                +  Ts*(coeffs[3] / 3.0
                                +  Ts*(coeffs[4] / 4.0))))))
-                a6 = np.mean(s - s_new)
+                smin = np.argmin(np.abs(s))
+                a6 = s[smin] - s_new[smin]
                 coeffs.append(a6)
 
                 # plt.plot(Ts, s, label="ref")
