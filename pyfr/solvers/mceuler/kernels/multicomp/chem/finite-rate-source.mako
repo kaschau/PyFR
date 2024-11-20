@@ -62,7 +62,7 @@
   fpdtype_t rho = q[${rhoix}];
   fpdtype_t rhoinv = 1.0/rho;
 
-  fpdtype_t T = q[${Tix}];
+  double T = q[${Tix}];
 
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
 
@@ -120,7 +120,7 @@
     k_f *= cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction
-    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    double Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t pmod = Pr/(1.0 + Pr);
     k_f *= pmod;
   % elif c['r_type'][i] == 'falloff-Troe':
@@ -128,16 +128,16 @@
       // Three Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
       // Convert to nat log and simplify
-      fpdtype_t log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
+      fpdtype_t log10Fcent = (double) ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
     % else: # Four Parameter Troe form
       // Four Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
       // Convert to nat log and simplify
-      fpdtype_t log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
+      fpdtype_t log10Fcent = (double) ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
-    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    double Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
     fpdtype_t F_pdr = pow(10.0,log10Fcent/(1.0+f1*f1));
