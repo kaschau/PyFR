@@ -155,7 +155,7 @@
   % endif
 
   % if c['reversible'][i] == 1.0:
-    fpdtype_t dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
+    double dG = ${"+".join([f"({s}*gbs[{i}])" for i,s in enumerate(nu_sum) if s != 0.0])};
     double K_cinv = ${Kcinv(sum(nu_sum))};
     rp[${i}] -= k_f*K_cinv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
