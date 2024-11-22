@@ -152,7 +152,7 @@
     // ${c['names'][n]}
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
     % if max(abs(nu_sum)) > 0.0:
-      src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if s != 0.0])});
+      src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if float(s) != 0.0])});
     % else:
       src[${n}] = 0.0;
     % endif
