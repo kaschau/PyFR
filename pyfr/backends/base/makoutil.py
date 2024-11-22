@@ -264,56 +264,58 @@ def thermix(context, ns, ndims):
 
 def nasa_cps(context, N7, Ru, MW, m):
     try:
-        return '+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW)+')'*4
+        return f'({'+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW)+')'*4})'
     except ValueError:
         return ''
 
 def nasa_cpp(context, N7, Ru, MW, m):
     try:
         mult = np.array([1.0, 2.0, 3.0, 4.0])
-        return '+ T*('.join(str(c) for c in N7[m+1:m+5]*Ru/MW*mult)+')'*3
+        return f'({'+ T*('.join(str(c) for c in N7[m+1:m+5]*Ru/MW*mult)+')'*3})'
     except ValueError:
         return ''
 
 def nasa_hs(context, N7, Ru, MW, m):
     div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     try:
-        return 'T*('+ '+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW/div)+')'*5 + f' + {N7[m + 5] * Ru/MW}'
+        return f'({'T*('+ '+ T*('.join(str(c) for c in N7[m:m+5]*Ru/MW/div)+')'*5 + f' + {N7[m + 5] * Ru/MW}'})'
     except ValueError:
         return ''
 
 def nasa_hi(context, N7, m):
     div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     try:
-        return f'+ T*('.join(str(c) for c in N7[m:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv'
+        return f'({'+ T*('.join(str(c) for c in N7[m:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv'})'
     except ValueError:
         return ''
 
 def nasa_scs(context, N7, m):
     div = np.array([1.0, 2.0, 3.0, 4.0])
     try:
-        return f'{N7[m + 0]} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 6]}'
+        return f'({'{N7[m + 0]} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 6]}'})'
     except ValueError:
         return ''
 
 def nasa_gbs(context, N7, m):
     div = np.array([2.0, 6.0, 12.0, 20.0])
     try:
-        return f'{N7[m + 0]} *(1.0 - logT) - T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv' f'- {N7[m + 6]}'
+        return f'({N7[m + 0]} *(1.0 - logT) - T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv' f'- {N7[m + 6]})'
     except ValueError:
         return ''
 
 def nasa_s(context, N7, Ru, MW, m):
     div = np.array([1.0, 2.0, 3.0, 4.0])
     try:
-        return f'{N7[m + 0]*Ru/MW} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]*(Ru/MW)/div)+')'*4 + f'+ {N7[m + 6]*Ru/MW}'
+        return f'({N7[m + 0]*Ru/MW} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]*(Ru/MW)/div)+')'*4 + f'+ {N7[m + 6]*Ru/MW})'
     except ValueError:
         return ''
 
 def intpow(context, A, x):
-    x = float(x)
-    assert x > 0
     if x.is_integer():
-        return '('+ '*'.join([f'{A}' for _ in range(int(x))]) + ')'
+        x = int(x)
+        if x > 0:
+            return f'({'*'.join([f'{A}' for _ in range(x)])})'
+        else:
+            return f'(1.0/({'*'.join([f'{A}' for _ in range(abs(x))])}))'
     else:
         return f'pow({A},{x})'
