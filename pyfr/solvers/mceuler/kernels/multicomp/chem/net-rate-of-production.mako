@@ -59,8 +59,8 @@
 
   // Gibbs energy
   double egbs[${ns}];
-  fpdtype_t logT = log(T);
-  fpdtype_t Tinv = 1.0/T;
+  double logT = log(T);
+  double Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
   % for n in range(ns):
@@ -138,10 +138,10 @@
     rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
 
-  % if c['reversible'][i] == 1.0:
-    fpdtype_t Kp = ${"*".join([pyfr.intpow(f"egbs[{j}]",s) for j,s in enumerate(nu_sum) if float(s) != 0.0])};
-    fpdtype_t Kc_inv = ${Kcinv(sum(nu_sum))};
-    rp[${i}] -= k_f*Kc_inv * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
+  % if c['reversible'][i]:
+    double Kp = ${"*".join([pyfr.intpow(f"egbs[{j}]",s) for j,s in enumerate(nu_sum) if float(s) != 0.0])};
+    double k_r = ${Kcinv(sum(nu_sum))}*k_f;
+    rp[${i}] -= k_r * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
   }
 
