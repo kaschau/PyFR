@@ -92,7 +92,7 @@
   double k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
-  fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{j}])" for j,eff in enumerate(c['aij'][i]) if eff != 0.0])};
+  fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{n}])" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])};
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
     k_f *= cTBC;
@@ -106,15 +106,15 @@
     <% Tsss = c['fall_coeffs'][i][1]%>\
     <% Ts = c['fall_coeffs'][i][2]%>\
     <% Tss = c['fall_coeffs'][i][3]%>\
-    % if Tss == 0: #Three Parameter Troe form
+    % if Tss == 0.0: #Three Parameter Troe form
       // Three Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
-      // Convert to nat log and simplify
+      ## Convert to nat log and simplify
       double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
     % else: # Four Parameter Troe form
       // Four Troe Reaction
       ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
-      // Convert to nat log and simplify
+      ## Convert to nat log and simplify
       double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
@@ -132,15 +132,15 @@
   // Set rates of progress
   <% nu_sum = nu_b[:,i] - nu_f[:,i] %>\
   % if c['r_type'][i] == "Arrhenius Custom Order":
-    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
+    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(c['orders'][i]) if float(v) != 0.0])};
   % else:
-    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
+    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_f[:,i]) if float(v) != 0.0])};
   % endif
 
   % if c['reversible'][i]:
-    double Kp = ${"*".join([pyfr.intpow(f"egbs[{j}]",s) for j,s in enumerate(nu_sum) if float(s) != 0.0])};
+    double Kp = ${"*".join([pyfr.intpow(f"egbs[{n}]",v) for n,v in enumerate(nu_sum) if float(v) != 0.0])};
     double k_r = ${Kcinv(sum(nu_sum))}*k_f;
-    rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
+    rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
 
   // Add this reaction to the sources that use it
