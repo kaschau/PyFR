@@ -1,10 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.chem.net-rate-of-production'/>
-<% import math %>\
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
-<% nr = c['Ea_f'].shape[0] %>\
 <% MW = c['MW'] %>\
 <% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
@@ -59,6 +57,7 @@
     // Take sub step in time
     fpdtype_t dTdt = 0.0;
     fpdtype_t tempsum = 0.0;
+    fpdtype_t Tinv = 1.0/T;
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -75,8 +74,8 @@
             hi = ${pyfr.nasa_hi(N7[n,:], 1)};
           }
         % endif
-        dTdt -= hi * src[${n}]
-        q[${n}] += src[${n}] * rhoinv * ${tSub};
+        dTdt -= hi * src[${n}];
+        q[${n}] += src[${n}] * rhoinv * ${dt/nsub_steps};
         q[${n}] = fmax(0.0, q[${n}]);
       % endif
       tempsum += q[${n}];
@@ -88,7 +87,7 @@
       q[${n}] *= tempsuminv;
     % endfor
     dTdt /= cp * rho;
-    T += dTdt * ${tSub};
+    T += dTdt * ${dt/nsub_steps};
   }
 
   // Reconstruct d(rhoY)/dt based on where we ended up
