@@ -23,7 +23,6 @@
   fpdtype_t rhoinv = 1.0/rho;
   fpdtype_t T = q[${Tix}];
 
-
   ## Generate straightforward finite rate source terms
   %if not reconstruct:
 
@@ -96,9 +95,7 @@
     // ${c['names'][n]}
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
     % if max(abs(nu_sum)) > 0.0:
-      % if reconstruct:
         src[${n}] = (q[${n}] * rho - u[${n}]) * ${1.0/dt};
-      % endif
     % else:
       src[${n}] = 0.0;
     % endif
@@ -111,7 +108,6 @@
 % for i in range(ndims):
   src[${i + vix}] = 0.0;
 % endfor
-
   src[${Eix}] = 0.0;
 
 
