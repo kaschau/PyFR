@@ -10,6 +10,7 @@
 <% nu_b = c['nu_b'] %>\
 <% fast_props = N7.shape[1] == 7 %>\
 <% reconstruct = nsub_steps > 1 %>\
+<% tSub = dt / float(nsub_steps) %>\
 
 <%pyfr:macro name='finite_rate_source' params='t, u, ploc, src'>
 
@@ -75,7 +76,7 @@
           }
         % endif
         dTdt -= hi * src[${n}];
-        q[${n}] += src[${n}] * rhoinv * ${dt/nsub_steps};
+        q[${n}] += src[${n}] * rhoinv * ${tSub};
         q[${n}] = fmax(0.0, q[${n}]);
       % endif
       tempsum += q[${n}];
@@ -87,7 +88,7 @@
       q[${n}] *= tempsuminv;
     % endfor
     dTdt /= cp * rho;
-    T += dTdt * ${dt/nsub_steps};
+    T += dTdt * ${tSub};
   }
 
   // Reconstruct d(rhoY)/dt based on where we ended up
