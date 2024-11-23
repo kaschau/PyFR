@@ -49,7 +49,7 @@
   % endif
 </%def>\
 
-<%pyfr:macro name='net_rate_of_production' params='q, T, src'>
+<%pyfr:macro name='net_rate_of_production' params='q, T, omega'>
 
   // Concentrations
   fpdtype_t cs[${ns}];
@@ -147,7 +147,7 @@
   % for n in range(ns):
     <% nu = nu_b[n,i] - nu_f[n,i] %>\
     % if abs(nu) > 0.0:
-      src[${n}] += ${MW[n]}*${nu}*rp;
+      omega[${n}] += ${MW[n]}*${nu}*rp;
     % endif
   % endfor
   }
