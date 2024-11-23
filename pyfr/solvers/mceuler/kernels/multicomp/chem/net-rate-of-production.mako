@@ -86,7 +86,6 @@
   <% nu_f = c['nu_f'] %>\
   <% nu_b = c['nu_b'] %>\
 
-  fpdtype_t rp[${nr}];
   % for i in range(nr):
   // Reaction ${i} - ${c['r_type'][i]}
   {
@@ -133,29 +132,25 @@
   // Set rates of progress
   <% nu_sum = nu_b[:,i] - nu_f[:,i] %>\
   % if c['r_type'][i] == "Arrhenius Custom Order":
-    rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
+    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(c['orders'][i]) if float(s) != 0.0])};
   % else:
-    rp[${i}] = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
+    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_f[:,i]) if float(s) != 0.0])};
   % endif
 
   % if c['reversible'][i]:
     double Kp = ${"*".join([pyfr.intpow(f"egbs[{j}]",s) for j,s in enumerate(nu_sum) if float(s) != 0.0])};
     double k_r = ${Kcinv(sum(nu_sum))}*k_f;
-    rp[${i}] -= k_r * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
+    rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{j}]",s) for j,s in enumerate(nu_b[:,i]) if float(s) != 0.0])};
   % endif
-  }
 
-% endfor ##// End reaction loop
-
-  // Set the source term
+  // Add this reaction to the sources that use it
   % for n in range(ns):
-    // ${c['names'][n]}
-    <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-    % if max(abs(nu_sum)) > 0.0:
-      src[${n}] = ${MW[n]}*(${"+".join([f"({s}*rp[{j}])" for j,s in enumerate(nu_sum) if float(s) != 0.0])});
-    % else:
-      src[${n}] = 0.0;
+    <% nu = nu_b[n,i] - nu_f[n,i] %>\
+    % if abs(nu) > 0.0:
+      src[${n}] += ${MW[n]}*${nu}*rp;
     % endif
   % endfor
+  }
+% endfor ##// End reaction loop
 
 </%pyfr:macro>
