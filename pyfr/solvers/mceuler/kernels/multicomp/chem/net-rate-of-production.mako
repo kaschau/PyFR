@@ -49,7 +49,7 @@
   % endif
 </%def>\
 
-<%pyfr:macro name='net_rate_of_production' params='q, T, omega'>
+<%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
 
   // Concentrations
   fpdtype_t cs[${ns}];

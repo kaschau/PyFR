@@ -26,12 +26,12 @@
   ## Generate straightforward finite rate source terms
   %if not reconstruct:
 
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'src')};
+    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
 
   % else: ## take sub steps
 
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'src')};
+    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
 
     // Compute cp
     fpdtype_t cp = 0.0;
