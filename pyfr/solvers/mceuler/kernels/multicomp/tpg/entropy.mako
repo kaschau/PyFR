@@ -29,7 +29,7 @@
       % endif
 
       <% Rk = c['Ru']/c['MW'][n] %>\
-      e += u[${n}] > 0.0 ? u[${n}] * (es - Rk*log(u[${n}])) : 0.0;
+      e += u[${n}] > 0.0 ? u[${n}] * (es - ${Rk}*log(u[${n}])) : 0.0;
     }
 
     // Return the specific thermodynamic entropy (mass basis)
