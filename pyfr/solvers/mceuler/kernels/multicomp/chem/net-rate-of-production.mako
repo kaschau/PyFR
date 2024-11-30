@@ -148,10 +148,14 @@
   % for n in range(ns):
     <% nu = nu_b[n,i] - nu_f[n,i] %>\
     % if abs(nu) > 0.0:
-      omega[${n}] += ${MW[n]}*${nu}*rp;
+      omega[${n}] += ${nu}*rp;
     % endif
   % endfor
   }
 % endfor ##// End reaction loop
 
+// Convert to mass
+% for n in range(ns):
+  omega[${n}] *= ${MW[n]};
+% endfor
 </%pyfr:macro>
