@@ -30,8 +30,14 @@
 
   % else: ## take sub steps
 
+  double Y[${ns}];
+  double rhoY[${ns}];
+  % for n in range(ns):
+    Y[${n}] = q[${n}];
+    rhoY[${n}] = u[${n}];
+  % endfor
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
+    ${pyfr.expand('net_rate_of_production', 'Y', 'T', 'rho', 'src')};
 
     // Compute cp
     fpdtype_t cp = 0.0;
@@ -40,15 +46,15 @@
       % if fast_props:
       {
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
-        cp += cps*q[${n}];
+        cp += cps*Y[${n}];
       }
       % else:
       if (T < ${N7[n,0]}){
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-        cp += cps*q[${n}];
+        cp += cps*Y[${n}];
       }else{
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-        cp += cps*q[${n}];
+        cp += cps*Y[${n}];
       }
       % endif
     }
@@ -75,16 +81,16 @@
           }
         % endif
         dTdt -= hi * src[${n}];
-        q[${n}] += src[${n}] * rhoinv * ${tSub};
-        q[${n}] = fmax(0.0, q[${n}]);
+        Y[${n}] += src[${n}] * rhoinv * ${tSub};
+        Y[${n}] = fmax(0.0, Y[${n}]);
       % endif
-      tempsum += q[${n}];
+      tempsum += Y[${n}];
     }
     % endfor
     // Normalize
     fpdtype_t tempsuminv = 1.0/tempsum;
     % for n in range(ns):
-      q[${n}] *= tempsuminv;
+      Y[${n}] *= tempsuminv;
     % endfor
     dTdt /= cp * rho;
     T += dTdt * ${tSub};
@@ -95,7 +101,7 @@
     // ${c['names'][n]}
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
     % if max(abs(nu_sum)) > 0.0:
-        src[${n}] = (q[${n}] * rho - u[${n}]) * ${1.0/dt};
+        src[${n}] = (Y[${n}] * rho - rhoY[${n}]) * ${1.0/dt};
     % else:
       src[${n}] = 0.0;
     % endif
