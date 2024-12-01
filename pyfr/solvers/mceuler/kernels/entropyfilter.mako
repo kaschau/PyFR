@@ -171,7 +171,7 @@
         fpdtype_t qavg[${nvars + 2}];
         fpdtype_t qhavg[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uavg', 'qavg', 'qhavg')};
-        ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'intestartavg')};
+        ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'intestaravg')};
         ${pyfr.expand('compute_entropy', 'uavg', 'qavg', 'eavg')};
 
         fpdtype_t Xavg = qavg[${rhoix}]*(eavg - entmin);
@@ -191,9 +191,12 @@
         }
 
         // Species mass >= 0
+        fpdtype_t mod = 0.0;
         % for n in range(ns):
         {
-            if (rhoYmin[${n}] < 0.0){
+            if (rhoYmin[${n}] < 0.0)
+            {
+                mod = 1.0;
                 fpdtype_t rYmin = rhoYmin[${n}];
                 fpdtype_t alpha = (rYmin - 0.0)/(rYmin - uavg[${n}]);
                 alpha = fmin(fmax(alpha, 0.0), 1.0);
@@ -201,12 +204,14 @@
                 % for uidx in range(nupts):
                 u[${uidx}][${n}] += alpha*(uavg[${n}] - u[${uidx}][${n}]);
                 % endfor
-
-                // Get new updated values
-                ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
-            }
+           }
         }
         % endfor
+        if (mod > 0.0)
+        {
+            // Get new updated values
+            ${pyfr.expand('get_minima', 'u', 'm0', 'rhomin', 'tot_rhoYmin', 'rhoYmin', 'intemin', 'emin', 'Xmin', 'entmin')};
+        }
 
         // Shifted internal energy positivity
         if (intemin < ${inte_min}){
