@@ -171,11 +171,10 @@
         fpdtype_t qavg[${nvars + 2}];
         fpdtype_t qhavg[${4 + ns}];
         ${pyfr.expand('stateFrom-cons', 'uavg', 'qavg', 'qhavg')};
-        ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'eavg')};
+        ${pyfr.expand('compute_intestar', 'uavg', 'qavg', 'qhavg', 'intestartavg')};
         ${pyfr.expand('compute_entropy', 'uavg', 'qavg', 'eavg')};
 
         fpdtype_t Xavg = qavg[${rhoix}]*(eavg - entmin);
-
 
         // Apply density, species, internal energy, and entropy limiting sequentially
         // Density positivity
