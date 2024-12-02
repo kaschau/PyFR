@@ -15,7 +15,8 @@ class MCNavierStokesElements(BaseMCFluidElements,
 
     @staticmethod
     def grad_con_to_pri(cons, grad_cons, cfg):
-        return None, None
+        fluid = MCFluid(cfg, justTherm=True)
+        return fluid.diff_con_to_pri(cons, grad_cons)
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -95,7 +96,8 @@ class MCNavierStokesElements(BaseMCFluidElements,
             def tdisf_k():
                 return self._make_sliced_kernel(k() for k in tdisf)
 
-                    # No gradient + flux kernel fusion, no flux-AA
+            self.kernels['tdisf'] = tdisf_k
+        # No gradient + flux kernel fusion, no flux-AA
         else:
             if c in r:
                 tdisf.append(lambda uin: self._be.kernel(
