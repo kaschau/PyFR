@@ -30,7 +30,7 @@
     fpdtype_t E = rhoE*rcprho;
     fpdtype_t e_Y_Y_x;
     fpdtype_t e_Y_Y_y;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'uin', 'q', 'qh', 'grad_uin')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'uin', 'q', 'qh', 'grad_uin', 'rho_x', 'rho_y')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - e_Y_Y_y);
 
@@ -39,7 +39,7 @@
     fpdtype_t t_yy = -2*mu*(v_y - ${1.0/3.0}*(u_x + v_y));
     fpdtype_t t_xy = -mu*(v_x + u_y);
 
-    fout[0][${vix    }] += t_xx;  fout[1][${vix    }] += t_xy;
+    fout[0][${vix + 0}] += t_xx;  fout[1][${vix + 0}] += t_xy;
     fout[0][${vix + 1}] += t_xy;  fout[1][${vix + 1}] += t_yy;
 
     // Thermal diffusion
@@ -82,9 +82,9 @@
     fpdtype_t rho_z = ${" + ".join([f"grad_uin[2][{n}]" for n in range(ns)])};
 
     // Velocity derivatives (grad[u,v,w])
-    fpdtype_t u_x = rcprho*(grad_uin[0][${vix    }] - u*rho_x);
-    fpdtype_t u_y = rcprho*(grad_uin[1][${vix    }] - u*rho_y);
-    fpdtype_t u_z = rcprho*(grad_uin[2][${vix    }] - u*rho_z);
+    fpdtype_t u_x = rcprho*(grad_uin[0][${vix + 0}] - u*rho_x);
+    fpdtype_t u_y = rcprho*(grad_uin[1][${vix + 0}] - u*rho_y);
+    fpdtype_t u_z = rcprho*(grad_uin[2][${vix + 0}] - u*rho_z);
     fpdtype_t v_x = rcprho*(grad_uin[0][${vix + 1}] - v*rho_x);
     fpdtype_t v_y = rcprho*(grad_uin[1][${vix + 1}] - v*rho_y);
     fpdtype_t v_z = rcprho*(grad_uin[2][${vix + 1}] - v*rho_z);
@@ -102,7 +102,7 @@
     fpdtype_t e_Y_Y_x;
     fpdtype_t e_Y_Y_y;
     fpdtype_t e_Y_Y_z;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'uin', 'q', 'qh', 'grad_uin')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'uin', 'q', 'qh', 'grad_uin', 'rho_x', 'rho_y', 'rho_z')};
     fpdtype_t T_x = rcpcv*(rcprho*(rhoE_x - E*rho_x) - u*u_x - v*v_x - w*w_x - e_Y_Y_x);
     fpdtype_t T_y = rcpcv*(rcprho*(rhoE_y - E*rho_y) - u*u_y - v*v_y - w*w_y - e_Y_Y_y);
     fpdtype_t T_z = rcpcv*(rcprho*(rhoE_z - E*rho_z) - u*u_z - v*v_z - w*w_z - e_Y_Y_z);
