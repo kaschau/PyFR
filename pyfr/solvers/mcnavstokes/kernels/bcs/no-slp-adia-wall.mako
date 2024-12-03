@@ -62,7 +62,7 @@
     // Enforce zero normal temperature gradient in wall
     fpdtype_t e_Y_Y_x;
     fpdtype_t e_Y_Y_y;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'ul', 'ql', 'qhl', 'grad_ul')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'ul', 'ql', 'qhl', 'grad_ul', 'rho_x', 'rho_y')};
     grad_ur[0][${Eix}] = u*u_x + v*v_x + rho*e_Y_Y_x + E*rho_x;
     grad_ur[1][${Eix}] = u*u_y + v*v_y + rho*e_Y_Y_y + E*rho_y;
     // Enforce zero normal species gradient in wall
@@ -96,7 +96,7 @@
     fpdtype_t e_Y_Y_x;
     fpdtype_t e_Y_Y_y;
     fpdtype_t e_Y_Y_z;
-    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'ul', 'ql', 'qhl', 'grad_ul')};
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'ul', 'ql', 'qhl', 'grad_ul', 'rho_x', 'rho_y', 'rho_z')};
     grad_ur[0][${Eix}] = u*u_x + v*v_x + w*w_x * rho*e_Y_Y_x + E*rho_x;
     grad_ur[1][${Eix}] = u*u_y + v*v_y + w*w_y * rho*e_Y_Y_y + E*rho_y;
     grad_ur[2][${Eix}] = u*u_z + v*v_z + w*w_z * rho*e_Y_Y_z + E*rho_z;
