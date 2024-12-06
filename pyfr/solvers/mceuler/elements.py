@@ -18,7 +18,7 @@ class BaseMCFluidElements:
     def convars(ndims, cfg):
         species_names = MCFluid.get_species_names(cfg)
         if ndims == 2:
-            return species_names + ['rhou', 'rhov', 'E']
+            return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'E']
         elif ndims == 3:
             return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'rhow', 'E']
 
@@ -119,7 +119,7 @@ class BaseMCFluidElements:
             eftplargs['e_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'e-tol', 1e-6)
 
-            # Hidden kernel parameters
+            # Inner solver parameters
             eftplargs['f_tol'] = self.cfg.getfloat('solver-entropy-filter',
                                                    'f-tol', 1e-4)
             eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',

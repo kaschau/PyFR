@@ -1,4 +1,3 @@
-from lzma import MF_BT2
 import numpy as np
 
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
@@ -14,7 +13,6 @@ class TplargsMixin:
         super().__init__(*args, **kwargs)
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
-        visc_corr = self.cfg.get('solver', 'viscosity-correction', 'none')
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
         if shock_capturing == 'entropy-filter':
             self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
@@ -30,7 +28,7 @@ class TplargsMixin:
         self.c |= mcfluid.consts
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
-                             rsolver=rsolver, visc_corr=visc_corr,
+                             rsolver=rsolver,
                              eos = mcfluid.eos, trans = mcfluid.trans,
                              shock_capturing=shock_capturing, c=self.c,
                              d_min=self.d_min, inte_min=self.inte_min)

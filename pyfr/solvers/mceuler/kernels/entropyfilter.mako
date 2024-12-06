@@ -44,7 +44,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         smin = fmin(smin, s);
-        Xmin = fmin(Xmin, (s - s0));
+        Xmin = fmin(Xmin, qi[${rhoix}]*(s - s0));
     }
 
     % if not fpts_in_upts:
@@ -70,7 +70,7 @@
         % endfor
         intemin = fmin(intemin, intestar);
         smin = fmin(smin, s);
-        Xmin = fmin(Xmin, (s - s0));
+        Xmin = fmin(Xmin, qi[${rhoix}]*(s - s0));
     }
     % endif
 </%pyfr:macro>
