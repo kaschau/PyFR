@@ -30,14 +30,16 @@
 
   % else: ## take sub steps
 
-  double Y[${ns}];
+  double Ynew[${ns}];
+  double Yold[${ns}];
   double rhoY[${ns}];
+  double tmpSrc[${ns}];
   % for n in range(ns):
-    Y[${n}] = q[${n}];
+    Yold[${n}] = q[${n}];
     rhoY[${n}] = u[${n}];
   % endfor
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
-    ${pyfr.expand('net_rate_of_production', 'Y', 'T', 'rho', 'src')};
+    ${pyfr.expand('net_rate_of_production', 'Yold', 'T', 'rho', 'tmpSrc')};
 
     // Compute cp
     fpdtype_t cp = 0.0;
@@ -46,23 +48,48 @@
       % if fast_props:
       {
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
-        cp += cps*Y[${n}];
+        cp += cps*Yold[${n}];
       }
       % else:
       if (T < ${N7[n,0]}){
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-        cp += cps*Y[${n}];
+        cp += cps*Yold[${n}];
       }else{
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-        cp += cps*Y[${n}];
+        cp += cps*Yold[${n}];
       }
       % endif
     }
     % endfor
 
-    // Take sub step in time
+    // Take sub step in time for species
+    fpdtype_t Yact_sum = 0.0;
+    fpdtype_t Ybath_sum = 0.0;
+    % for n in range(ns):
+    {
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+        Ynew[${n}] = Yold[${n}] + tmpSrc[${n}] * rhoinv * ${tSub};
+        Ynew[${n}] = fmax(0.0, Ynew[${n}]);
+        Yact_sum += Ynew[${n}];
+      % else:
+        Ynew[${n}] = Yold[${n}];
+        Ybath_sum += Ynew[${n}];
+      % endif
+    }
+    % endfor
+    // Normalize the active species (non-bath) and their sources
+    fpdtype_t Y_norminv = (1.0-Ybath_sum)/Yact_sum;
+    % for n in range(ns):
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+      Ynew[${n}] *= Y_norminv;
+      tmpSrc[${n}] = rho*(Ynew[${n}] - Yold[${n}]) * ${1.0/dt};
+      % endif
+    % endfor
+
+    // Take sub step in time for temperature
     fpdtype_t dTdt = 0.0;
-    fpdtype_t tempsum = 0.0;
     fpdtype_t Tinv = 1.0/T;
     % for n in range(ns):
     {
@@ -80,17 +107,10 @@
             hi = ${pyfr.nasa_hi(N7[n,:], 1)};
           }
         % endif
-        dTdt -= hi * src[${n}];
-        Y[${n}] += src[${n}] * rhoinv * ${tSub};
-        Y[${n}] = fmax(0.0, Y[${n}]);
+        dTdt -= hi * tmpSrc[${n}];
       % endif
-      tempsum += Y[${n}];
+    Yold[${n}] = Ynew[${n}];
     }
-    % endfor
-    // Normalize
-    fpdtype_t tempsuminv = 1.0/tempsum;
-    % for n in range(ns):
-      Y[${n}] *= tempsuminv;
     % endfor
     dTdt /= cp * rho;
     T += dTdt * ${tSub};
@@ -101,7 +121,7 @@
     // ${c['names'][n]}
     <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
     % if max(abs(nu_sum)) > 0.0:
-        src[${n}] = (Y[${n}] * rho - rhoY[${n}]) * ${1.0/dt};
+        src[${n}] = (Ynew[${n}] * rho - rhoY[${n}]) * ${1.0/dt};
     % else:
       src[${n}] = 0.0;
     % endif
