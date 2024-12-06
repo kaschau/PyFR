@@ -18,11 +18,34 @@
 
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-% for i in range(nvars):
-    ur[${i}] = ul[${i}];
+% for n in range(ns):
+    ur[${n}] = ul[${n}];
 % endfor
 
+% for i in range(ndims):
+    ur[${i + vix}] = 0.0;
+% endfor
+
+    fpdtype_t rho = ${" + ".join([f"ul[{n}]" for n in range(ns)])};
+    ur[${Eix}] = ul[${Eix}]
+                     - (0.5/rho)*${pyfr.dot('ul[{i}]', i=(vix,vix + ndims))};
+
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
+
+    // The LDG state is unique. We need to create an inconsistent state between
+    // ur and qr. We clearly want to set the velocities to zero, and then compute
+    // the primatives based on just internal energy (no KE). But when we go to
+    // compute T and species gradients => grad_ur, we use ul,grad_ul
+    // in their full quantity, so when we go to viscous flux add, we need to use
+    // the same values to get proper normal gradients on the wall. Further, on
+    // a wall, we don't want to add the \tau*(ul-ur) term. Therefore, after
+    // we compute the primatives qr, we reset the conserved quantities, ur, to
+    // be identical to ul.
+
+% for i in range(ndims):
+    ur[${i + vix}] = ul[${i + vix}];
+% endfor
+    ur[${Eix}] = ul[${Eix}];
 
 </%pyfr:macro>
 
