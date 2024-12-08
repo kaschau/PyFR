@@ -55,7 +55,7 @@
   fpdtype_t cs[${ns}];
   % for n in range(ns):
     omega[${n}] = 0.0;  // omega must start at zero
-    cs[${n}] = rho*q[${n}]*${1.0/c['MW'][n]};
+    cs[${n}] = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
   % endfor
 
   // Gibbs energy

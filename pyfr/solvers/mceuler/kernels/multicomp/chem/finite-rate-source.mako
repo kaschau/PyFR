@@ -30,13 +30,14 @@
 
   % else: ## take sub steps
 
-  double Ynew[${ns}];
-  double Yold[${ns}];
-  double rhoY[${ns}];
-  double tmpSrc[${ns}];
+  fpdtype_t Ynew[${ns}];
+  fpdtype_t Yold[${ns}];
+  fpdtype_t rhoY[${ns}];
+  fpdtype_t tmpSrc[${ns}];
   % for n in range(ns):
     Yold[${n}] = q[${n}];
     rhoY[${n}] = u[${n}];
+    src[${n}] = 0.0;
   % endfor
   for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
     ${pyfr.expand('net_rate_of_production', 'Yold', 'T', 'rho', 'tmpSrc')};
@@ -62,6 +63,19 @@
     }
     % endfor
 
+    // Limit source term for species sub step
+    % for n in range(ns):
+    {
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+      ## g.t.zero
+      tmpSrc[${n}] = max(tmpSrc[${n}], -rho*Yold[${n}]*${1.0/tSub});
+      ## l.t one
+      tmpSrc[${n}] = min(tmpSrc[${n}], rho*(1.0-Yold[${n}])*${1.0/tSub});
+      % endif
+    }
+    % endfor
+
     // Take sub step in time for species
     fpdtype_t Yact_sum = 0.0;
     fpdtype_t Ybath_sum = 0.0;
@@ -70,7 +84,6 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
         Ynew[${n}] = Yold[${n}] + tmpSrc[${n}] * rhoinv * ${tSub};
-        Ynew[${n}] = fmax(0.0, Ynew[${n}]);
         Yact_sum += Ynew[${n}];
       % else:
         Ynew[${n}] = Yold[${n}];
@@ -84,7 +97,6 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
       Ynew[${n}] *= Y_norminv;
-      tmpSrc[${n}] = rho*(Ynew[${n}] - Yold[${n}]) * ${1.0/dt};
       % endif
     % endfor
 
