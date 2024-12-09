@@ -11,7 +11,7 @@
 <%pyfr:macro name='stateFrom-cons' params='u, q, qh'>
 
     ## q is an array of length nvars + 2
-    ## storing all primatives
+    ## storing all primitive s
     ## 0:ns-1,    ns:ns+ndims, ns+ndims+1, ns+ndims+2, nvars + 2
     ## Y0...Ynsp, u,v(,w),  rho          , p,          T
 

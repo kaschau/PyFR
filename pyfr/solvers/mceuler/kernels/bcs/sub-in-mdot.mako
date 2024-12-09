@@ -4,7 +4,7 @@
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-    // set right side primatives
+    // set right side primitive s
 %  for n,spn in enumerate(c['names']):
     qr[${n}] = ${c[spn]};
 %  endfor

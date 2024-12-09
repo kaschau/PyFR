@@ -34,12 +34,12 @@
 
     // The LDG state is unique. We need to create an inconsistent state between
     // ur and qr. We clearly want to set the velocities to zero, and then compute
-    // the primatives based on just internal energy (no KE). But when we go to
+    // the primitive s based on just internal energy (no KE). But when we go to
     // compute T and species gradients => grad_ur, we use ul,grad_ul
     // in their full quantity, so when we go to viscous flux add, we need to use
     // the same values to get proper normal gradients on the wall. Further, on
     // a wall, we don't want to add the \tau*(ul-ur) term. Therefore, after
-    // we compute the primatives qr, we reset the conserved quantities, ur, to
+    // we compute the primitive s qr, we reset the conserved quantities, ur, to
     // be identical to ul.
 
 % for i in range(ndims):

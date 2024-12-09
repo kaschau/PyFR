@@ -4,7 +4,7 @@
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-    // Set right primatives
+    // Set right primitive s
     qr[${pix}] = ql[${pix}];
     // Set wall velocity
 % for i, v in enumerate('uvw'[:ndims]):
@@ -24,7 +24,7 @@
 
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-    // Set right primatives
+    // Set right primitive s
     qr[${pix}] = ql[${pix}];
     // Set wall velocity
 % for i, v in enumerate('uvw'[:ndims]):
