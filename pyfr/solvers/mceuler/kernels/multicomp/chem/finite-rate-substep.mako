@@ -9,10 +9,9 @@
 <% nu_f = c['nu_f'] %>\
 <% nu_b = c['nu_b'] %>\
 <% fast_props = N7.shape[1] == 7 %>\
-<% reconstruct = nsub_steps > 1 %>\
-<% tSub = dt / float(nsub_steps) %>\
+<% tSub = dt / float(sub_steps) %>\
 
-<%pyfr:macro name='finite_rate_source' params='t, u, ploc, src'>
+<%pyfr:macro name='finite_rate_substep' params='t, u, ploc, src'>
 
   // Compute thermodynamic properties
   fpdtype_t q[${nvars + 2}];
@@ -23,24 +22,15 @@
   fpdtype_t rhoinv = 1.0/rho;
   fpdtype_t T = q[${Tix}];
 
-  ## Generate straightforward finite rate source terms
-  %if not reconstruct:
-
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
-
-  % else: ## take sub steps
-
-  fpdtype_t Ynew[${ns}];
-  fpdtype_t Yold[${ns}];
-  fpdtype_t rhoY[${ns}];
   fpdtype_t tmpSrc[${ns}];
+
+  // Start source at zero
   % for n in range(ns):
-    Yold[${n}] = q[${n}];
-    rhoY[${n}] = u[${n}];
     src[${n}] = 0.0;
   % endfor
-  for(int nSub = 0; nSub < ${nsub_steps}; nSub++){
-    ${pyfr.expand('net_rate_of_production', 'Yold', 'T', 'rho', 'tmpSrc')};
+
+  for(int nSub = 0; nSub < ${sub_steps}; nSub++){
+    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'tmpSrc')};
 
     // Compute cp
     fpdtype_t cp = 0.0;
@@ -49,15 +39,15 @@
       % if fast_props:
       {
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
-        cp += cps*Yold[${n}];
+        cp += cps*q[${n}];
       }
       % else:
       if (T < ${N7[n,0]}){
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
-        cp += cps*Yold[${n}];
+        cp += cps*q[${n}];
       }else{
         fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
-        cp += cps*Yold[${n}];
+        cp += cps*q[${n}];
       }
       % endif
     }
@@ -69,9 +59,9 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
       ## g.t.zero
-      tmpSrc[${n}] = max(tmpSrc[${n}], -rho*Yold[${n}]*${1.0/tSub});
+      tmpSrc[${n}] = fmax(tmpSrc[${n}], -rho*q[${n}]*${1.0/tSub});
       ## l.t one
-      tmpSrc[${n}] = min(tmpSrc[${n}], rho*(1.0-Yold[${n}])*${1.0/tSub});
+      tmpSrc[${n}] = fmin(tmpSrc[${n}], rho*(1.0-q[${n}])*${1.0/tSub});
       % endif
     }
     % endfor
@@ -83,11 +73,10 @@
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
-        Ynew[${n}] = Yold[${n}] + tmpSrc[${n}] * rhoinv * ${tSub};
-        Yact_sum += Ynew[${n}];
+        q[${n}] = q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub};
+        Yact_sum += q[${n}];
       % else:
-        Ynew[${n}] = Yold[${n}];
-        Ybath_sum += Ynew[${n}];
+        Ybath_sum += q[${n}];
       % endif
     }
     % endfor
@@ -96,7 +85,7 @@
     % for n in range(ns):
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
-      Ynew[${n}] *= Y_norminv;
+      q[${n}] *= Y_norminv;
       % endif
     % endfor
 
@@ -121,26 +110,14 @@
         % endif
         dTdt -= hi * tmpSrc[${n}];
       % endif
-    Yold[${n}] = Ynew[${n}];
+
+      // Accumulate source term
+      src[${n}] += tmpSrc[${n}]*${tSub}/${dt};
     }
     % endfor
     dTdt /= cp * rho;
     T += dTdt * ${tSub};
   }
-
-  // Reconstruct d(rhoY)/dt based on where we ended up
-  % for n in range(ns):
-    // ${c['names'][n]}
-    <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-    % if max(abs(nu_sum)) > 0.0:
-        src[${n}] = (Ynew[${n}] * rho - rhoY[${n}]) * ${1.0/dt};
-    % else:
-      src[${n}] = 0.0;
-    % endif
-  % endfor
-
-% endif
-
 
 // Set non chemical terms to zero
 % for i in range(ndims):

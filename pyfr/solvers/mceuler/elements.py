@@ -155,19 +155,38 @@ class BaseMCFluidElements:
             consts = self.cfg.items_as('constants', float)
             consts |= self.mcfluid.consts
 
+            sub_steps = self.cfg.get('multi-component', 'sub-steps', default = False)
             chem_tplargs = {
                 'ndims': self.ndims,
                 'nvars': self.nvars,
                 'c': consts,
                 'eos': self.mcfluid.eos,
-                'nsub_steps': self.cfg.getint('multi-component', 'nsub-steps', default = 1),
+                'sub_steps': sub_steps,
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
-            self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-source',
-                               'finite_rate_source',
-                               chem_tplargs,
-                               False,
-                               True)
+
+            if not sub_steps:
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate',
+                                   'finite_rate',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+
+            elif sub_steps == 'auto':
+                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 500)
+                chem_tplargs['max_subs'] = max_subs
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-auto',
+                                   'finite_rate_auto',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+            else:
+                chem_tplargs['sub_steps'] = int(chem_tplargs['sub_steps'])
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-substep',
+                                   'finite_rate_substep',
+                                   chem_tplargs,
+                                   False,
+                                   True)
 
 
 class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
