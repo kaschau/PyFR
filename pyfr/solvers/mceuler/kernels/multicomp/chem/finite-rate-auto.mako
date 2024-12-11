@@ -40,9 +40,11 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
       ## g.t.zero and l.t. one
+      // HACK underflows in tmpSrc fail the sign check with ffast-math
+      // resulting in tSub=inf and such. Need better solution.
       if (abs(tmpSrc[${n}]) > ${fpdtype_eps}){
-      tSub = (tmpSrc[${n}] < 0.0) & (abs(tmpSrc[${n}]) > ${fpdtype_eps}) ? fmin(tSub, -rho*q[${n}]/tmpSrc[${n}])
-                                                                         : fmin(tSub, rho*(1.0-q[${n}])/tmpSrc[${n}]);
+        tSub = (tmpSrc[${n}] < 0.0) ? fmin(tSub, -rho*q[${n}]/tmpSrc[${n}])
+                                    : fmin(tSub, rho*(1.0-q[${n}])/tmpSrc[${n}]);
       }
       % endif
     }
