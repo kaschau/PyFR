@@ -130,7 +130,7 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
 
 class MCNavierStokesNoSlpAdiaWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-adia-wall'
-    cflux_state = 'ghost'
+    cflux_state = 'ghost-imperm'
 
 
 class MCNavierStokesSlpAdiaWallBCInters(MCNavierStokesBaseBCInters):
@@ -156,7 +156,7 @@ class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
 
 class MCNavierStokesNoSlpIsotWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-isot-wall'
-    cflux_state = 'ghost'
+    cflux_state = 'ghost-imperm'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
