@@ -72,7 +72,6 @@
 
     fpdtype_t T_x = rhoE_x - E*rho_x - u*u_x - v*v_x - rho*e_Y_Y_x;
     fpdtype_t T_y = rhoE_y - E*rho_y - u*u_y - v*v_y - rho*e_Y_Y_y;
-    printf("Tx %e Ty %e \n", T_x*qhl[0]/qhl[1]/rho, T_y*qhl[0]/qhl[1]/rho);
 
     // Enforce no normal component of temperature gradient
     fpdtype_t Tdotn = T_x*nl[0] + T_y*nl[1];
