@@ -26,7 +26,7 @@
     ur[${i + vix}] = 0.0;
 % endfor
 
-    fpdtype_t rho = ${" + ".join([f"ul[{n}]" for n in range(ns)])};
+    fpdtype_t rho = ql[${rhoix}];
     ur[${Eix}] = ul[${Eix}]
                      - (0.5/rho)*${pyfr.dot('ul[{i}]', i=(vix,vix + ndims))};
 
