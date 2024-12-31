@@ -28,7 +28,8 @@
         }
       % endif
 
-      s += q[${n}] > 0.0 ? q[${n}] * ss : 0.0;
+      <% Rk = c['Ru']/c['MW'][n] %>\
+      s += q[${n}] > 0.0 ? q[${n}] * (ss - ${Rk}*log(u[${n}])) : 0.0;
     }
 
     // Return the specific thermodynamic entropy (mass basis)
