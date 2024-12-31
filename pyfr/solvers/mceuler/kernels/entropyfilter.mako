@@ -136,7 +136,7 @@
     % for n in range(ns):
       rhoY = fmin(rhoY, ui[${n}]);
     % endfor
-    X = (s - s0);
+    X = rho*(s - s0);
 
 </%pyfr:macro>
 
