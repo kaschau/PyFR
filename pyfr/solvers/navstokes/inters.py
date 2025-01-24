@@ -209,3 +209,22 @@ class NavierStokesSubOutflowBCInters(NavierStokesBaseBCInters):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         self.c |= self._exp_opts(['p'], lhs)
+
+class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
+    type = 'sub-out-nscbc-fp'
+    cflux_state = 'nscbc'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg):
+        super().__init__(be, lhs, elemap, cfgsect, cfg)
+
+        self._ndivg_lhs = self._const_mat(lhs, 'get_ndivg_fpts_for_inter')
+
+        self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
+        self.kernels['comm_flux'] = lambda: self._be.kernel(
+            'bccflux_nscbc', tplargs=self._tplargs, dims=[self.ninterfpts],
+            extrns=self._external_args, ul=self._scal_lhs,
+            gradul=self._vect_lhs, nl=self._pnorm_lhs,
+            ndivg=self._ndivg_lhs, **self._external_vals
+        )
+
+        self.c |= self._exp_opts(['p'], lhs)

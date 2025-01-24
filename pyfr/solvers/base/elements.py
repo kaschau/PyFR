@@ -410,6 +410,11 @@ class BaseElements:
 
         return smats.reshape(ndims, nmpts, -1), djacs
 
+    def get_ndivg_fpts_for_inter(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        m = self.basis.m11
+        return m[:,fpts_idx,fpts_idx].T
+
     def get_pnorms(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
         return self._pnorm_fpts[fpts_idx, eidx]

@@ -153,6 +153,11 @@ class BaseShape:
         return np.linalg.solve(ub.vdm, A[:, None]*ub.vdm).T
 
     @cached_property
+    def m11(self):
+        m = self.norm_fpts.T[:, None, :]*self.gbasis_at(self.fpts)
+        return m
+
+    @cached_property
     def nupts(self):
         n = self.order + 1
         return int(np.polyval(self.npts_coeffs, n)) // self.npts_cdenom
