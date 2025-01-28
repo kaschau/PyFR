@@ -410,10 +410,17 @@ class BaseElements:
 
         return smats.reshape(ndims, nmpts, -1), djacs
 
-    def get_ndivg_fpts_for_inter(self, eidx, fidx):
+    # Kyle meth
+    def get_ndivg_fpts_for_inter(self, _, fidx):
         fpts_idx = self.basis.facefpts[fidx]
         m = self.basis.m11
-        return m[:,fpts_idx,fpts_idx].T
+        return m[:, fpts_idx, fpts_idx].T
+
+    def _get_scal_upts_for_inter(self, eidx, _):
+        ntmp = self.nupts*self.nvars
+        rmap = (eidx,)*ntmp
+        cmap = np.arange(ntmp)
+        return (self._scal_upts_cpy.mid,)*ntmp, rmap, cmap, (1,)*ntmp
 
     def get_pnorms(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]

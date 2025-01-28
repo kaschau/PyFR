@@ -80,6 +80,11 @@ class BaseInters:
     def _vect_view(self, inter, meth):
         return self._view(inter, meth, (self.ndims, self.nvars))
 
+    def _scal_upts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        nupts = basis.nupts
+        return self._view(inter, meth, (nupts, self.nvars), with_perm=False)
+
     def _xchg_view(self, inter, meth, vshape=(), with_perm=True):
         vm = _get_inter_objs(inter, meth, self.elemap)
         perm = self._perm if with_perm else Ellipsis
