@@ -6,6 +6,7 @@ from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
 from pyfr.solvers.euler.inters import (FluidIntIntersMixin,
                                        FluidMPIIntersMixin)
 from pyfr.util import first
+from collections import defaultdict
 
 
 class TplargsMixin:
@@ -218,33 +219,67 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-
         self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
 
-        self._ndivg_lhs = self._const_mat(lhs, 'get_ndivg_fpts_for_inter')
 
-        # Create views of the solution data
-        nreqs = len(elemap[first(lhs[0])].scal_upts)
-        self._escal_upts = self._escal_upts_view(lhs, '_get_escal_upts_for_inter', nreqs)
+        def gen_nscbc_kerns(uin):
+            # Create collection of elements-face pairs on boundary
+            self._ndivg_lhs = self._const_mat(lhs, 'get_ndivg_fpts_for_inter')
+            # Create views of the solution data
+            nreqs = len(elemap[first(lhs[0])].scal_upts)
 
-        # Create views of the scal_fpts scratch space on an element wise basis
-        self._escal_fpts = self._escal_fpts_view(lhs, '_get_escal_fpts_for_inter')
+            kerns = []
 
-        basis = self.elemap[first(lhs)[0]].basis
-        self._tplargs['nupts'] = basis.nupts
-        self._tplargs['nfacefpts'] = basis.nfacefpts[0]
+            shapes = set(t[0] for t in lhs)
+            self._tplargs_efp = defaultdict(dict)
 
-        self.kernels['comm_flux'] = lambda uin: self._be.kernel(
-            'bccflux_nscbc', tplargs=self._tplargs, dims=[len(lhs)],
-            extrns=self._external_args,
-            u=self._escal_upts[uin],
-            ul=self._escal_fpts,
-            **self._external_vals)
+            # Our element-wise views of the solution data
+            self._escal_upts = defaultdict(dict)
+            # Our element-wise views of the flux point data
+            self._escal_fpts = defaultdict(dict)
+
+            for shape in shapes:
+                basis = self.elemap[shape].basis
+                nupts = basis.nupts
+                nfpts = basis.nfpts
+
+                for fidx, nfacefpts in enumerate(basis.nfacefpts):
+                    # Generate lhs for element-face pair
+                    lhs_efp = [t for t in lhs if t[0] == shape and t[2] == fidx]
+                    if not lhs_efp:
+                        continue
+
+                    # Store tplargs for this element-face pair
+                    self._tplargs_efp[shape][fidx] = self._tplargs.copy()
+                    tplargs_efp = self._tplargs_efp[shape][fidx]
+                    tplargs_efp['nupts'] = nupts
+                    tplargs_efp['nfpts'] = nfpts
+                    tplargs_efp['nfacefpts'] = nfacefpts
+                    tplargs_efp['facefpts'] = basis.facefpts[fidx]
+
+                    escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter', nreqs)
+                    self._escal_upts[shape][fidx] = escal_upts
+
+                    # Create views of the scal_fpts scratch space on an element wise basis
+                    escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
+                    self._escal_fpts[shape][fidx] = escal_fpts
+
+                    kerns.append(self._be.kernel(
+                        'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
+                        extrns=self._external_args,
+                        u=self._escal_upts[shape][fidx][uin],
+                        ul=self._escal_fpts[shape][fidx],
+                        **self._external_vals))
+
+            return self._be.unordered_meta_kernel(kerns)
+
+        self.kernels['comm_flux'] = lambda uin: gen_nscbc_kerns(uin)
 
         self.c |= self._exp_opts(['p'], lhs)
 
         test = elemap[first(lhs[0])].scal_upts[0].get()
+        basis = elemap[first(lhs[0])].basis
         for i in range(basis.nupts):
             for j in range(self.nvars):
                 for k in range(elemap[first(lhs[0])].neles):
-                    test[i,j,k] = float(f'{j}{j}{j}')
+                    test[i,j,k] = float(f'{k}{k}{k}')

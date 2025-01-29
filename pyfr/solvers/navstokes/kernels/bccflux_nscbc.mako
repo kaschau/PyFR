@@ -9,7 +9,7 @@
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
               u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
-              ul='in view fpdtype_t[${str(nfacefpts)}][${str(nvars)}]'>
+              ul='in view fpdtype_t[${str(nfpts)}][${str(nvars)}]'>
 
     printf("ELEMENT\n");
     for(int i=0; i < ${nupts}; i++)
@@ -17,9 +17,8 @@
       printf("%03.0f %03.0f %03.0f %03.0f \n", u[i][0], u[i][1], u[i][2], u[i][3]);
     }
     printf("FACE\n");
-    for(int i=0; i < ${nfacefpts}; i++)
-    {
-      printf("%03.0f %03.0f %03.0f %03.0f \n", ul[i][0], ul[i][1], ul[i][2], ul[i][3]);
-    }
+    % for fpt in range(nfacefpts):
+      printf("%03.0f %03.0f %03.0f %03.0f \n", ul[${facefpts[fpt]}][0], ul[${facefpts[fpt]}][1], ul[${facefpts[fpt]}][2], ul[${facefpts[fpt]}][3]);
+    % endfor
 
 </%pyfr:kernel>

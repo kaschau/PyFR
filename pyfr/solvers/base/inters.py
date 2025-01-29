@@ -101,10 +101,10 @@ class BaseInters:
             views.append(self._be.view(*vm, vshape=vshape))
         return views
 
-    # An element wise view of the scal_fpts scratch space
+    # An element wise view of the scal_fpts matrix
     def _escal_fpts_view(self, inter, meth):
         basis = first(self.elemap.values()).basis
-        vshape = (basis.nfacefpts[0], self.nvars)
+        vshape = (basis.nfpts, self.nvars)
         with_perm = False
         return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
 

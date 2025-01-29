@@ -423,7 +423,7 @@ class BaseElements:
 
     def _get_escal_fpts_for_inter(self, eidx, fidx):
         cmap = (eidx,)
-        rmap = (self._srtd_face_fpts[fidx][eidx][0],)
+        rmap = (0,)
         return (self._scal_fpts.mid,), rmap, cmap, (1,)
 
     def get_pnorms(self, eidx, fidx):
