@@ -10,6 +10,13 @@ def _get_inter_objs(interside, getter, elemap):
     # Get the data from the interface
     return [emap[type](eidx, fidx) for type, eidx, fidx in interside]
 
+def _get_upts_inter_objs(interside, getter, elemap, idx):
+    # Map from element type to view mat getter
+    emap = {type: getattr(ele, getter) for type, ele in elemap.items()}
+
+    # Get the data from the interface
+    return [emap[type](eidx, fidx, idx) for type, eidx, fidx in interside]
+
 
 class BaseInters:
     def __init__(self, be, lhs, elemap, cfg):
@@ -80,10 +87,18 @@ class BaseInters:
     def _vect_view(self, inter, meth):
         return self._view(inter, meth, (self.ndims, self.nvars))
 
-    def _scal_upts_view(self, inter, meth):
+    def _scal_upts_view(self, inter, meth, nreqs):
         basis = first(self.elemap.values()).basis
         nupts = basis.nupts
-        return self._view(inter, meth, (nupts, self.nvars), with_perm=False)
+        vshape = (nupts, self.nvars)
+        with_perm = False
+        views = []
+        for i in range(nreqs):
+            vm = _get_upts_inter_objs(inter, meth, self.elemap, i)
+            perm = self._perm if with_perm else Ellipsis
+            vm = [np.concatenate(m)[perm] for m in zip(*vm)]
+            views.append(self._be.view(*vm, vshape=vshape))
+        return views
 
     def _xchg_view(self, inter, meth, vshape=(), with_perm=True):
         vm = _get_inter_objs(inter, meth, self.elemap)

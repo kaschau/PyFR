@@ -222,21 +222,15 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
 
         self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
 
-        self._scal_upts = self._scal_upts_view(lhs, '_get_scal_upts_for_inter')
+        nreqs = len(elemap[first(lhs[0])].scal_upts)
+        self._scal_upts = self._scal_upts_view(lhs, '_get_scal_upts_for_inter', nreqs)
 
         basis = self.elemap[first(lhs)[0]].basis
         self._tplargs['nupts'] = basis.nupts
 
-        self.kernels['comm_flux'] = lambda: self._be.kernel(
+        self.kernels['comm_flux'] = lambda uin: self._be.kernel(
             'bccflux_nscbc', tplargs=self._tplargs, dims=[len(lhs)],
             extrns=self._external_args,
-            u=self._scal_upts, **self._external_vals)
-
-        # self.kernels['comm_flux'] = lambda: self._be.kernel(
-        #     'bccflux_nscbc', tplargs=self._tplargs, dims=[self.ninterfpts],
-        #     extrns=self._external_args, ul=self._scal_lhs,
-        #     gradul=self._vect_lhs, nl=self._pnorm_lhs,
-        #     ndivg=self._ndivg_lhs, **self._external_vals
-        # )
+            u=self._scal_upts[uin], **self._external_vals)
 
         self.c |= self._exp_opts(['p'], lhs)

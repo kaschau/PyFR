@@ -1,23 +1,19 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 
-<%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
+## <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
 
-% if bccfluxstate:
-<%include file='pyfr.solvers.navstokes.kernels.bcs.${bccfluxstate}'/>
-% endif
+## % if bccfluxstate:
+## <%include file='pyfr.solvers.navstokes.kernels.bcs.${bccfluxstate}'/>
+## % endif
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
-              ul='inout view fpdtype_t[${str(nvars)}]'
-              gradul='in view fpdtype_t[${str(ndims)}][${str(nvars)}]'
-              nl='in fpdtype_t[${str(ndims)}]'
-              ndivg='in fpdtype_t[${str(ndims)}]'>
-    fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
-    fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
+              u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'>
 
+    printf("ELEMENT\n");
+    for(int i=0; i < ${nupts}; i++)
+    {
+      printf("%03.0f %03.0f %03.0f %03.0f \n", u[i][0], u[i][1], u[i][2], u[i][3]);
+    }
 
-    printf("HERE!!!! \n");
-    printf("%f %f \n", ndivg[0], ndivg[1]);
-    printf("%f %f \n", nl[0], nl[1]);
-    ${pyfr.expand('bc_common_flux_state', 'ul', 'gradul', 'gradg', 'norm_nl', 'mag_nl')};
 </%pyfr:kernel>
