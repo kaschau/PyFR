@@ -416,10 +416,15 @@ class BaseElements:
         m = self.basis.m11
         return m[:, fpts_idx, fpts_idx].T
 
-    def _get_scal_upts_for_inter(self, eidx, _, idx):
+    def _get_escal_upts_for_inter(self, eidx, _, idx):
         cmap = (eidx,)
         rmap = (0,)
         return (self.scal_upts[idx].mid,), rmap, cmap, (1,)
+
+    def _get_escal_fpts_for_inter(self, eidx, fidx):
+        cmap = (eidx,)
+        rmap = (self._srtd_face_fpts[fidx][eidx][0],)
+        return (self._scal_fpts.mid,), rmap, cmap, (1,)
 
     def get_pnorms(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
