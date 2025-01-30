@@ -1,4 +1,5 @@
 from functools import cached_property, wraps
+from itertools import chain
 
 import numpy as np
 
@@ -410,21 +411,19 @@ class BaseElements:
 
         return smats.reshape(ndims, nmpts, -1), djacs
 
-    # Kyle meth
-    def get_ndivg_fpts_for_inter(self, _, fidx):
-        fpts_idx = self.basis.facefpts[fidx]
-        m = self.basis.m11
-        return m[:, fpts_idx, fpts_idx].T
-
     def _get_escal_upts_for_inter(self, eidx, _, idx):
         cmap = (eidx,)
         rmap = (0,)
         return (self.scal_upts[idx].mid,), rmap, cmap, (1,)
 
-    def _get_escal_fpts_for_inter(self, eidx, fidx):
+    def _get_escal_fpts_for_inter(self, eidx, _):
         cmap = (eidx,)
         rmap = (0,)
         return (self._scal_fpts.mid,), rmap, cmap, (1,)
+
+    def _get_epnorms_for_inter(self, eidx, _):
+        fpts_idx = list(chain.from_iterable(self.basis.facefpts))
+        return self._pnorm_fpts[fpts_idx, eidx]
 
     def get_pnorms(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]

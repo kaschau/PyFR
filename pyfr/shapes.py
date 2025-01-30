@@ -154,7 +154,12 @@ class BaseShape:
 
     @cached_property
     def m11(self):
-        m = self.norm_fpts.T[:, None, :]*self.gbasis_at(self.fpts)
+        m = self.gbasis_at(self.fpts)
+        return m
+
+    @cached_property
+    def m12(self):
+        m = np.rollaxis(self.ubasis.jac_nodal_basis_at(self.fpts), 2)
         return m
 
     @cached_property

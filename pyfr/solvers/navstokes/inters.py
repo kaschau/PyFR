@@ -221,13 +221,9 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
 
         self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
 
+        nreqs = len(elemap[first(lhs[0])].scal_upts)
 
         def gen_nscbc_kerns(uin):
-            # Create collection of elements-face pairs on boundary
-            self._ndivg_lhs = self._const_mat(lhs, 'get_ndivg_fpts_for_inter')
-            # Create views of the solution data
-            nreqs = len(elemap[first(lhs[0])].scal_upts)
-
             kerns = []
 
             shapes = set(t[0] for t in lhs)
@@ -237,11 +233,16 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
             self._escal_upts = defaultdict(dict)
             # Our element-wise views of the flux point data
             self._escal_fpts = defaultdict(dict)
+            # Out element-wise views of the flux point physical norms
+            self._epnorm_fpts = defaultdict(dict)
 
             for shape in shapes:
                 basis = self.elemap[shape].basis
                 nupts = basis.nupts
                 nfpts = basis.nfpts
+
+                self._tplargs['m11'] = basis.m11
+                self._tplargs['m12'] = basis.m12
 
                 for fidx, nfacefpts in enumerate(basis.nfacefpts):
                     # Generate lhs for element-face pair
@@ -264,11 +265,16 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
                     escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
                     self._escal_fpts[shape][fidx] = escal_fpts
 
+                    # Create matrices for the physical norms at the flux points on an element-wise basis
+                    epnorm_fpts = self._ewise_const_mat(lhs_efp, '_get_epnorms_for_inter')
+                    self._epnorm_fpts[shape][fidx] = epnorm_fpts
+
                     kerns.append(self._be.kernel(
                         'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
                         extrns=self._external_args,
                         u=self._escal_upts[shape][fidx][uin],
                         ul=self._escal_fpts[shape][fidx],
+                        nl=self._epnorm_fpts[shape][fidx],
                         **self._external_vals))
 
             return self._be.unordered_meta_kernel(kerns)
@@ -277,9 +283,9 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
 
         self.c |= self._exp_opts(['p'], lhs)
 
-        test = elemap[first(lhs[0])].scal_upts[0].get()
-        basis = elemap[first(lhs[0])].basis
-        for i in range(basis.nupts):
-            for j in range(self.nvars):
-                for k in range(elemap[first(lhs[0])].neles):
-                    test[i,j,k] = float(f'{k}{k}{k}')
+        # test = elemap[first(lhs[0])].scal_upts[0].get()
+        # basis = elemap[first(lhs[0])].basis
+        # for i in range(basis.nupts):
+        #     for j in range(self.nvars):
+        #         for k in range(elemap[first(lhs[0])].neles):
+        #             test[i,j,k] = float(f'{k}{k}{k}')
