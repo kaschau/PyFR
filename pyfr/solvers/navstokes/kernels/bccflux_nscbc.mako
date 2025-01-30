@@ -7,10 +7,15 @@
 ## <%include file='pyfr.solvers.navstokes.kernels.bcs.${bccfluxstate}'/>
 ## % endif
 
+<%def name="nidx(i,j)">
+  <% return i*ndims + j %>
+</%def>\
+
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
               u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
-              ul='in view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
-              nl='in fpdtype_t[${str(nfpts)}][${str(ndims)}]'>
+              ul='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
+              nl='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
+              smats='in fpdtype_t[${str(nfacefpts)}][${str(ndims*ndims)}]'>
 
     printf("\n*************ELEMENT************\n");
     for(int i=0; i < ${nupts}; i++)
@@ -20,9 +25,9 @@
     fpdtype_t dfdE[${str(nvars)}];
     fpdtype_t dfdN[${str(nvars)}];
     printf("FACE\n");
-    % for fpt in facefpts:
+    % for i,fpt in enumerate(facefpts):
       printf("ul = %.1f %.1f %.1f %.1f \n", ul[${fpt}][0], ul[${fpt}][1], ul[${fpt}][2], ul[${fpt}][3]);
-      printf("nl = %.1f %.1f\n", nl[${fpt}][0], nl[${fpt}][1]);
+      printf("nl = %.1f %.1f\n", nl[${i}][0], nl[${i}][1]);
 
       % for n in range(nvars):
         dfdE[${n}] = 0.0;
@@ -41,6 +46,13 @@
       % endfor
       printf("dudE %.1f %.1f %.1f %.1f \n", dfdE[0], dfdE[1], dfdE[2], dfdE[3]);
       printf("dedN %.1f %.1f %.1f %.1f \n", dfdN[0], dfdN[1], dfdN[2], dfdN[3]);
+    % endfor
+
+    % for n in range(ndims):
+    % for n1 in range(ndims):
+      printf("smats fp1 = %.1f \n", smats[0][${nidx(n,n1)}]);
+      printf("smats fp2 = %.1f \n", smats[1][${nidx(n,n1)}]);
+    % endfor
     % endfor
 
 </%pyfr:kernel>

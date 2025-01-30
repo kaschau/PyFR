@@ -68,12 +68,12 @@ class BaseInters:
 
         return self._be.const_matrix(m)
 
-    def _ewise_const_mat(self, inter, meth):
+    def _fwise_const_mat(self, inter, meth):
         m = _get_inter_objs(inter, meth, self.elemap)
 
         # Swizzle the dimensions
         m = np.array(m)
-        m = m.transpose((1,2,0))
+        m = np.moveaxis(m, 0, -1)
 
         return self._be.const_matrix(m)
 

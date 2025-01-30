@@ -421,9 +421,15 @@ class BaseElements:
         rmap = (0,)
         return (self._scal_fpts.mid,), rmap, cmap, (1,)
 
-    def _get_epnorms_for_inter(self, eidx, _):
-        fpts_idx = list(chain.from_iterable(self.basis.facefpts))
+    def _get_pnorms_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
         return self._pnorm_fpts[fpts_idx, eidx]
+
+    def _get_smats_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        smats = self.smat_at_np('fpts')[:, fpts_idx, :, eidx].swapaxes(0,1)
+        smats = np.reshape(smats, (smats.shape[0],-1,smats.shape[-1]))
+        return smats
 
     def get_pnorms(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]

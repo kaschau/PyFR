@@ -233,8 +233,10 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
             self._escal_upts = defaultdict(dict)
             # Our element-wise views of the flux point data
             self._escal_fpts = defaultdict(dict)
-            # Out element-wise views of the flux point physical norms
-            self._epnorm_fpts = defaultdict(dict)
+            # Our face-wise matrix of the flux point physical norms
+            self._pnorm_facefpts = defaultdict(dict)
+            # Our face-wise matrix of the flux point smat
+            self._smats_facefpts = defaultdict(dict)
 
             for shape in shapes:
                 basis = self.elemap[shape].basis
@@ -265,16 +267,21 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
                     escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
                     self._escal_fpts[shape][fidx] = escal_fpts
 
-                    # Create matrices for the physical norms at the flux points on an element-wise basis
-                    epnorm_fpts = self._ewise_const_mat(lhs_efp, '_get_epnorms_for_inter')
-                    self._epnorm_fpts[shape][fidx] = epnorm_fpts
+                    # Create matrix for the physical norms at the flux points on an face-wise basis
+                    pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
+                    self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
+
+                    # Create matrix for smats at the flux points on an face-wise basis
+                    smats_facefpts = self._fwise_const_mat(lhs_efp, '_get_smats_facefpts')
+                    self._smats_facefpts[shape][fidx] = smats_facefpts
 
                     kerns.append(self._be.kernel(
                         'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
                         extrns=self._external_args,
                         u=self._escal_upts[shape][fidx][uin],
                         ul=self._escal_fpts[shape][fidx],
-                        nl=self._epnorm_fpts[shape][fidx],
+                        nl=self._pnorm_facefpts[shape][fidx],
+                        smats=self._smats_facefpts[shape][fidx],
                         **self._external_vals))
 
             return self._be.unordered_meta_kernel(kerns)
