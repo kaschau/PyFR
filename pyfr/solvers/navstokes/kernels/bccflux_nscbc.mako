@@ -7,8 +7,8 @@
 ## <%include file='pyfr.solvers.navstokes.kernels.bcs.${bccfluxstate}'/>
 ## % endif
 
-<%def name="nidx(i,j)">
-  <% return i*ndims + j %>
+<%def name="nidx(comp,phys)">
+  <% return comp*ndims + phys %>
 </%def>\
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
@@ -46,13 +46,13 @@
       % endfor
       printf("dudE %.1f %.1f %.1f %.1f \n", dfdE[0], dfdE[1], dfdE[2], dfdE[3]);
       printf("dedN %.1f %.1f %.1f %.1f \n", dfdN[0], dfdN[1], dfdN[2], dfdN[3]);
+
+    % for comp in range(ndims):
+    % for phys in range(ndims):
+      printf("d${comp}/d${phys} fp = %.1f \n", smats[${i}][${nidx(comp,phys)}]);
+    % endfor
     % endfor
 
-    % for n in range(ndims):
-    % for n1 in range(ndims):
-      printf("smats fp1 = %.1f \n", smats[0][${nidx(n,n1)}]);
-      printf("smats fp2 = %.1f \n", smats[1][${nidx(n,n1)}]);
-    % endfor
     % endfor
 
 </%pyfr:kernel>
