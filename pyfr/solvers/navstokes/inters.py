@@ -259,6 +259,7 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
                     tplargs_efp['nfpts'] = nfpts
                     tplargs_efp['nfacefpts'] = nfacefpts
                     tplargs_efp['facefpts'] = basis.facefpts[fidx]
+                    tplargs_efp['bnorm_fpts'] = basis.norm_fpts[fidx]
 
                     escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter', nreqs)
                     self._escal_upts[shape][fidx] = escal_upts
@@ -279,7 +280,7 @@ class NavierStokesNSCBCOutflowBCInters(NavierStokesBaseBCInters):
                         'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
                         extrns=self._external_args,
                         u=self._escal_upts[shape][fidx][uin],
-                        ul=self._escal_fpts[shape][fidx],
+                        uf=self._escal_fpts[shape][fidx],
                         nl=self._pnorm_facefpts[shape][fidx],
                         smats=self._smats_facefpts[shape][fidx],
                         **self._external_vals))
