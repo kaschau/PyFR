@@ -428,8 +428,15 @@ class BaseElements:
     def _get_smats_facefpts(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
         smats = self.smat_at_np('fpts')[:, fpts_idx, :, eidx]
-        rcpdjac = self.rcpdjac_at_np('fpts')[fpts_idx, eidx]
-        smats *= rcpdjac[:, np.newaxis, np.newaxis]
+        # rcpdjac = self.rcpdjac_at_np('fpts')[fpts_idx, eidx]
+        # smats *= rcpdjac[:, np.newaxis, np.newaxis]
+        smats = np.reshape(smats, (smats.shape[0],-1))
+        return smats
+
+    def _get_smats_upts(self, eidx, _):
+        smats = self.smat_at_np('upts')[:, :, :, eidx].swapaxes(0, 1)
+        # rcpdjac = self.rcpdjac_at_np('fpts')[fpts_idx, eidx]
+        # smats *= rcpdjac[:, np.newaxis, np.newaxis]
         smats = np.reshape(smats, (smats.shape[0],-1))
         return smats
 

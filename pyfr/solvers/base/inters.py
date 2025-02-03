@@ -77,6 +77,15 @@ class BaseInters:
 
         return self._be.const_matrix(m)
 
+    def _ewise_const_mat(self, inter, meth):
+        m = _get_inter_objs(inter, meth, self.elemap)
+
+        # Swizzle the dimensions
+        m = np.array(m)
+        m = np.moveaxis(m, 0, -1)
+
+        return self._be.const_matrix(m)
+
     def _get_perm_for_view(self, inter, meth):
         vm = _get_inter_objs(inter, meth, self.elemap)
         vm = [np.concatenate(m) for m in zip(*vm)]
