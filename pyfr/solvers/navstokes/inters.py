@@ -236,6 +236,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._smats_facefpts = defaultdict(dict)
         # Whole element matrix of the solution point smats
         self._smats_upts = defaultdict(dict)
+        # Boundary face matrix of the flux point jacs
+        self._jacs_facefpts = defaultdict(dict)
 
     def gen_nscbc_kerns(self, uin):
         kerns = []
@@ -245,14 +247,15 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             nupts = basis.nupts
             nfpts = basis.nfpts
 
-            self._tplargs['m11'] = basis.m11
-            self._tplargs['m12'] = basis.m12
-
             for fidx, nfacefpts in enumerate(basis.nfacefpts):
                 # Generate lhs for element-face pair
                 lhs_efp = [t for t in self.lhs if t[0] == shape and t[2] == fidx]
                 if not lhs_efp:
                     continue
+
+                facefpts = basis.facefpts[fidx]
+                self._tplargs['m11'] = basis.m11[facefpts, facefpts]
+                self._tplargs['m12'] = basis.m12[facefpts]
 
                 # Store tplargs for this element-face pair
                 self._tplargs_efp[shape][fidx] = self._tplargs.copy()
@@ -282,6 +285,10 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
                 self._smats_upts[shape][fidx] = smats_upts
 
+                # Create matrix for jacs at the flux points on a face
+                jacs_facefpts = self._fwise_const_mat(lhs_efp, '_get_jacs_facefpts')
+                self._jacs_facefpts[shape][fidx] = jacs_facefpts
+
                 kerns.append(self._be.kernel(
                     'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
                     extrns=self._external_args,
@@ -290,6 +297,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     nl=self._pnorm_facefpts[shape][fidx],
                     smats_f=self._smats_facefpts[shape][fidx],
                     smats_u=self._smats_upts[shape][fidx],
+                    jacs=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))
 
         return self._be.unordered_meta_kernel(kerns)
@@ -305,4 +313,6 @@ class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
 
         self.kernels['comm_flux'] = lambda uin: self.gen_nscbc_kerns(uin)
 
-        self.c |= self._exp_opts(['p'], lhs)
+        self.c['p_inf'] = 1.0
+        self.c['sigma'] = 0.25
+        self.c['Lx'] = 1.0
