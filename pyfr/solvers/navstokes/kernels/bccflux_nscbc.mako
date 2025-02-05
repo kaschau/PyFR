@@ -161,7 +161,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
-  fpdtype_t Msq = ${pyfr.dot('v_f[{i}]', i=ndims)}*rcpcsq;
+  fpdtype_t Msq = (${pyfr.dot('v_f[{i}]', i=ndims)})*rcpcsq;
   L[3] = jacs[${f}]*${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p_inf']});
 
   ## Check
@@ -169,12 +169,19 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("L_${i} = %f \n", L[${i}]);
   ## % endfor
 
-  ## Step 6: Compute dFstardE values normal to face
+  ## Step 6: Compute d,dFstardE values normal to face
+  fpdtype_t d[${nvars}];
   % if ndims == 2:
-    dtFidE_n[0][0] = norm_nl[0]*L[0] + norm_nl[1]*L[1] + u_f[0]/(${sqrt(2)}*c)*(L[2] + L[3]);
-    dtFidE_n[0][1] = norm_nl[0]*${1.0/sqrt(2)}*(L[2] - L[3]);
-    dtFidE_n[0][2] = norm_nl[1]*${1.0/sqrt(2)}*(L[2] - L[3]);
-    dtFidE_n[0][3] = u_f[0]*${1.0/sqrt(2)}*(L[2] + L[3]);
+
+    d[0] = norm_nl[0]*L[0] + norm_nl[1]*L[1] + u_f[0]/(${sqrt(2)}*c)*(L[2] + L[3]);
+    d[1] = norm_nl[0]*${1.0/sqrt(2)}*(L[2] - L[3]);
+    d[2] = norm_nl[1]*${1.0/sqrt(2)}*(L[2] - L[3]);
+    d[3] = u_f[0]*${1.0/sqrt(2)}*c*(L[2] + L[3]);
+
+    dtFidE_n[0][0] = (d[0]);
+    dtFidE_n[0][1] = (v_f[0] * d[0] + u_f[0]*d[1]);
+    dtFidE_n[0][2] = (v_f[1] * d[0] + u_f[0]*d[2]);
+    dtFidE_n[0][3] = (0.5*(${pyfr.dot('v_f[{i}]', i=ndims)})*d[0] + u_f[1]*d[1] + u_f[2]*d[2] + ${1.0/(c['gamma']-1.0)}*d[3]);
   % endif
 
   ## Step 7: Solve for normal transformed common flux
