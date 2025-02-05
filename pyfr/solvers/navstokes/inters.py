@@ -214,16 +214,12 @@ class NavierStokesSubOutflowBCInters(NavierStokesBaseBCInters):
 
 
 class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
-    cflux_state = 'nscbc'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
+
         self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
 
-        self.nreqs = len(elemap[first(lhs[0])].scal_upts)
-        self.lhs = lhs
-
-        self.shapes = set(t[0] for t in self.lhs)
         self._tplargs_efp = defaultdict(dict)
 
         # Whole element view of the solution data
@@ -239,58 +235,77 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         # Boundary face matrix of the flux point jacs
         self._jacs_facefpts = defaultdict(dict)
 
-    def gen_nscbc_kerns(self, uin):
-        kerns = []
+        # lhs length
+        self._dim_lhs = defaultdict(dict)
 
-        for shape in self.shapes:
+        self.kernels['comm_flux'] = lambda uin: self.gen_nscbc_kerns(uin)
+
+        # Create required element-face pairs
+        ef_pairs = []
+        for shape in set(t[0] for t in lhs):
+            for fidx in range(len(self.elemap[shape].basis.faces)):
+                lhs_efp = [t for t in lhs if t[0] == shape and t[2] == fidx]
+                if lhs_efp:
+                    ef_pairs.append((shape, fidx, lhs_efp))
+
+
+        for shape, fidx, lhs_efp in ef_pairs:
             basis = self.elemap[shape].basis
             nupts = basis.nupts
             nfpts = basis.nfpts
+            nfacefpts = basis.nfacefpts[fidx]
 
-            for fidx, nfacefpts in enumerate(basis.nfacefpts):
-                # Generate lhs for element-face pair
-                lhs_efp = [t for t in self.lhs if t[0] == shape and t[2] == fidx]
-                if not lhs_efp:
-                    continue
+            # Generate lhs for element-face pair
+            self._dim_lhs[shape][fidx] = len(lhs_efp)
 
-                facefpts = basis.facefpts[fidx]
-                self._tplargs['m11'] = basis.m11[facefpts, facefpts]
-                self._tplargs['m12'] = basis.m12[facefpts]
+            # Store tplargs for this element-face pair
+            self._tplargs_efp[shape][fidx] = self._tplargs.copy()
+            tplargs_efp = self._tplargs_efp[shape][fidx]
 
-                # Store tplargs for this element-face pair
-                self._tplargs_efp[shape][fidx] = self._tplargs.copy()
+            facefpts = basis.facefpts[fidx]
+            tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
+            tplargs_efp['m12'] = basis.m12[facefpts]
+
+            tplargs_efp['nupts'] = nupts
+            tplargs_efp['nfpts'] = nfpts
+            tplargs_efp['nfacefpts'] = nfacefpts
+            tplargs_efp['facefpts'] = basis.facefpts[fidx]
+            tplargs_efp['bnorm_facefpts'] = basis.norm_fpts[basis.facefpts[fidx]]
+
+            nreqs = len(elemap[first(lhs[0])].scal_upts)
+            escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter', nreqs)
+            self._escal_upts[shape][fidx] = escal_upts
+
+            # Create views of the scal_fpts scratch space on an element wise basis
+            escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
+            self._escal_fpts[shape][fidx] = escal_fpts
+
+            # Create matrix for the physical norms at the flux points on a face
+            pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
+            self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
+
+            # Create matrix for smats at the flux points on a face
+            smats_facefpts = self._fwise_const_mat(lhs_efp, '_get_smats_facefpts')
+            self._smats_facefpts[shape][fidx] = smats_facefpts
+
+            # Create matrix for smats at the solution points in an element
+            smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
+            self._smats_upts[shape][fidx] = smats_upts
+
+            # Create matrix for jacs at the flux points on a face
+            jacs_facefpts = self._fwise_const_mat(lhs_efp, '_get_jacs_facefpts')
+            self._jacs_facefpts[shape][fidx] = jacs_facefpts
+
+    def gen_nscbc_kerns(self, uin):
+        kerns = []
+        for shape in self._tplargs_efp.keys():
+            for fidx in self._tplargs_efp[shape].keys():
+
                 tplargs_efp = self._tplargs_efp[shape][fidx]
-                tplargs_efp['nupts'] = nupts
-                tplargs_efp['nfpts'] = nfpts
-                tplargs_efp['nfacefpts'] = nfacefpts
-                tplargs_efp['facefpts'] = basis.facefpts[fidx]
-                tplargs_efp['bnorm_facefpts'] = basis.norm_fpts[basis.facefpts[fidx]]
-
-                escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter', self.nreqs)
-                self._escal_upts[shape][fidx] = escal_upts
-
-                # Create views of the scal_fpts scratch space on an element wise basis
-                escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
-                self._escal_fpts[shape][fidx] = escal_fpts
-
-                # Create matrix for the physical norms at the flux points on a face
-                pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
-                self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
-
-                # Create matrix for smats at the flux points on a face
-                smats_facefpts = self._fwise_const_mat(lhs_efp, '_get_smats_facefpts')
-                self._smats_facefpts[shape][fidx] = smats_facefpts
-
-                # Create matrix for smats at the solution points in an element
-                smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
-                self._smats_upts[shape][fidx] = smats_upts
-
-                # Create matrix for jacs at the flux points on a face
-                jacs_facefpts = self._fwise_const_mat(lhs_efp, '_get_jacs_facefpts')
-                self._jacs_facefpts[shape][fidx] = jacs_facefpts
 
                 kerns.append(self._be.kernel(
-                    'bccflux_nscbc', tplargs=tplargs_efp, dims=[len(lhs_efp)],
+                    'bccflux_nscbc', tplargs=tplargs_efp,
+                    dims=[self._dim_lhs[shape][fidx]],
                     extrns=self._external_args,
                     u=self._escal_upts[shape][fidx][uin],
                     uf=self._escal_fpts[shape][fidx],
@@ -303,7 +318,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         return self._be.unordered_meta_kernel(kerns)
 
 
-
 class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
 
     type = 'sub-out-nscbc-fp'
@@ -311,8 +325,5 @@ class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.kernels['comm_flux'] = lambda uin: self.gen_nscbc_kerns(uin)
-
         self.c['p_inf'] = 1.0
         self.c['sigma'] = 0.25
-        self.c['Lx'] = 1.0

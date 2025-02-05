@@ -162,7 +162,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = ${pyfr.dot('v_f[{i}]', i=ndims)}*rcpcsq;
-  L[3] = jacs[${f}]*${c['sigma']/sqrt(2)/c['Lx']}/u_f[0]*(1.0-Msq)*(p_f - ${c['p_inf']});
+  L[3] = jacs[${f}]*${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p_inf']});
 
   ## Check
   ## % for i in range(nvars):
