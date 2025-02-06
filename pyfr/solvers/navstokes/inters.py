@@ -228,8 +228,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._escal_fpts = defaultdict(dict)
         # Boundary face matrix of the flux point physical norms
         self._pnorm_facefpts = defaultdict(dict)
-        # Boundary face matrix of the flux point smats
-        self._smats_facefpts = defaultdict(dict)
         # Whole element matrix of the solution point smats
         self._smats_upts = defaultdict(dict)
         # Boundary face matrix of the flux point jacs
@@ -272,7 +270,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['facefpts'] = basis.facefpts[fidx]
             tplargs_efp['bnorm_facefpts'] = basis.norm_fpts[basis.facefpts[fidx]]
 
-            nreqs = len(elemap[first(lhs[0])].scal_upts)
             escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter')
             self._escal_upts[shape][fidx] = escal_upts
 
@@ -283,10 +280,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             # Create matrix for the physical norms at the flux points on a face
             pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
             self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
-
-            # Create matrix for smats at the flux points on a face
-            smats_facefpts = self._fwise_const_mat(lhs_efp, '_get_smats_facefpts')
-            self._smats_facefpts[shape][fidx] = smats_facefpts
 
             # Create matrix for smats at the solution points in an element
             smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
@@ -310,7 +303,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     u=self._escal_upts[shape][fidx],
                     uf=self._escal_fpts[shape][fidx],
                     nl=self._pnorm_facefpts[shape][fidx],
-                    smats_f=self._smats_facefpts[shape][fidx],
                     smats_u=self._smats_upts[shape][fidx],
                     jacs=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))

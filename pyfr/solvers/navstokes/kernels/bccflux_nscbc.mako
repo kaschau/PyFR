@@ -14,7 +14,6 @@
               u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
               uf='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
               nl='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
-              smats_f='in fpdtype_t[${str(nfacefpts)}][${str(ndims*ndims)}]'
               smats_u='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs='in fpdtype_t[${str(nfacefpts)}]'>
 
@@ -79,7 +78,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("p_f = %f  vf = %f %f \n", p_f, v_f[0], v_f[1]);
 
   ## Step 2: Compute derivative in transformed space of tflux, pressure, velocity at flux point
+  ## Also compute gradient of smats for geometric source term
   fpdtype_t dtFidE[${ndims}][${nvars}] = {{0}};
+  fpdtype_t dsmatsdE[${ndims}][${ndims}] = {{0}};
   fpdtype_t dvdE[${ndims}][${ndims}] = {{0}};
   fpdtype_t dpdE[${ndims}] = {0};
   fpdtype_t drhodE[${ndims}] = {0};
@@ -90,6 +91,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
       % endfor
       % for phys in range(ndims):
         dvdE[${phys}][${comp}] += vupts[${upt}][${phys}]*${m12[f, comp, upt]};
+        dsmatsdE[${phys}][${comp}] += smats_u[${upt}][${nidx(comp,phys)}]*${m12[f, comp, upt]};
       % endfor
       dpdE[${comp}] += pupts[${upt}]*${m12[f, comp, upt]};
       drhodE[${comp}] += u[${upt}][0]*${m12[f, comp, upt]};
@@ -102,6 +104,8 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## % endfor
   ## printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
   ## printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
+  ## printf("dExdE = %f %f\n", dsmats[0][0], dsmats[0][1]);
+  ## printf("dEydE = %f %f\n", dsmats[1][0], dsmats[1][1]);
   ## printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
   ## printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
 
@@ -109,6 +113,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## Step 3: Realign derivatives to a face-normal orientation where \Xi is normal to face
   fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
   fpdtype_t dtFidE_n[${ndims}][${nvars}];
+  fpdtype_t dsmatsdE_n[${ndims}][${nvars}];
   % for vidx in range(nvars):
   {
     fpdtype_t dF_temp[${ndims}] = {${','.join([f'dtFidE[{i}][{vidx}]' for i in range(ndims)])}};
@@ -125,8 +130,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     fpdtype_t dv_temp[${ndims}] = {${','.join([f'dvdE[{phys}][{comp}]' for comp in range(ndims)])}};
     fpdtype_t dv_n_temp[${ndims}];
     ${pyfr.expand('transform_to', 'bnorm', 'dv_temp', 'dv_n_temp', off=0)};
+    fpdtype_t dsmats_temp[${ndims}] = {${','.join([f'dsmatsdE[{phys}][{comp}]' for comp in range(ndims)])}};
+    fpdtype_t dsmats_n_temp[${ndims}];
+    ${pyfr.expand('transform_to', 'bnorm', 'dsmats_temp', 'dsmats_n_temp', off=0)};
     % for comp in range(ndims):
       dvdE_n[${phys}][${comp}] = dv_n_temp[${comp}];
+      dsmatsdE_n[${phys}][${comp}] = dsmats_n_temp[${comp}];
     % endfor
   }
   % endfor
@@ -210,10 +219,15 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 
   % for vidx in range(nvars):
   {
+    int vidx = ${vidx};
     ## printf("\n VAR ${vidx} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
     uf[${fpt_idx}][${vidx}] = jacs[${f}]*(${'+'.join([f'dtFidE_n[{dim}][{vidx}]' for dim in range(ndims)])});
     ## printf("dtFidE_n %f\n", uf[${fpt_idx}][${vidx}]);
+
+    ## Add geomteric source term
+    uf[${fpt_idx}][${vidx}] += (${pyfr.dot('f_f[{i}][vidx]','dsmatsdE_n[0][{i}]', i=ndims)});
+    ## printf("geom source %f\n",${pyfr.dot('f_f[{i}][vidx]','dsmatsdE_n[0][{i}]', i=ndims)});
 
     ## subtract our flux gradient on the face (from interior values)
     uf[${fpt_idx}][${vidx}] -= (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])});
@@ -224,8 +238,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     uf[${fpt_idx}][${vidx}] /= ${m11[f]};
 
     ## compute and add the transformed, normal flux from interior values
-    int idx = ${vidx};
-    fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][idx]', i=ndims)};
+    fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][vidx]', i=ndims)};
     uf[${fpt_idx}][${vidx}] += f_f_n;
     ## printf("f_f_n  %f\n", f_f_n);
 
