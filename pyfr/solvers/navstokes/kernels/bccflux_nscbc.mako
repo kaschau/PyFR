@@ -73,12 +73,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ${pyfr.expand('inviscid_flux', 'u_f', 'f_f', 'p_f', 'v_f')};
 
   ## Check
-  % for vidx in range(nvars):
-    printf("f_f ${vidx} = %f %f \n", f_f[0][${vidx}], f_f[1][${vidx}]);
-  % endfor
-    printf("p_f = %f  vf = %f %f \n", p_f, v_f[0], v_f[1]);
+  ## % for vidx in range(nvars):
+  ##   printf("f_f ${vidx} = %f %f \n", f_f[0][${vidx}], f_f[1][${vidx}]);
+  ## % endfor
+  ##   printf("p_f = %f  vf = %f %f \n", p_f, v_f[0], v_f[1]);
 
-  ## Step 2: Compute derivatives in transformed space of tflux, pressure, velocity at flux point
+  ## Step 2: Compute derivative in transformed space of tflux, pressure, velocity at flux point
   fpdtype_t dtFidE[${ndims}][${nvars}] = {{0}};
   fpdtype_t dvdE[${ndims}][${ndims}] = {{0}};
   fpdtype_t dpdE[${ndims}] = {0};
@@ -100,10 +100,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## % for vidx in range(nvars):
   ##   printf("dtFidE_${vidx} = %.1f %.1f \n", dtFidE[0][${vidx}],dtFidE[1][${vidx}]);
   ## % endfor
-  printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
-  printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
-  printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
-  printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
+  ## printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
+  ## printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
+  ## printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
+  ## printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
 
 
   ## Step 3: Realign derivatives to a face-normal orientation where \Xi is normal to face
@@ -139,10 +139,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## % for vidx in range(nvars):
   ##   printf("dtFidE_n_${vidx} = %f %f \n", dtFidE_n[0][${vidx}],dtFidE_n[1][${vidx}]);
   ## % endfor
-  printf("dudE_n = %f %f\n", dvdE_n[0][0], dvdE_n[0][1]);
-  printf("dvdE_n = %f %f\n", dvdE_n[1][0], dvdE_n[1][1]);
-  printf("dpdE_n = %f %f\n", dpdE_n[0], dpdE_n[1]);
-  printf("drhodE_n = %f %f\n", drhodE_n[0], drhodE_n[1]);
+  ## printf("dudE_n = %f %f\n", dvdE_n[0][0], dvdE_n[0][1]);
+  ## printf("dvdE_n = %f %f\n", dvdE_n[1][0], dvdE_n[1][1]);
+  ## printf("dpdE_n = %f %f\n", dpdE_n[0], dpdE_n[1]);
+  ## printf("drhodE_n = %f %f\n", drhodE_n[0], drhodE_n[1]);
 
   ## Step 4: Compute the characteristic wave amplitudes, L
   fpdtype_t nl_f[${ndims}] = {${", ".join([f'nl[{f}][{i}]' for i in range(ndims)])}};
@@ -158,26 +158,27 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t L[${nvars}];
 
   % if ndims == 2:
-    L[0] = uhat*norm_nl[0]*(drhodE_n[0]- dpdE[0]*rcpcsq);
-    L[1] = uhat*norm_nl[1]*(drhodE_n[0] - dpdE[0]*rcpcsq);
-    L[2] = ${1.0/sqrt(2)}*(uhat + chat)*(norm_nl[0]*dvdE_n[0][0] + norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE[0]);
-    L[3] = ${1.0/sqrt(2)}*(uhat - chat)*(-norm_nl[0]*dvdE_n[0][0] - norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE[0]);
+    L[0] = uhat*norm_nl[0]*(drhodE_n[0]- dpdE_n[0]*rcpcsq);
+    L[1] = uhat*norm_nl[1]*(drhodE_n[0] - dpdE_n[0]*rcpcsq);
+    L[2] = ${1.0/sqrt(2)}*(uhat + chat)*(norm_nl[0]*dvdE_n[0][0] + norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
+    L[3] = ${1.0/sqrt(2)}*(uhat - chat)*(-norm_nl[0]*dvdE_n[0][0] - norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
   % endif
 
   ## Check
   ## % for vidx in range(nvars):
   ##   printf("L_${vidx} %f\n", L[${vidx}]);
   ## % endfor
-  printf("nl_f %f %f \n", nl_f[0], nl_f[1]);
-  printf("norm_nl %f %f \n", norm_nl[0], norm_nl[1]);
-  printf("v_f %f %f \n", v_f[0], v_f[1]);
-  printf("mag_nl %f p_f %f rho_f %f\n", mag_nl, p_f, u_f[0]);
-  printf("uhat %f chat %f \n", uhat, chat);
+  ## printf("nl_f %f %f \n", nl_f[0], nl_f[1]);
+  ## printf("norm_nl %f %f \n", norm_nl[0], norm_nl[1]);
+  ## printf("v_f %f %f \n", v_f[0], v_f[1]);
+  ## printf("mag_nl %f p_f %f rho_f %f\n", mag_nl, p_f, u_f[0]);
+  ## printf("uhat %f chat %f \n", uhat, chat);
+  ## printf("here %f %f %f %f\n", (uhat + chat), norm_nl[0]*dvdE_n[0][0], norm_nl[1]*dvdE_n[1][0], 1.0/(u_f[0]*c)*dpdE_n[0]);
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = (${pyfr.dot('v_f[{i}]', i=ndims)})*rcpcsq;
-  L[3] = ${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p_inf']});
+  L[3] = ${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
 
   ## Check
   % for i in range(nvars):
@@ -187,7 +188,6 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## Step 6: Compute d,dFstardE values normal to face
   fpdtype_t d[${nvars}];
   % if ndims == 2:
-
     d[0] = norm_nl[0]*L[0] + norm_nl[1]*L[1] + u_f[0]/(${sqrt(2)}*c)*(L[2] + L[3]);
     d[1] = norm_nl[0]*${1.0/sqrt(2)}*(L[2] - L[3]);
     d[2] = norm_nl[1]*${1.0/sqrt(2)}*(L[2] - L[3]);
@@ -200,24 +200,25 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endif
 
   ## Check
-  printf("here %f %f %f \n",norm_nl[0]*L[0], u_f[0]/(${sqrt(2)}*c), (L[2] + L[3]));
-  % for vidx in range(nvars):
-    printf(" d_${vidx} %f\n", d[${vidx}]);
-    printf(" dtFidE_n ${vidx} %f\n", dtFidE_n[0][${vidx}]);
-  % endfor
+  ## printf("here %f %f %f \n",norm_nl[0]*L[0], u_f[0]/(${sqrt(2)}*c), (L[2] + L[3]));
+  ## % for vidx in range(nvars):
+  ##   printf(" d_${vidx} %f\n", d[${vidx}]);
+  ##   printf(" dtFidE_n ${vidx} %f\n", dtFidE_n[0][${vidx}]);
+  ## % endfor
 
   ## Step 7: Solve for normal transformed common flux
 
   % for vidx in range(nvars):
   {
-    printf("\n VAR ${vidx} \n");
+    ## printf("\n VAR ${vidx} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
     uf[${fpt_idx}][${vidx}] = jacs[${f}]*(${'+'.join([f'dtFidE_n[{dim}][{vidx}]' for dim in range(ndims)])});
-    printf("dtFidE_n %f\n", uf[${fpt_idx}][${vidx}]);
+    ## printf("dtFidE_n %f\n", uf[${fpt_idx}][${vidx}]);
 
     ## subtract our flux gradient on the face (from interior values)
     uf[${fpt_idx}][${vidx}] -= (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])});
-    printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])}));
+    ## printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])}));
+    ## printf("diff  %f\n", uf[${fpt_idx}][${vidx}]);
 
     ## divide by ~\del \dot g
     uf[${fpt_idx}][${vidx}] /= ${m11[f]};
@@ -226,10 +227,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     int idx = ${vidx};
     fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][idx]', i=ndims)};
     uf[${fpt_idx}][${vidx}] += f_f_n;
-    printf("f_f_n  %f\n", f_f_n);
+    ## printf("f_f_n  %f\n", f_f_n);
 
     ## Check
-    printf("f_n  %f\n", uf[${fpt_idx}][${vidx}]);
+    ## printf("f_n  %f\n", uf[${fpt_idx}][${vidx}]);
   }
   % endfor
 
