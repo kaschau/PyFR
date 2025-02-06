@@ -59,6 +59,9 @@ class BaseSystem:
         # Get all the solution point locations for the elements
         self.ele_ploc_upts = [e.ploc_at_np('upts') for e in eles]
 
+        # Get face data
+        self.ele_scal_fpts = [e._scal_fpts for e in eles]
+
         if hasattr(eles[0], '_grad_upts'):
             self.eles_vect_upts = [e._grad_upts for e in eles]
 
@@ -315,6 +318,9 @@ class BaseSystem:
 
     def ele_scal_upts(self, idx):
         return [eb[idx].get() for eb in self.ele_banks]
+
+    def ele_scal_fpts(self):
+        return [e.get() for e in self.ele_scal_fpts]
 
     def get_ele_entmin_int(self):
         return [e.get() for e in self.eles_entmin_int]

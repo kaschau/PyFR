@@ -238,7 +238,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         # lhs length
         self._dim_lhs = defaultdict(dict)
 
-        self.kernels['comm_flux'] = lambda uin: self.gen_nscbc_kerns(uin)
+        self.kernels['comm_flux'] = lambda: self.gen_nscbc_kerns()
 
         # Create required element-face pairs
         ef_pairs = []
@@ -273,7 +273,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['bnorm_facefpts'] = basis.norm_fpts[basis.facefpts[fidx]]
 
             nreqs = len(elemap[first(lhs[0])].scal_upts)
-            escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter', nreqs)
+            escal_upts = self._escal_upts_view(lhs_efp, '_get_escal_upts_for_inter')
             self._escal_upts[shape][fidx] = escal_upts
 
             # Create views of the scal_fpts scratch space on an element wise basis
@@ -296,7 +296,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             jacs_facefpts = self._fwise_const_mat(lhs_efp, '_get_jacs_facefpts')
             self._jacs_facefpts[shape][fidx] = jacs_facefpts
 
-    def gen_nscbc_kerns(self, uin):
+    def gen_nscbc_kerns(self):
         kerns = []
         for shape in self._tplargs_efp.keys():
             for fidx in self._tplargs_efp[shape].keys():
@@ -307,7 +307,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     'bccflux_nscbc', tplargs=tplargs_efp,
                     dims=[self._dim_lhs[shape][fidx]],
                     extrns=self._external_args,
-                    u=self._escal_upts[shape][fidx][uin],
+                    u=self._escal_upts[shape][fidx],
                     uf=self._escal_fpts[shape][fidx],
                     nl=self._pnorm_facefpts[shape][fidx],
                     smats_f=self._smats_facefpts[shape][fidx],

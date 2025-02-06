@@ -181,9 +181,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   L[3] = ${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
 
   ## Check
-  % for i in range(nvars):
-    printf("L_${i} = %f \n", L[${i}]);
-  % endfor
+  ## % for i in range(nvars):
+  ##   printf("L_${i} = %f \n", L[${i}]);
+  ## % endfor
 
   ## Step 6: Compute d,dFstardE values normal to face
   fpdtype_t d[${nvars}];

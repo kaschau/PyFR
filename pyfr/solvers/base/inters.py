@@ -106,18 +106,9 @@ class BaseInters:
         return self._view(inter, meth, (self.ndims, self.nvars))
 
     # An element wise view of the solution data
-    def _escal_upts_view(self, inter, meth, nreqs):
-        basis = first(self.elemap.values()).basis
-        nupts = basis.nupts
-        vshape = (nupts, self.nvars)
-        with_perm = False
-        views = []
-        for i in range(nreqs):
-            vm = _get_eupts_inter_objs(inter, meth, self.elemap, i)
-            perm = self._perm if with_perm else Ellipsis
-            vm = [np.concatenate(m)[perm] for m in zip(*vm)]
-            views.append(self._be.view(*vm, vshape=vshape))
-        return views
+    def _escal_upts_view(self, inter, meth):
+        nupts = first(self.elemap.values()).basis.nupts
+        return self._view(inter, meth, (nupts, self.nvars), with_perm=False)
 
     # An element wise view of the scal_fpts matrix
     def _escal_fpts_view(self, inter, meth):

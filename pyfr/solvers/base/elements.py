@@ -411,10 +411,10 @@ class BaseElements:
 
         return smats.reshape(ndims, nmpts, -1), djacs
 
-    def _get_escal_upts_for_inter(self, eidx, _, idx):
+    def _get_escal_upts_for_inter(self, eidx, _):
         cmap = (eidx,)
         rmap = (0,)
-        return (self.scal_upts[idx].mid,), rmap, cmap, (1,)
+        return (self._scal_upts_cpy.mid,), rmap, cmap, (1,)
 
     def _get_escal_fpts_for_inter(self, eidx, _):
         cmap = (eidx,)
