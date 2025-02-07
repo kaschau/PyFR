@@ -167,7 +167,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t L[${nvars}];
 
   % if ndims == 2:
-    L[0] = uhat*norm_nl[0]*(drhodE_n[0]- dpdE_n[0]*rcpcsq);
+    L[0] = uhat*norm_nl[0]*(drhodE_n[0] - dpdE_n[0]*rcpcsq);
     L[1] = uhat*norm_nl[1]*(drhodE_n[0] - dpdE_n[0]*rcpcsq);
     L[2] = ${1.0/sqrt(2)}*(uhat + chat)*(norm_nl[0]*dvdE_n[0][0] + norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
     L[3] = ${1.0/sqrt(2)}*(uhat - chat)*(-norm_nl[0]*dvdE_n[0][0] - norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
@@ -201,10 +201,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     d[2] = norm_nl[1]*${1.0/sqrt(2)}*(L[2] - L[3]);
     d[3] = u_f[0]*${1.0/sqrt(2)}*c*(L[2] + L[3]);
 
-    dtFidE_n[0][0] = (d[0]);
-    dtFidE_n[0][1] = (v_f[0] * d[0] + u_f[0]*d[1]);
-    dtFidE_n[0][2] = (v_f[1] * d[0] + u_f[0]*d[2]);
-    dtFidE_n[0][3] = (0.5*(${pyfr.dot('v_f[{i}]', i=ndims)})*d[0] + u_f[1]*d[1] + u_f[2]*d[2] + ${1.0/(c['gamma']-1.0)}*d[3]);
+    dtFidE_n[0][0] = jacs[${f}]*(d[0]);
+    dtFidE_n[0][1] = jacs[${f}]*(v_f[0] * d[0] + u_f[0]*d[1]);
+    dtFidE_n[0][2] = jacs[${f}]*(v_f[1] * d[0] + u_f[0]*d[2]);
+    dtFidE_n[0][3] = jacs[${f}]*(0.5*(${pyfr.dot('v_f[{i}]', i=ndims)})*d[0] + u_f[1]*d[1] + u_f[2]*d[2] + ${1.0/(c['gamma']-1.0)}*d[3]);
   % endif
 
   ## Check
@@ -221,7 +221,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     int vidx = ${vidx};
     ## printf("\n VAR ${vidx} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
-    uf[${fpt_idx}][${vidx}] = jacs[${f}]*(${'+'.join([f'dtFidE_n[{dim}][{vidx}]' for dim in range(ndims)])});
+    uf[${fpt_idx}][${vidx}] = ${'+'.join([f'dtFidE_n[{dim}][{vidx}]' for dim in range(ndims)])};
     ## printf("dtFidE_n %f\n", uf[${fpt_idx}][${vidx}]);
 
     ## Add geomteric source term
