@@ -55,12 +55,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 ## Iterate over the flux points on our face
 % for f, fpt_idx in enumerate(facefpts):
 {
-  ## printf("Flux point %d\n", ${fpt_idx});
+  ## printf("\n Flux point %d\n", ${fpt_idx});
 
   ## Check
-  ##  % for vidx in range(nvars):
-  ##    printf("uf ${vidx} = %f e \n", uf[${fpt_idx}][${vidx}]);
-  ##  % endfor
+  ## % for vidx in range(nvars):
+  ##   printf("uf ${vidx} = %f \n", uf[${fpt_idx}][${vidx}]);
+  ## % endfor
 
   ## Step 1a: Compute physical flux point values
   fpdtype_t f_f[${ndims}][${nvars}];
@@ -84,14 +84,14 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t dvdE[${ndims}][${ndims}] = {{0}};
   fpdtype_t dpdE[${ndims}] = {0};
   fpdtype_t drhodE[${ndims}] = {0};
-  % for comp in range(ndims):
-    % for upt in range(nupts):
+  % for upt in range(nupts):
+    % for comp in range(ndims):
       % for vidx in range(nvars):
         dtFidE[${comp}][${vidx}] += tFi[${upt}][${comp}][${vidx}]*${m12[f, comp, upt]};
       % endfor
       % for phys in range(ndims):
         dvdE[${phys}][${comp}] += vupts[${upt}][${phys}]*${m12[f, comp, upt]};
-        dsmatsdE[${phys}][${comp}] += smats_u[${upt}][${nidx(comp,phys)}]*${m12[f, comp, upt]};
+        dsmatsdE[${comp}][${phys}] += smats_u[${upt}][${nidx(comp,phys)}]*${m12[f, comp, upt]};
       % endfor
       dpdE[${comp}] += pupts[${upt}]*${m12[f, comp, upt]};
       drhodE[${comp}] += u[${upt}][0]*${m12[f, comp, upt]};
@@ -130,12 +130,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     fpdtype_t dv_temp[${ndims}] = {${','.join([f'dvdE[{phys}][{comp}]' for comp in range(ndims)])}};
     fpdtype_t dv_n_temp[${ndims}];
     ${pyfr.expand('transform_to', 'bnorm', 'dv_temp', 'dv_n_temp', off=0)};
-    fpdtype_t dsmats_temp[${ndims}] = {${','.join([f'dsmatsdE[{phys}][{comp}]' for comp in range(ndims)])}};
+    fpdtype_t dsmats_temp[${ndims}] = {${','.join([f'dsmatsdE[{comp}][{phys}]' for comp in range(ndims)])}};
     fpdtype_t dsmats_n_temp[${ndims}];
     ${pyfr.expand('transform_to', 'bnorm', 'dsmats_temp', 'dsmats_n_temp', off=0)};
     % for comp in range(ndims):
       dvdE_n[${phys}][${comp}] = dv_n_temp[${comp}];
-      dsmatsdE_n[${phys}][${comp}] = dsmats_n_temp[${comp}];
+      dsmatsdE_n[${comp}][${phys}] = dsmats_n_temp[${comp}];
     % endfor
   }
   % endfor
@@ -158,7 +158,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t mag_nl = sqrt(${pyfr.dot('nl_f[{i}]', i=ndims)});
   fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl_f[{i}]', i=ndims)};
 
-  fpdtype_t uhat = (1/jacs[${f}])*(${pyfr.dot('nl_f[{i}]','v_f[{i}]', i=ndims)});
+  fpdtype_t uhat = (1.0/jacs[${f}])*(${pyfr.dot('nl_f[{i}]','v_f[{i}]', i=ndims)});
   fpdtype_t c = sqrt(${c['gamma']}*p_f/u_f[0]);
   fpdtype_t csq = c*c;
   fpdtype_t chat = c*mag_nl/jacs[${f}];
@@ -182,12 +182,11 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## printf("v_f %f %f \n", v_f[0], v_f[1]);
   ## printf("mag_nl %f p_f %f rho_f %f\n", mag_nl, p_f, u_f[0]);
   ## printf("uhat %f chat %f \n", uhat, chat);
-  ## printf("here %f %f %f %f\n", (uhat + chat), norm_nl[0]*dvdE_n[0][0], norm_nl[1]*dvdE_n[1][0], 1.0/(u_f[0]*c)*dpdE_n[0]);
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = (${pyfr.dot('v_f[{i}]', i=ndims)})*rcpcsq;
-  L[3] = ${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
+  L[3] = jacs[${f}]*${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
 
   ## Check
   ## % for i in range(nvars):
@@ -232,16 +231,14 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     ## subtract our flux gradient on the face (from interior values)
     uf[${fpt_idx}][${vidx}] -= (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])});
     ## printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{vidx}]' for dim in range(ndims)])}));
-    ## printf("diff  %f\n", uf[${fpt_idx}][${vidx}]);
 
     ## divide by ~\del \dot g
     uf[${fpt_idx}][${vidx}] /= ${m11[f]};
 
     ## compute and add the transformed, normal flux from interior values
     fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][vidx]', i=ndims)};
-    uf[${fpt_idx}][${vidx}] += f_f_n;
     ## printf("f_f_n  %f\n", f_f_n);
-
+    uf[${fpt_idx}][${vidx}] += f_f_n;
     ## Check
     ## printf("f_n  %f\n", uf[${fpt_idx}][${vidx}]);
   }
