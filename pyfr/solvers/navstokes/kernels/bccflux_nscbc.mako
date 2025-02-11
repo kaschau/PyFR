@@ -230,10 +230,16 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endif
 
   ## Check
-  printf("here %f %f %f \n",norm_nl[0]*L[0], u_f[0]/(${sqrt(2)}*c), (L[2] + L[3]));
+  fpdtype_t dtFidE_star[${ndims}][${nvars}];
   % for var in range(nvars):
-    printf(" d_${var} %f\n", d[${var}]);
-    printf(" dtFidE_n ${var} %f\n", dtFidE_n[0][${var}]);
+  {
+    fpdtype_t dF_n_temp[${ndims}] = {${','.join([f'dtFidE_n[{i}][{var}]' for i in range(ndims)])}};
+    fpdtype_t dF_temp[${ndims}];
+    ${pyfr.expand('transform_from', 'bnorm', 'dF_n_temp', 'dF_temp', off=0)};;
+    % for comp in range(ndims):
+      dtFidE_star[${comp}][${var}] = dF_temp[${comp}];
+    % endfor
+  }
   % endfor
 
   ## Step 7: Solve for normal transformed common flux
@@ -243,8 +249,8 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     int var = ${var};
     ## printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
-    uf[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_n[{dim}][{var}]' for dim in range(ndims)])};
-    ## printf("dtFidE_n %f\n", uf[${fpt_idx}][${var}]);
+    uf[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])};
+    printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
 
     ## Add geomteric source term
     ## uf[${fpt_idx}][${var}] += (${pyfr.dot('f_f[{i}][var]','dsmatsdE_n[0][{i}]', i=ndims)});
