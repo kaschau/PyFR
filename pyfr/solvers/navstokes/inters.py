@@ -252,6 +252,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             nupts = basis.nupts
             nfpts = basis.nfpts
             nfacefpts = basis.nfacefpts[fidx]
+            ndims = self.ndims
+            nvars = self.nvars
 
             # Generate lhs for element-face pair
             self._dim_lhs[shape][fidx] = len(lhs_efp)
@@ -261,6 +263,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp = self._tplargs_efp[shape][fidx]
 
             facefpts = basis.facefpts[fidx]
+            tplargs_efp['m0'] = basis.m0[facefpts]
+            tplargs_efp['m1'] = basis.m1.reshape(nupts,ndims,nupts)
+            tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
 
