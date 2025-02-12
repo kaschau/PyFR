@@ -421,6 +421,11 @@ class BaseElements:
         rmap = (0,)
         return (self._scal_fpts.mid,), rmap, cmap, (1,)
 
+    def _get_evect_fpts_for_inter(self, eidx, _):
+        cmap = (eidx,)
+        rmap = (0,)
+        return (self._vect_fpts.mid,), rmap, cmap, (1,)
+
     def _get_pnorms_facefpts(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
         return self._pnorm_fpts[fpts_idx, eidx]

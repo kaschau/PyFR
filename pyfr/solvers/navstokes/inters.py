@@ -226,6 +226,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._escal_upts = defaultdict(dict)
         # Whole element view of the flux point data
         self._escal_fpts = defaultdict(dict)
+        # Whole element view of the flux point gradients data
+        self._evect_fpts = defaultdict(dict)
         # Boundary face matrix of the flux point physical norms
         self._pnorm_facefpts = defaultdict(dict)
         # Whole element matrix of the solution point smats
@@ -282,6 +284,10 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             escal_fpts = self._escal_fpts_view(lhs_efp, '_get_escal_fpts_for_inter')
             self._escal_fpts[shape][fidx] = escal_fpts
 
+            # Create views of the vect_fpts scratch space on an element wise basis
+            evect_fpts = self._evect_fpts_view(lhs_efp, '_get_evect_fpts_for_inter')
+            self._evect_fpts[shape][fidx] = evect_fpts
+
             # Create matrix for the physical norms at the flux points on a face
             pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
             self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
@@ -307,6 +313,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     extrns=self._external_args,
                     u=self._escal_upts[shape][fidx],
                     uf=self._escal_fpts[shape][fidx],
+                    gradu=self._evect_fpts[shape][fidx],
                     nl=self._pnorm_facefpts[shape][fidx],
                     smats_u=self._smats_upts[shape][fidx],
                     jacs=self._jacs_facefpts[shape][fidx],

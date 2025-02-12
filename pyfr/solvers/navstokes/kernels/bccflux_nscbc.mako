@@ -8,11 +8,15 @@
 <%def name="nidx(comp,phys)">
   <% return comp*ndims + phys %>
 </%def>\
+<%def name="nvidx(dim,fpt)">
+  <% return dim*nfpts + fpt %>
+</%def>\
 <% from math import sqrt %>\
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
               u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
               uf='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
+              graduf='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
               nl='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
               smats_u='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs='in fpdtype_t[${str(nfacefpts)}]'>

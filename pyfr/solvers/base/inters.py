@@ -117,6 +117,13 @@ class BaseInters:
         with_perm = False
         return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
 
+    # An element wise view of the vect_fpts matrix
+    def _evect_fpts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        vshape = (self.ndims*basis.nfpts, self.nvars)
+        with_perm = False
+        return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
+
     def _xchg_view(self, inter, meth, vshape=(), with_perm=True):
         vm = _get_inter_objs(inter, meth, self.elemap)
         perm = self._perm if with_perm else Ellipsis
