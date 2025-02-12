@@ -21,11 +21,10 @@
               smats_u='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs='in fpdtype_t[${str(nfacefpts)}]'>
 
-printf("\n*************ELEMENT************\n");
+## printf("\n*************ELEMENT************\n");
 
 ## Step 1: Compute transformed visc flux, pressure, velocity at solution points
 fpdtype_t tFi[${nupts}][${ndims}][${nvars}] = {{{0}}};
-fpdtype_t dtFidEupts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 fpdtype_t pupts[${nupts}];
 fpdtype_t vupts[${nupts}][${ndims}];
 for (int uidx = 0; uidx < ${nupts}; uidx++)
@@ -51,27 +50,23 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endfor
 }
 
-% for upt in range(nupts):
-  % for upt2 in range(nupts):
-    % for var in range(nvars):
-      % for comp in range(ndims):
-          dtFidEupts[${upt}][${comp}][${var}] += tFi[${upt2}][${comp}][${var}]*${m1[upt,comp,upt2]};
-      % endfor
-    % endfor
-  % endfor
-% endfor
 ## Check
-## % for var in range(nvars):
 ## % for upt in range(nupts):
-##   ## printf("upt ${upt} tFi_${var} = %.1f %.1fe \n", tFi[${upt}][0][${var}], tFi[${upt}][1][${var}]);
-##   printf("upt ${upt} dtFidEupts_${var} = %e %e \n", dtFidEupts[${upt}][0][${var}], dtFidEupts[${upt}][1][${var}]);
+##   % for var in range(nvars):
+##     printf("upt ${upt} tFi_${var} = %.14e %.14e \n", tFi[${upt}][0][${var}], tFi[${upt}][1][${var}]);
+##   % endfor
 ## % endfor
+
+## % for upt in range(nupts):
+## % for var in range(nvars):
+##   printf("upt ${upt} ${var} = %.2f \n", u[${upt}][${var}]);
+##   % endfor
 ## % endfor
 
 ## Iterate over the flux points on our face
 % for f, fpt_idx in enumerate(facefpts):
 {
-  printf("\n Flux point %d\n", ${fpt_idx});
+  ## printf("\n Flux point %d\n", ${fpt_idx});
 
   ## Check
   ## % for var in range(nvars):
@@ -113,8 +108,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % for upt in range(nupts):
     % for comp in range(ndims):
       % for var in range(nvars):
-        ## dtFidE[${comp}][${var}] += tFi[${upt}][${comp}][${var}]*${m12[f, comp, upt]};
-        dtFidE[${comp}][${var}] += dtFidEupts[${upt}][${comp}][${var}]*${m0[f, upt]};
+        dtFidE[${comp}][${var}] += tFi[${upt}][${comp}][${var}]*${m12[f, comp, upt]};
       % endfor
       % for phys in range(ndims):
         dvdE[${phys}][${comp}] += vupts[${upt}][${phys}]*${m12[f, comp, upt]};
@@ -127,17 +121,17 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 
   ## Check
   ## % for var in range(nvars):
-  ##   printf("dtFidE_${var} = %.1f %.1f \n", dtFidE[0][${var}],dtFidE[1][${var}]);
+  ##   printf("dtFidE_${var} = %f %f \n", dtFidE[0][${var}],dtFidE[1][${var}]);
   ## % endfor
   ## printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
   ## printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
-  ## printf("dExdE = %f %f\n", dsmats[0][0], dsmats[0][1]);
-  ## printf("dEydE = %f %f\n", dsmats[1][0], dsmats[1][1]);
+  ## printf("dExdE = %f %f\n", dsmatsdE[0][0], dsmatsdE[0][1]);
+  ## printf("dEydE = %f %f\n", dsmatsdE[1][0], dsmatsdE[1][1]);
   ## printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
   ## printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
 
   ## Step 3: Realign derivatives to a face-normal orientation where \Xi is normal to face
-  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
+  fpdtype_t bnorm[${ndims}] = {${','.join([str(float(i)) for i in bnorm_facefpts[f,:]])}};
   fpdtype_t dtFidE_n[${ndims}][${nvars}];
   fpdtype_t dsmatsdE_n[${ndims}][${nvars}];
   % for var in range(nvars):
@@ -171,13 +165,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ${pyfr.expand('transform_to', 'bnorm', 'drhodE', 'drhodE_n', off=0)};
 
   ## Check
-  ## % for var in range(nvars):
-  ##   printf("dtFidE_n_${var} = %f %f \n", dtFidE_n[0][${var}],dtFidE_n[1][${var}]);
-  ## % endfor
-  ## printf("dudE_n = %f %f\n", dvdE_n[0][0], dvdE_n[0][1]);
-  ## printf("dvdE_n = %f %f\n", dvdE_n[1][0], dvdE_n[1][1]);
-  ## printf("dpdE_n = %f %f\n", dpdE_n[0], dpdE_n[1]);
-  ## printf("drhodE_n = %f %f\n", drhodE_n[0], drhodE_n[1]);
+  ## printf("dudE_n = %.12e %.12e\n", dvdE_n[0][0], dvdE_n[0][1]);
+  ## printf("dvdE_n = %.12e %.12e\n", dvdE_n[1][0], dvdE_n[1][1]);
+  ## printf("dpdE_n = %.12e %.12e\n", dpdE_n[0], dpdE_n[1]);
+  ## printf("drhodE_n = %.12e %.12e\n", drhodE_n[0], drhodE_n[1]);
 
   ## Step 4: Compute the characteristic wave amplitudes, L
   fpdtype_t nl_f[${ndims}] = {${", ".join([f'nl[{f}][{i}]' for i in range(ndims)])}};
@@ -200,14 +191,14 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endif
 
   ## Check
-  % for var in range(nvars):
-    printf("L_${var} %f\n", L[${var}]);
-  % endfor
-  printf("nl_f %f %f \n", nl_f[0], nl_f[1]);
-  printf("norm_nl %f %f \n", norm_nl[0], norm_nl[1]);
-  printf("v_f %f %f \n", v_f[0], v_f[1]);
-  printf("mag_nl %f p_f %f rho_f %f\n", mag_nl, p_f, u_f[0]);
-  printf("uhat %f chat %f \n", uhat, chat);
+  ## % for var in range(nvars):
+  ##   printf("L_${var} %.14e\n", L[${var}]);
+  ## % endfor
+  ## printf("nl_f %f %f \n", nl_f[0], nl_f[1]);
+  ## printf("norm_nl %f %f \n", norm_nl[0], norm_nl[1]);
+  ## printf("v_f %.14e %.14e \n", v_f[0], v_f[1]);
+  ## printf("mag_nl %f p_f %.14e  rho_f %.14e\n", mag_nl, p_f, u_f[0]);
+  ## printf("uhat %.14e chat %.14e \n", uhat, chat);
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
@@ -215,9 +206,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   L[3] = jacs[${f}]*${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
 
   ## Check
-  % for i in range(nvars):
-    printf("L_${i} = %f \n", L[${i}]);
-  % endfor
+  ## % for i in range(nvars):
+  ##   printf("L_${i} = %.14e \n", L[${i}]);
+  ## % endfor
 
   ## Step 6: Compute d,dFstardE values normal to face
   fpdtype_t d[${nvars}];
@@ -234,27 +225,35 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endif
 
   ## Check
+  ## % for var in range(nvars):
+  ##   printf(" d_${var} %.14e\n", d[${var}]);
+  ## % endfor
+  ## % for var in range(nvars):
+  ##   printf(" dtFidE_n[0] ${var} %.14e\n", dtFidE_n[0][${var}]);
+  ## % endfor
+
+  ## Convert back
   fpdtype_t dtFidE_star[${ndims}][${nvars}];
   % for var in range(nvars):
   {
+    ## Correct signs
     fpdtype_t dF_n_temp[${ndims}] = {${','.join([f'dtFidE_n[{i}][{var}]' for i in range(ndims)])}};
     fpdtype_t dF_temp[${ndims}];
-    ${pyfr.expand('transform_from', 'bnorm', 'dF_n_temp', 'dF_temp', off=0)};;
+    ${pyfr.expand('transform_from', 'bnorm', 'dF_n_temp', 'dF_temp', off=0)};
     % for comp in range(ndims):
-      dtFidE_star[${comp}][${var}] = dF_temp[${comp}];
+      dtFidE_star[${comp}][${var}] = dF_temp[${comp}]*${bnorm_facefpts[f,comp]};
     % endfor
   }
   % endfor
 
   ## Step 7: Solve for normal transformed common flux
-
   % for var in range(nvars):
   {
     int var = ${var};
     ## printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
     uf[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])};
-    printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
+    ## printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
 
     ## Add geomteric source term
     ## uf[${fpt_idx}][${var}] += (${pyfr.dot('f_f[{i}][var]','dsmatsdE_n[0][{i}]', i=ndims)});
@@ -272,10 +271,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     ## printf("f_f_n  %f\n", f_f_n);
     uf[${fpt_idx}][${var}] += f_f_n[${var}];
     ## Check
-    printf("f_n  %f\n", uf[${fpt_idx}][${var}]);
+    ## printf("f_n =  %.14e \n", uf[${fpt_idx}][${var}]);
   }
   % endfor
-
 }
 % endfor
 
