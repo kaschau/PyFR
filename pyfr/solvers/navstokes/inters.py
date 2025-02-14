@@ -311,12 +311,12 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     'bccflux_nscbc', tplargs=tplargs_efp,
                     dims=[self._dim_lhs[shape][fidx]],
                     extrns=self._external_args,
-                    u=self._escal_upts[shape][fidx],
-                    uf=self._escal_fpts[shape][fidx],
-                    gradu=self._evect_fpts[shape][fidx],
-                    nl=self._pnorm_facefpts[shape][fidx],
-                    smats_u=self._smats_upts[shape][fidx],
-                    jacs=self._jacs_facefpts[shape][fidx],
+                    u_ele=self._escal_upts[shape][fidx],
+                    u_fpt=self._escal_fpts[shape][fidx],
+                    gradu_fpt=self._evect_fpts[shape][fidx],
+                    nl_ffpt=self._pnorm_facefpts[shape][fidx],
+                    smats_ele=self._smats_upts[shape][fidx],
+                    jacs_ffpt=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))
 
         return self._be.unordered_meta_kernel(kerns)

@@ -13,38 +13,59 @@
 </%def>\
 <% from math import sqrt %>\
 
+
+<%pyfr:macro name='mmmul' params='A, B, C'>
+% if ndims == 2:
+% for row in range(nvars):
+% for col in range(nvars):
+C[${row}][${col}] += A[${row}][${col}]*B[${col}][${row}];
+% endfor
+% endfor
+
+% else:
+
+% endif
+</%pyfr:macro>
+
+<%pyfr:macro name='mvmul' params='A, b, c'>
+% if ndims == 2:
+% for row in range(nvars):
+% for col in range(nvars):
+c[${row}] += A[${row}][${col}]*b[${col}];
+% endfor
+% endfor
+
+% else:
+
+% endif
+</%pyfr:macro>
+
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
-              u='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
-              uf='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
-              graduf='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
-              nl='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
-              smats_u='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
-              jacs='in fpdtype_t[${str(nfacefpts)}]'>
+              u_ele='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
+              u_fpt='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
+              gradu_fpt='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
+              nl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
+              smats_ele='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
+              jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
 ## printf("\n*************ELEMENT************\n");
 
 ## Step 1: Compute transformed visc flux, pressure, velocity at solution points
 fpdtype_t tFi[${nupts}][${ndims}][${nvars}] = {{{0}}};
-fpdtype_t pupts[${nupts}];
-fpdtype_t vupts[${nupts}][${ndims}];
 for (int uidx = 0; uidx < ${nupts}; uidx++)
 {
   fpdtype_t ul[${nvars}];
   % for var in range(nvars):
-    ul[${var}] = u[uidx][${var}];
+    ul[${var}] = u_ele[uidx][${var}];
   % endfor
   fpdtype_t fi[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
   ${pyfr.expand('inviscid_flux', 'ul', 'fi', 'p', 'v')};
-  pupts[uidx] = p;
-  % for dim in range(ndims):
-    vupts[uidx][${dim}] = v[${dim}];
-  % endfor
 
   % for var in range(nvars):
     % for comp in range(ndims):
       % for phys in range(ndims):
-        tFi[uidx][${comp}][${var}] += smats_u[uidx][${nidx(comp,phys)}]*fi[${phys}][${var}];
+        tFi[uidx][${comp}][${var}] += smats_ele[uidx][${nidx(comp,phys)}]*fi[${phys}][${var}];
       % endfor
     % endfor
   % endfor
@@ -66,23 +87,59 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 ## Iterate over the flux points on our face
 % for f, fpt_idx in enumerate(facefpts):
 {
+
   ## printf("\n Flux point %d\n", ${fpt_idx});
 
-  ## Check
-  ## % for var in range(nvars):
-  ##   printf("uf ${var} = %f \n", uf[${fpt_idx}][${var}]);
-  ## % endfor
-
   ## Step 1a: Compute physical flux point values
-  fpdtype_t f_f[${ndims}][${nvars}];
-  fpdtype_t f_f_n[${nvars}] = {0};
-  fpdtype_t p_f, v_f[${ndims}];
-  fpdtype_t u_f[${nvars}];
+  fpdtype_t fl[${ndims}][${nvars}];
+  fpdtype_t p, v[${ndims}];
+  fpdtype_t ul[${nvars}];
   % for var in range(nvars):
-    u_f[${var}] = uf[${fpt_idx}][${var}];
+    ul[${var}] = u_fpt[${fpt_idx}][${var}];
   % endfor
-  ${pyfr.expand('inviscid_flux', 'u_f', 'f_f', 'p_f', 'v_f')};
+  ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'p', 'v')};
 
+  fpdtype_t nl[${ndims}] = {${", ".join([f'nl_ffpt[{f}][{i}]' for i in range(ndims)])}};
+  fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
+  fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
+
+  fpdtype_t c = sqrt(${c['gamma']}*p/ul[0]);
+  fpdtype_t rho = ul[0];
+  fpdtype_t invrho = 1.0/rho;
+  fpdtype_t invc = 1.0/c;
+  fpdtype_t invcsq = invc*invc;
+
+  fpdtype_t dQdU[${nvars}][${nvars}] = {
+    {1.0, 0.0, 0.0, 0.0},
+    {-v[0]*invrho, invrho, 0.0, 0.0},
+    {-v[1]*invrho, 0.0, invrho, 0.0},
+    {${(c['gamma']-1.0)/2.0}*(${pyfr.dot('v[{i}]', i=ndims)}), ${1.0-c['gamma']}*v[0], ${1.0-c['gamma']}*v[1], ${c['gamma']-1.0}},
+  };
+  fpdtype_t dUdQ[${nvars}][${nvars}] = {
+    {1.0, 0.0, 0.0, 0.0},
+    {v[0], rho, 0.0, 0.0},
+    {v[1], 0.0, rho, 0.0},
+    {0.5*(${pyfr.dot('v[{i}]', i=ndims)}), ul[0], ul[1], ${1.0/(c['gamma']-1)}}
+  };
+  fpdtype_t dWdQ[${nvars}][${nvars}] = {
+    {nl[0], 0.0, 0.0, -nl[0]*invcsq},
+    {0.0, -nl[1], nl[0], 0.0},
+    {0.0,  nl[0]*${1.0/sqrt(2)},  nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
+    {0.0, -nl[0]*${1.0/sqrt(2)}, -nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
+  };
+  fpdtype_t dQdW[${nvars}][${nvars}] = {
+    {nl[0], 0.0, rho*invc*${1.0/sqrt(2)}, rho*invc*${1.0/sqrt(2)}},
+    {0.0, -nl[1], nl[0]*${1.0/sqrt(2)}, -nl[0]*${1.0/sqrt(2)}},
+    {0.0,  nl[0], nl[1]*${1.0/sqrt(2)}, -nl[1]*${1.0/sqrt(2)}},
+    {0.0, 0.0, rho*c*${1.0/sqrt(2)}, rho*c*${1.0/sqrt(2)}},
+  };
+
+  fpdtype_t PU[${nvars}][${nvars}] = {{0}};
+  ${pyfr.expand('mmmul','dWdQ','dQdU','PU')};
+  fpdtype_t PUinv[${nvars}][${nvars}] = {{0}};
+  ${pyfr.expand('mmmul','dUdQ','dQdW','PUinv')};
+
+  fpdtype_t f_f_n[${nvars}] = {0};
   % for upt in range(nupts):
   % for comp in range(ndims):
   % for var in range(nvars):
@@ -91,49 +148,42 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % endfor
   % endfor
 
-  ## Check
-  ## % for var in range(nvars):
-  ##   printf("f_f ${var} = %f %f \n", f_f[0][${var}], f_f[1][${var}]);
-  ##   printf("f_f_n ${var} = %f \n", f_f_n[${var}]);
-  ## % endfor
-  ##   printf("p_f = %f  vf = %f %f \n", p_f, v_f[0], v_f[1]);
+  ## ## Check
+  ## ## % for var in range(nvars):
+  ## ##   printf("f_f ${var} = %f %f \n", f_f[0][${var}], f_f[1][${var}]);
+  ## ##   printf("f_f_n ${var} = %f \n", f_f_n[${var}]);
+  ## ## % endfor
+  ## ##   printf("p_f = %f  vf = %f %f \n", p_f, v_f[0], v_f[1]);
 
-  ## Step 2: Compute derivative in transformed space of tflux, pressure, velocity at flux point
+  ## ## Step 2: Compute derivative in transformed space of tflux, pressure, velocity at flux point
   ## Also compute gradient of smats for geometric source term
   fpdtype_t dtFidE[${ndims}][${nvars}] = {{0}};
   fpdtype_t dsmatsdE[${ndims}][${ndims}] = {{0}};
-  fpdtype_t dvdE[${ndims}][${ndims}] = {{0}};
-  fpdtype_t dpdE[${ndims}] = {0};
-  fpdtype_t drhodE[${ndims}] = {0};
   % for upt in range(nupts):
     % for comp in range(ndims):
       % for var in range(nvars):
         dtFidE[${comp}][${var}] += tFi[${upt}][${comp}][${var}]*${m12[f, comp, upt]};
       % endfor
       % for phys in range(ndims):
-        dvdE[${phys}][${comp}] += vupts[${upt}][${phys}]*${m12[f, comp, upt]};
-        dsmatsdE[${comp}][${phys}] += smats_u[${upt}][${nidx(comp,phys)}]*${m12[f, comp, upt]};
+        dsmatsdE[${comp}][${phys}] += smats_ele[${upt}][${nidx(comp,phys)}]*${m12[f, comp, upt]};
       % endfor
-      dpdE[${comp}] += pupts[${upt}]*${m12[f, comp, upt]};
-      drhodE[${comp}] += u[${upt}][0]*${m12[f, comp, upt]};
     % endfor
   % endfor
 
-  ## Check
-  ## % for var in range(nvars):
-  ##   printf("dtFidE_${var} = %f %f \n", dtFidE[0][${var}],dtFidE[1][${var}]);
-  ## % endfor
-  ## printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
-  ## printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
-  ## printf("dExdE = %f %f\n", dsmatsdE[0][0], dsmatsdE[0][1]);
-  ## printf("dEydE = %f %f\n", dsmatsdE[1][0], dsmatsdE[1][1]);
-  ## printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
-  ## printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
+  ## ## Check
+  ## ## % for var in range(nvars):
+  ## ##   printf("dtFidE_${var} = %f %f \n", dtFidE[0][${var}],dtFidE[1][${var}]);
+  ## ## % endfor
+  ## ## printf("dudE = %f %f\n", dvdE[0][0], dvdE[0][1]);
+  ## ## printf("dvdE = %f %f\n", dvdE[1][0], dvdE[1][1]);
+  ## ## printf("dExdE = %f %f\n", dsmatsdE[0][0], dsmatsdE[0][1]);
+  ## ## printf("dEydE = %f %f\n", dsmatsdE[1][0], dsmatsdE[1][1]);
+  ## ## printf("dpdE = %f %f\n", dpdE[0], dpdE[1]);
+  ## ## printf("drhodE = %f %f\n", drhodE[0], drhodE[1]);
 
-  ## Step 3: Realign derivatives to a face-normal orientation where \Xi is normal to face
+  ## ## Step 3: Realign derivatives to a face-normal orientation where \Xi is normal to face
   fpdtype_t bnorm[${ndims}] = {${','.join([str(float(i)) for i in bnorm_facefpts[f,:]])}};
   fpdtype_t dtFidE_n[${ndims}][${nvars}];
-  fpdtype_t dsmatsdE_n[${ndims}][${nvars}];
   % for var in range(nvars):
   {
     fpdtype_t dF_temp[${ndims}] = {${','.join([f'dtFidE[{i}][{var}]' for i in range(ndims)])}};
@@ -144,95 +194,48 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     % endfor
   }
   % endfor
-  fpdtype_t dvdE_n[${ndims}][${ndims}];
+  fpdtype_t dsmatsdE_n[${ndims}][${nvars}];
   % for phys in range(ndims):
   {
-    fpdtype_t dv_temp[${ndims}] = {${','.join([f'dvdE[{phys}][{comp}]' for comp in range(ndims)])}};
-    fpdtype_t dv_n_temp[${ndims}];
-    ${pyfr.expand('transform_to', 'bnorm', 'dv_temp', 'dv_n_temp', off=0)};
     fpdtype_t dsmats_temp[${ndims}] = {${','.join([f'dsmatsdE[{comp}][{phys}]' for comp in range(ndims)])}};
     fpdtype_t dsmats_n_temp[${ndims}];
     ${pyfr.expand('transform_to', 'bnorm', 'dsmats_temp', 'dsmats_n_temp', off=0)};
     % for comp in range(ndims):
-      dvdE_n[${phys}][${comp}] = dv_n_temp[${comp}];
       dsmatsdE_n[${comp}][${phys}] = dsmats_n_temp[${comp}];
     % endfor
   }
   % endfor
-  fpdtype_t dpdE_n[${ndims}];
-  ${pyfr.expand('transform_to', 'bnorm', 'dpdE', 'dpdE_n', off=0)};
-  fpdtype_t drhodE_n[${ndims}];
-  ${pyfr.expand('transform_to', 'bnorm', 'drhodE', 'drhodE_n', off=0)};
 
-  ## Check
-  ## printf("dudE_n = %.12e %.12e\n", dvdE_n[0][0], dvdE_n[0][1]);
-  ## printf("dvdE_n = %.12e %.12e\n", dvdE_n[1][0], dvdE_n[1][1]);
-  ## printf("dpdE_n = %.12e %.12e\n", dpdE_n[0], dpdE_n[1]);
-  ## printf("drhodE_n = %.12e %.12e\n", drhodE_n[0], drhodE_n[1]);
+  ## ## Check
 
-  ## Step 4: Compute the characteristic wave amplitudes, L
-  fpdtype_t nl_f[${ndims}] = {${", ".join([f'nl[{f}][{i}]' for i in range(ndims)])}};
-  fpdtype_t mag_nl = sqrt(${pyfr.dot('nl_f[{i}]', i=ndims)});
-  fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl_f[{i}]', i=ndims)};
+  ## ## Step 4: Compute the characteristic wave strengths, N
 
-  fpdtype_t uhat = (1.0/jacs[${f}])*(${pyfr.dot('nl_f[{i}]','v_f[{i}]', i=ndims)});
-  fpdtype_t c = sqrt(${c['gamma']}*p_f/u_f[0]);
-  fpdtype_t csq = c*c;
-  fpdtype_t chat = c*mag_nl/jacs[${f}];
-  fpdtype_t rcpcsq = 1.0/csq;
-
-  fpdtype_t L[${nvars}];
-
-  % if ndims == 2:
-    L[0] = uhat*norm_nl[0]*(drhodE_n[0] - dpdE_n[0]*rcpcsq);
-    L[1] = uhat*norm_nl[1]*(drhodE_n[0] - dpdE_n[0]*rcpcsq);
-    L[2] = ${1.0/sqrt(2)}*(uhat + chat)*(norm_nl[0]*dvdE_n[0][0] + norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
-    L[3] = ${1.0/sqrt(2)}*(uhat - chat)*(-norm_nl[0]*dvdE_n[0][0] - norm_nl[1]*dvdE_n[1][0] + 1.0/(u_f[0]*c)*dpdE_n[0]);
-  % endif
-
-  ## Check
-  ## % for var in range(nvars):
-  ##   printf("L_${var} %.14e\n", L[${var}]);
-  ## % endfor
-  ## printf("nl_f %f %f \n", nl_f[0], nl_f[1]);
-  ## printf("norm_nl %f %f \n", norm_nl[0], norm_nl[1]);
-  ## printf("v_f %.14e %.14e \n", v_f[0], v_f[1]);
-  ## printf("mag_nl %f p_f %.14e  rho_f %.14e\n", mag_nl, p_f, u_f[0]);
-  ## printf("uhat %.14e chat %.14e \n", uhat, chat);
+  fpdtype_t N[${nvars}];
+  fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFidE_n[0][{i}]' for i in range(nvars)])}};
+  ${pyfr.expand('mvmul','PU','dEdE','N')}
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
-  fpdtype_t Msq = (${pyfr.dot('v_f[{i}]', i=ndims)})*rcpcsq;
-  L[3] = jacs[${f}]*${c['sigma']/sqrt(2)}/u_f[0]*(1.0-Msq)*(p_f - ${c['p']});
+  fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
+  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']});
 
-  ## Check
-  ## % for i in range(nvars):
-  ##   printf("L_${i} = %.14e \n", L[${i}]);
-  ## % endfor
+  ## ## Check
+  ## ## % for i in range(nvars):
+  ## ##   printf("N_${i} = %.14e \n", N[${i}]);
+  ## ## % endfor
 
-  ## Step 6: Compute d,dFstardE values normal to face
-  fpdtype_t d[${nvars}];
-  % if ndims == 2:
-    d[0] = norm_nl[0]*L[0] + norm_nl[1]*L[1] + u_f[0]/(${sqrt(2)}*c)*(L[2] + L[3]);
-    d[1] = norm_nl[0]*${1.0/sqrt(2)}*(L[2] - L[3]);
-    d[2] = norm_nl[1]*${1.0/sqrt(2)}*(L[2] - L[3]);
-    d[3] = u_f[0]*${1.0/sqrt(2)}*c*(L[2] + L[3]);
+  ## ## Step 6: Compute d,dEstardE values normal to face
+  ${pyfr.expand('mvmul','PUinv','N','dEdE')};
+  % for var in range(nvars):
+    dtFidE_n[0][${var}] = dEdE[${var}];
+  % endfor
 
-    dtFidE_n[0][0] = jacs[${f}]*(d[0]);
-    dtFidE_n[0][1] = jacs[${f}]*(v_f[0] * d[0] + u_f[0]*d[1]);
-    dtFidE_n[0][2] = jacs[${f}]*(v_f[1] * d[0] + u_f[0]*d[2]);
-    dtFidE_n[0][3] = jacs[${f}]*(0.5*(${pyfr.dot('v_f[{i}]', i=ndims)})*d[0] + u_f[1]*d[1] + u_f[2]*d[2] + ${1.0/(c['gamma']-1.0)}*d[3]);
-  % endif
+  ## ## Check
+  ## ## % for var in range(nvars):
+  ## ##   printf(" dtFidE_n[0] ${var} %.14e\n", dtFidE_n[0][${var}]);
+  ## ## % endfor
 
-  ## Check
-  ## % for var in range(nvars):
-  ##   printf(" d_${var} %.14e\n", d[${var}]);
-  ## % endfor
-  ## % for var in range(nvars):
-  ##   printf(" dtFidE_n[0] ${var} %.14e\n", dtFidE_n[0][${var}]);
-  ## % endfor
-
-  ## Convert back
+  ## ## Convert back
   fpdtype_t dtFidE_star[${ndims}][${nvars}];
   % for var in range(nvars):
   {
@@ -252,7 +255,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     int var = ${var};
     ## printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
-    uf[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])};
+    u_fpt[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])};
     ## printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
 
     ## Add geomteric source term
@@ -260,16 +263,16 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     ## printf("geom source %f\n",${pyfr.dot('f_f[{i}][var]','dsmatsdE_n[0][{i}]', i=ndims)});
 
     ## subtract our flux gradient on the face (from interior values)
-    uf[${fpt_idx}][${var}] -= (${'+'.join([f'dtFidE[{dim}][{var}]' for dim in range(ndims)])});
+    u_fpt[${fpt_idx}][${var}] -= (${'+'.join([f'dtFidE[{dim}][{var}]' for dim in range(ndims)])});
     ## printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{var}]' for dim in range(ndims)])}));
 
     ## divide by ~\del \dot g
-    uf[${fpt_idx}][${var}] /= ${m11[f]};
+    u_fpt[${fpt_idx}][${var}] /= ${m11[f]};
 
     ## compute and add the transformed, normal flux from interior values
     ## fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][var]', i=ndims)};
     ## printf("f_f_n  %f\n", f_f_n);
-    uf[${fpt_idx}][${var}] += f_f_n[${var}];
+    u_fpt[${fpt_idx}][${var}] += f_f_n[${var}];
     ## Check
     ## printf("f_n =  %.14e \n", uf[${fpt_idx}][${var}]);
   }
