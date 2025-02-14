@@ -224,6 +224,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFidE_n[0][{i}]' for i in range(nvars)])}};
     ${pyfr.expand('mvmul','PU','dEdE','N')}
     fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE_n[1][{i}]' for i in range(nvars)])}};
+    % if ndims == 3:
+      fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE_n[2][{i}]' for i in range(nvars)])}};
+    % endif
     ${pyfr.expand('mvmul','PU','dGdN','S')}
   }
 
@@ -281,10 +284,11 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     ## divide by ~\del \dot g
     u_fpt[${fpt_idx}][${var}] /= ${m11[f]};
 
-    ## compute and add the transformed, normal flux from interior values
-    ## fpdtype_t f_f_n = ${pyfr.dot('nl_f[{i}]', 'f_f[{i}][var]', i=ndims)};
-    ## printf("f_f_n  %f\n", f_f_n);
+    ## add the transformed, normal flux from interior values
+    ## fpdtype_t fl_n2 = ${pyfr.dot('nl[{i}]', 'fl[{i}][var]', i=ndims)};
+    ## u_fpt[${fpt_idx}][${var}] += fl_n2;
     u_fpt[${fpt_idx}][${var}] += fl_n[${var}];
+
     ## Check
     ## printf("f_n =  %.14e \n", u_fpt[${fpt_idx}][${var}]);
   }
