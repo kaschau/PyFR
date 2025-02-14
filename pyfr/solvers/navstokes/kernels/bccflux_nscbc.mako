@@ -219,15 +219,18 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## ## Step 4: Compute the characteristic wave strengths, N
 
   fpdtype_t N[${nvars}] = {0};
+  fpdtype_t S[${nvars}] = {0};
   {
     fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFidE_n[0][{i}]' for i in range(nvars)])}};
     ${pyfr.expand('mvmul','PU','dEdE','N')}
+    fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE_n[1][{i}]' for i in range(nvars)])}};
+    ${pyfr.expand('mvmul','PU','dGdN','S')}
   }
 
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
-  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']});
+  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - S[${nvars-1}];
 
   ## Check
   ## % for i in range(nvars):
@@ -253,7 +256,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     fpdtype_t dF_temp[${ndims}];
     ${pyfr.expand('transform_from', 'bnorm', 'dF_n_temp', 'dF_temp', off=0)};
     % for comp in range(ndims):
-      dtFidE_star[${comp}][${var}] = dF_temp[${comp}]*${bnorm_facefpts[f,comp]};
+      dtFidE_star[${comp}][${var}] = dF_temp[${comp}];
     % endfor
   }
   % endfor
