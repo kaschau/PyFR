@@ -48,7 +48,7 @@ c[${row}] += A[${row}][${col}]*b[${col}];
               smats_ele='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-## printf("\n*************ELEMENT************\n");
+printf("\n*************ELEMENT************\n");
 
 ## Step 1: Compute transformed visc flux, pressure, velocity at solution points
 fpdtype_t tFi[${nupts}][${ndims}][${nvars}] = {{{0}}};
@@ -88,7 +88,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 % for f, fpt_idx in enumerate(facefpts):
 {
 
-  ## printf("\n Flux point %d\n", ${fpt_idx});
+  printf("\n Flux point %d\n", ${fpt_idx});
 
   ## Step 1a: Compute physical flux point values
   fpdtype_t fl[${ndims}][${nvars}];
@@ -250,7 +250,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   % for var in range(nvars):
   {
     int var = ${var};
-    ## printf("\n VAR ${var} \n");
+    printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
     u_fpt[${fpt_idx}][${var}] = ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])};
     ## printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
@@ -271,7 +271,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     ## printf("f_f_n  %f\n", f_f_n);
     u_fpt[${fpt_idx}][${var}] += fl_n[${var}];
     ## Check
-    ## printf("f_n =  %.14e \n", u_fpt[${fpt_idx}][${var}]);
+    printf("f_n =  %.14e \n", u_fpt[${fpt_idx}][${var}]);
   }
   % endfor
 }
