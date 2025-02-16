@@ -234,7 +234,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
   fpdtype_t alpha = sqrt(Msq);
 
-  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}] - (1.0-alpha)*S[${nvars-1}];
+  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
 
   ## Check
   ## % for i in range(nvars):
