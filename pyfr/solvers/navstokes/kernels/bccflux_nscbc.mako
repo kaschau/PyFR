@@ -205,7 +205,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## % endfor
 
   ## fpdtype_t dsmatsdE_n[${ndims}][${nvars}];
-  ## % for phys in range(ndims):
+  ## % for phys in range()ndims):
   ## {
   ##   fpdtype_t dsmats_temp[${ndims}] = {${','.join([f'dsmatsdE[{comp}][{phys}]' for comp in range(ndims)])}};
   ##   fpdtype_t dsmats_n_temp[${ndims}];
@@ -233,7 +233,9 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## Step 5: Replace incoming wave amplitudes
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
-  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - S[${nvars-1}];
+  fpdtype_t alpha = sqrt(Msq);
+
+  N[${nvars-1}] = 1.0/jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
 
   ## Check
   ## % for i in range(nvars):
