@@ -163,7 +163,6 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("fl ${var} = %f %f \n", fl[0][${var}], fl[1][${var}]);
   ##   printf("fl_n ${var} = %f \n", fl_n[${var}]);
   ## % endfor
-  ##   printf("p = %f  v = %f %f \n", p, v[0], v[1]);
 
   ## ## Step 2: Compute derivative in transformed space of tflux, at flux point
   ## Also compute gradient of smats for geometric source term
@@ -235,7 +234,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
   fpdtype_t alpha = sqrt(Msq);
 
-  N[${nvars-1}] = 1.0/jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
+  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}] - (1.0-alpha)*S[${nvars-1}];
 
   ## Check
   ## % for i in range(nvars):
