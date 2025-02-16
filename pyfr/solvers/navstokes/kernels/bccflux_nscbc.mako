@@ -116,7 +116,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     {1.0, 0.0, 0.0, 0.0},
     {v[0], rho, 0.0, 0.0},
     {v[1], 0.0, rho, 0.0},
-    {0.5*(${pyfr.dot('v[{i}]', i=ndims)}), ul[0], ul[1], ${1.0/(c['gamma']-1)}}
+    {0.5*(${pyfr.dot('v[{i}]', i=ndims)}), ul[1], ul[2], ${1.0/(c['gamma']-1)}}
   };
   fpdtype_t dWdQ[${nvars}][${nvars}] = {
     {norm_nl[0], 0.0, 0.0, -norm_nl[0]*invcsq},
