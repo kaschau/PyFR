@@ -223,9 +223,6 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFidE_n[0][{i}]' for i in range(nvars)])}};
     ${pyfr.expand('mvmul','PU','dEdE','N')}
     fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE_n[1][{i}]' for i in range(nvars)])}};
-    % if ndims == 3:
-      fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE_n[2][{i}]' for i in range(nvars)])}};
-    % endif
     ${pyfr.expand('mvmul','PU','dGdN','S')}
   }
 
@@ -251,11 +248,10 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   }
 
 
-  ## ## Convert back
+  ## Orient back
   fpdtype_t dtFidE_star[${ndims}][${nvars}];
   % for var in range(nvars):
   {
-    ## Correct signs
     fpdtype_t dF_n_temp[${ndims}] = {${','.join([f'dtFidE_n[{i}][{var}]' for i in range(ndims)])}};
     fpdtype_t dF_temp[${ndims}];
     ${pyfr.expand('transform_from', 'bnorm', 'dF_n_temp', 'dF_temp', off=0)};
