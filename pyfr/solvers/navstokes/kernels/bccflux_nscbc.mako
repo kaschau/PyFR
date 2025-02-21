@@ -119,13 +119,13 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     {0.5*(${pyfr.dot('v[{i}]', i=ndims)}), ul[1], ul[2], ${1.0/(c['gamma']-1)}}
   };
   fpdtype_t dWdQ[${nvars}][${nvars}] = {
-    {norm_nl[0], 0.0, 0.0, -norm_nl[0]*invcsq},
+    {1.0, 0.0, 0.0, -invcsq},
     {0.0, -norm_nl[1], norm_nl[0], 0.0},
     {0.0,  norm_nl[0]*${1.0/sqrt(2)},  norm_nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
     {0.0, -norm_nl[0]*${1.0/sqrt(2)}, -norm_nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
   };
   fpdtype_t dQdW[${nvars}][${nvars}] = {
-    {norm_nl[0], 0.0, rho*invc*${1.0/sqrt(2)}, rho*invc*${1.0/sqrt(2)}},
+    {1.0, 0.0, rho*invc*${1.0/sqrt(2)}, rho*invc*${1.0/sqrt(2)}},
     {0.0, -norm_nl[1], norm_nl[0]*${1.0/sqrt(2)}, -norm_nl[0]*${1.0/sqrt(2)}},
     {0.0,  norm_nl[0], norm_nl[1]*${1.0/sqrt(2)}, -norm_nl[1]*${1.0/sqrt(2)}},
     {0.0, 0.0, rho*c*${1.0/sqrt(2)}, rho*c*${1.0/sqrt(2)}},
@@ -145,8 +145,11 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ${pyfr.expand('mmmul','dUdQ','dQdW','PUinv')};
 
   ## Check
+  ## fpdtype_t test[${nvars}][${nvars}] = {{0}};
+  ## ${pyfr.expand('mmmul','dWdQ','dQdW','test')};
   ## % for row in range(nvars):
-  ##   printf("PU[${row}] = %f %f %f %f \n", PU[${row}][0],PU[${row}][1],PU[${row}][2],PU[${row}][3]);
+  ##   ## printf("PU[${row}] = %f %f %f %f \n", PU[${row}][0],PU[${row}][1],PU[${row}][2],PU[${row}][3]);
+  ##   printf("test[${row}] = %f %f %f %f \n", test[${row}][0],test[${row}][1],test[${row}][2],test[${row}][3]);
   ## % endfor
 
   fpdtype_t fl_n[${nvars}] = {0};
