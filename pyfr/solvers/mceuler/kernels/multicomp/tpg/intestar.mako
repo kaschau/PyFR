@@ -11,19 +11,19 @@
 
     fpdtype_t T = q[${Tix}];
 
-    intestar = qh[3]/q[${rhoix}];
+    intestar = qh[3];
     // Compute shifted internal energy
 % for n in range(ns):
 
     % if fast_props:
-      intestar -= q[${n}] * ${N7[n,5] * Ru/MW[n]};
+      intestar -= u[${n}] * ${N7[n,5] * Ru/MW[n]};
     % else:
       if (T < ${N7[n,0]})
       {
-        intestar -= q[${n}] * ${N7[n,8 + 5] * Ru/MW[n]};
+        intestar -= u[${n}] * ${N7[n,8 + 5] * Ru/MW[n]};
       }else
       {
-        intestar -= q[${n}] * ${N7[n,1 + 5] * Ru/MW[n]};
+        intestar -= u[${n}] * ${N7[n,1 + 5] * Ru/MW[n]};
       }
     % endif
 % endfor

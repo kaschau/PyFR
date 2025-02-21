@@ -5,6 +5,6 @@
 <%pyfr:macro name='compute_intestar' params='u, q, qh, intestar'>
 
   // For cpg, inte is always positive, just return qh3
-  intestar = qh[3]/q[${rhoix}];
+  intestar = qh[3];
 
 </%pyfr:macro>
