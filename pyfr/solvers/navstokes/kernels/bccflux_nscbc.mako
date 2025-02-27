@@ -15,7 +15,7 @@
 <%def name="nuidx(dim, upt)">
   <% return dim*nupts + upt %>
 </%def>\
-<% from math import sqrt %>\
+<%from math import sqrt %>\
 
 <%pyfr:macro name='mmmul' params='A, B, C'>
 % for row in range(nvars):
@@ -101,6 +101,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Get face normals at flux point
   fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
+  ${pyfr.expand('set_normal', 'bnorm', 'norm_nl')};
+  fpdtype_t jac = jacs_ffpt[${f}];
 
   ## Step 1: Compute transformed flux and metrics relative to face normal
   ## transformed orientation
@@ -155,9 +157,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## % endfor
   ##   printf("p = %f  v = %f %f \n", p, v[0], v[1]);
 
-  fpdtype_t c = sqrt(${c['gamma']}*p/ul[0]);
   fpdtype_t rho = ul[0];
   fpdtype_t invrho = 1.0/rho;
+  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
   fpdtype_t invc = 1.0/c;
   fpdtype_t invcsq = invc*invc;
 
@@ -268,11 +270,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     ${pyfr.expand('mvmul','PU','dGdN','S')}
   }
 
-  ## Step 5: Replace incoming wave amplitudes
-  ## ${pyfr.expand('compute_L', 'L', 'u_f')};
-  fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
-  fpdtype_t alpha = sqrt(Msq);
-  N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
+  ## Step 5: Compute wave amplitudes for unknown waves
+  ${pyfr.expand('compute_wave_amp', 'ul', 'p', 'v', 'jac', 'N', 'S')};
 
   ## printf("N_2 = %.14e \n", N[2]);
   ## printf("S_2 = %.14e \n", S[2]);

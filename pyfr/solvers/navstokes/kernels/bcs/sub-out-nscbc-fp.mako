@@ -1,5 +1,21 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
+<%from math import sqrt%>
+
+<%pyfr:macro name='set_normal' params='bnorm, norm_nl'>
+ ## For outlets, we already have outward transformed and physical normals
+</%pyfr:macro>
+
+<%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S'>
+  fpdtype_t rho = u[0];
+  fpdtype_t csq = ${c['gamma']}*p/rho;
+  fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})/csq;
+  fpdtype_t alpha = sqrt(Msq);
+
+  ## Only need incoming wave
+  N[${nvars-1}] = jac*${c['sigma']/sqrt(2)}/u[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
+
+</%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_state' params='ul, nl, ur' externs='ploc, t'>
   % for i in range(nvars):
