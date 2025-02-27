@@ -226,7 +226,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._scal_fpts = defaultdict(dict)
         self._vect_upts = defaultdict(dict)
         self._vect_fpts = defaultdict(dict)
-        self._pnorm_facefpts = defaultdict(dict)
+        self._normnl_facefpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
         self._jacs_facefpts = defaultdict(dict)
 
@@ -284,8 +284,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             vect_fpts = self._vect_fpts_view(lhs_efp, '_get_vect_fpts_for_inter_ele')
             self._vect_fpts[shape][fidx] = vect_fpts
 
-            pnorm_facefpts = self._fwise_const_mat(lhs_efp, '_get_pnorms_facefpts')
-            self._pnorm_facefpts[shape][fidx] = pnorm_facefpts
+            normnl_facefpts = self._fwise_const_mat(lhs_efp, '_get_normnls_facefpts')
+            self._normnl_facefpts[shape][fidx] = normnl_facefpts
 
             smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
             self._smats_upts[shape][fidx] = smats_upts
@@ -308,7 +308,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     u_fpts=self._scal_fpts[shape][fidx],
                     gradu_upts=self._vect_upts[shape][fidx],
                     gradu_fpts=self._vect_fpts[shape][fidx],
-                    nl_ffpt=self._pnorm_facefpts[shape][fidx],
+                    normnl_ffpt=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
                     jacs_ffpt=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))

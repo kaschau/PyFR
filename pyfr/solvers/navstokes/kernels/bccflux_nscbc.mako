@@ -38,7 +38,7 @@ c[${row}] += A[${row}][${col}]*b[${col}];
               u_fpts='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
               gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
               gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
-              nl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
+              normnl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
@@ -100,9 +100,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Get face normals at flux point
   fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
-  fpdtype_t nl[${ndims}] = {${", ".join([f'nl_ffpt[{f}][{i}]' for i in range(ndims)])}};
-  fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
-  fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
+  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
 
   ## Step 1: Compute transformed flux and metrics relative to face normal
   ## transformed orientation

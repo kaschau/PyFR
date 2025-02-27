@@ -431,9 +431,12 @@ class BaseElements:
         rmap = (0,)
         return (self._vect_fpts.mid,), rmap, cmap, (1,)
 
-    def _get_pnorms_facefpts(self, eidx, fidx):
+    def _get_normnls_facefpts(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
-        return self._pnorm_fpts[fpts_idx, eidx]
+        pnorms = self._pnorm_fpts[fpts_idx, eidx]
+        mag_nl = np.linalg.norm(pnorms, axis=1)
+        norm_nl = pnorms/mag_nl[:,np.newaxis]
+        return norm_nl
 
     def _get_smats_facefpts(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
