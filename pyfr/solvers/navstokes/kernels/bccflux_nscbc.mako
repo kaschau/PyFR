@@ -39,38 +39,25 @@ c[${row}] += A[${row}][${col}]*b[${col}];
 
 ## printf("\n*************ELEMENT************\n");
 
-## Step 1: Compute transformed visc flux, pressure, velocity at solution points
-fpdtype_t smats_n_ele[${nupts}][${ndims*ndims}]= {{0}};
-fpdtype_t tFi[${nupts}][${ndims}][${nvars}] = {{{0}}};
-fpdtype_t tFi_n[${nupts}][${ndims}][${nvars}] = {{{0}}};
+## Step 1: Compute transformed and physical flux at solution points
+fpdtype_t f_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
+fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 for (int uidx = 0; uidx < ${nupts}; uidx++)
 {
-  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[0,:]])}};
-  % for phys in range(ndims):
-  {
-    fpdtype_t smats_n_temp[${ndims}];
-    fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_ele[uidx][{nidx(comp,phys)}]' for comp in range(ndims)])}};
-    ${pyfr.expand('transform_to', 'bnorm', 'smats_temp', 'smats_n_temp', off=0)};
-    % for comp in range(ndims):
-      smats_n_ele[uidx][${nidx(comp,phys)}] = smats_n_temp[${comp}];
-    % endfor
-  }
-  % endfor
-
   fpdtype_t ul[${nvars}];
   % for var in range(nvars):
     ul[${var}] = u_ele[uidx][${var}];
   % endfor
-  fpdtype_t fi[${ndims}][${nvars}];
+  fpdtype_t f[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
-  ${pyfr.expand('inviscid_flux', 'ul', 'fi', 'p', 'v')};
+  ${pyfr.expand('inviscid_flux', 'ul', 'f', 'p', 'v')};
 
   % for var in range(nvars):
-    % for comp in range(ndims):
-      % for phys in range(ndims):
-        tFi[uidx][${comp}][${var}] += smats_ele[uidx][${nidx(comp,phys)}]*fi[${phys}][${var}];
-        tFi_n[uidx][${comp}][${var}] += smats_n_ele[uidx][${nidx(comp,phys)}]*fi[${phys}][${var}];
+    % for phys in range(ndims):
+      % for comp in range(ndims):
+        tF_upts[uidx][${comp}][${var}] += smats_ele[uidx][${nidx(comp,phys)}]*f[${phys}][${var}];
       % endfor
+      f_upts[uidx][${phys}][${var}] = f[${phys}][${var}];
     % endfor
   % endfor
 }
@@ -91,10 +78,41 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 ## Iterate over the flux points on our face
 % for f, fpt_idx in enumerate(facefpts):
 {
-
   ## printf("\n Flux point %d\n", ${fpt_idx});
 
-  ## Step 1a: Compute physical flux point values
+  ## Get face normals at flux point
+  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
+  fpdtype_t nl[${ndims}] = {${", ".join([f'nl_ffpt[{f}][{i}]' for i in range(ndims)])}};
+  fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
+  fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
+
+  ## Step 1: Compute transformed flux and metrics relative to face normal
+  ## transformed orientation
+  fpdtype_t smats_ele_T[${nupts}][${ndims*ndims}]= {{0}};
+  fpdtype_t tF_T[${nupts}][${ndims}][${nvars}] = {{{0}}};
+  for (int uidx = 0; uidx < ${nupts}; uidx++)
+  {
+    % for phys in range(ndims):
+    {
+      fpdtype_t smats_T_temp[${ndims}];
+      fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_ele[uidx][{nidx(comp,phys)}]' for comp in range(ndims)])}};
+      ${pyfr.expand('transform_to', 'bnorm', 'smats_temp', 'smats_T_temp', off=0)};
+      % for comp in range(ndims):
+        smats_ele_T[uidx][${nidx(comp,phys)}] = smats_T_temp[${comp}];
+      % endfor
+    }
+    % endfor
+
+    % for var in range(nvars):
+      % for comp in range(ndims):
+        % for phys in range(ndims):
+          tF_T[uidx][${comp}][${var}] += smats_ele_T[uidx][${nidx(comp,phys)}]*f_upts[uidx][${phys}][${var}];
+        % endfor
+      % endfor
+    % endfor
+  }
+
+  ## Step 1a: Compute physical flux at our flux point
   fpdtype_t fl[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
   fpdtype_t ul[${nvars}];
@@ -109,10 +127,6 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("fl ${var} = %f %f \n", fl[0][${var}], fl[1][${var}]);
   ## % endfor
   ##   printf("p = %f  v = %f %f \n", p, v[0], v[1]);
-
-  fpdtype_t nl[${ndims}] = {${", ".join([f'nl_ffpt[{f}][{i}]' for i in range(ndims)])}};
-  fpdtype_t mag_nl = sqrt(${pyfr.dot('nl[{i}]', i=ndims)});
-  fpdtype_t norm_nl[] = ${pyfr.array('(1 / mag_nl)*nl[{i}]', i=ndims)};
 
   fpdtype_t c = sqrt(${c['gamma']}*p/ul[0]);
   fpdtype_t rho = ul[0];
@@ -166,11 +180,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("test[${row}] = %f %f %f %f \n", test[${row}][0],test[${row}][1],test[${row}][2],test[${row}][3]);
   ## % endfor
 
+  ## Compute normal transformed flux
   fpdtype_t fl_n[${nvars}] = {0};
   % for upt in range(nupts):
   % for comp in range(ndims):
   % for var in range(nvars):
-    fl_n[${var}] += tFi[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
+    fl_n[${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
   % endfor
   % endfor
   % endfor
@@ -181,22 +196,21 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("fl_n ${var} = %f \n", fl_n[${var}]);
   ## % endfor
 
-  ## ## Step 2: Compute derivative in modified transformed space of tflux, at flux point
+  ## Step 3: Compute derivative in normal transformed space of tflux, at flux point
   ## Also compute gradient of smats for geometric source term
-  fpdtype_t dtFidE[${ndims}][${nvars}] = {{0}};
+  fpdtype_t dtFdE_T[${ndims}][${nvars}] = {{0}};
   fpdtype_t dsmatsdE[${ndims}][${ndims}] = {{0}};
-  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
   % for upt in range(nupts):
   {
     fpdtype_t m12_temp[${ndims}] = {${','.join([str(m12[f,i,upt]) for i in range(ndims)])}};
-    fpdtype_t m12_n[${ndims}];
-    ${pyfr.expand('transform_to', 'bnorm', 'm12_temp', 'm12_n', off=0)};
+    fpdtype_t m12_T[${ndims}];
+    ${pyfr.expand('transform_to', 'bnorm', 'm12_temp', 'm12_T', off=0)};
     % for comp in range(ndims):
       % for var in range(nvars):
-        dtFidE[${comp}][${var}] += tFi_n[${upt}][${comp}][${var}]*m12_n[${comp}];
+        dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*m12_T[${comp}];
       % endfor
       % for phys in range(ndims):
-        dsmatsdE[${comp}][${phys}] += smats_n_ele[${upt}][${nidx(comp,phys)}]*m12_n[${comp}];
+        dsmatsdE[${comp}][${phys}] += smats_ele_T[${upt}][${nidx(comp,phys)}]*m12_T[${comp}];
       % endfor
     % endfor
   }
@@ -207,14 +221,13 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("dtFidE_${var} = %f %f \n", dtFidE[0][${var}], dtFidE[1][${var}]);
   ## % endfor
 
-   ## Step 4: Compute the characteristic wave strengths, N
-
+  ## Step 4: Compute the characteristic wave strengths, N
   fpdtype_t N[${nvars}] = {0};
   fpdtype_t S[${nvars}] = {0};
   fpdtype_t source[${nvars}];
   {
-    fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFidE[0][{i}]' for i in range(nvars)])}};
-    fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFidE[1][{i}]' for i in range(nvars)])}};
+    fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
+    fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFdE_T[1][{i}]' for i in range(nvars)])}};
 
     % for var in range(nvars):
     {
@@ -232,7 +245,6 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ## ${pyfr.expand('compute_L', 'L', 'u_f')};
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
   fpdtype_t alpha = sqrt(Msq);
-
   N[${nvars-1}] = jacs_ffpt[${f}]*${c['sigma']/sqrt(2)}/ul[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
 
   ## printf("N_2 = %.14e \n", N[2]);
@@ -244,12 +256,12 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   ##   printf("N_${i} = %.14e \n", N[${i}]);
   ## % endfor
 
-  ## ## Step 6: Compute dFstardE values normal to face
-  fpdtype_t dtFidE_star[${nvars}] = {0};
+  ## ## Step 6: Compute dtFdE_T* values normal to face
+  fpdtype_t dtFdE_Ts[${nvars}] = {0};
   {
-    ${pyfr.expand('mvmul','PUinv','N','dtFidE_star')};
+    ${pyfr.expand('mvmul','PUinv','N','dtFdE_Ts')};
     % for var in range(nvars):
-      dtFidE_star[${var}] += source[${var}];
+      dtFdE_Ts[${var}] += source[${var}];
     % endfor
   }
 
@@ -258,11 +270,11 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   {
     ## printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
-    u_fpt[${fpt_idx}][${var}] = dtFidE_star[${var}];
+    u_fpt[${fpt_idx}][${var}] = dtFdE_Ts[${var}];
     ## printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
 
     ## subtract our flux gradient on the face (from interior values)
-    u_fpt[${fpt_idx}][${var}] -= dtFidE[0][${var}];
+    u_fpt[${fpt_idx}][${var}] -= dtFdE_T[0][${var}];
     ## printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{var}]' for dim in range(ndims)])}));
 
     ## divide by ~\del \dot g
