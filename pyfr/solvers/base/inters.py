@@ -10,13 +10,6 @@ def _get_inter_objs(interside, getter, elemap):
     # Get the data from the interface
     return [emap[type](eidx, fidx) for type, eidx, fidx in interside]
 
-def _get_eupts_inter_objs(interside, getter, elemap, idx):
-    # Map from element type to view mat getter
-    emap = {type: getattr(ele, getter) for type, ele in elemap.items()}
-
-    # Get the data from the interface
-    return [emap[type](eidx, fidx, idx) for type, eidx, fidx in interside]
-
 
 class BaseInters:
     def __init__(self, be, lhs, elemap, cfg):
@@ -105,20 +98,23 @@ class BaseInters:
     def _vect_view(self, inter, meth):
         return self._view(inter, meth, (self.ndims, self.nvars))
 
-    # An element wise view of the solution data
-    def _escal_upts_view(self, inter, meth):
+    def _scal_upts_view(self, inter, meth):
         nupts = first(self.elemap.values()).basis.nupts
         return self._view(inter, meth, (nupts, self.nvars), with_perm=False)
 
-    # An element wise view of the scal_fpts matrix
-    def _escal_fpts_view(self, inter, meth):
+    def _scal_fpts_view(self, inter, meth):
         basis = first(self.elemap.values()).basis
         vshape = (basis.nfpts, self.nvars)
         with_perm = False
         return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
 
-    # An element wise view of the vect_fpts matrix
-    def _evect_fpts_view(self, inter, meth):
+    def _vect_upts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        vshape = (self.ndims*basis.nupts, self.nvars)
+        with_perm = False
+        return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
+
+    def _vect_fpts_view(self, inter, meth):
         basis = first(self.elemap.values()).basis
         vshape = (self.ndims*basis.nfpts, self.nvars)
         with_perm = False

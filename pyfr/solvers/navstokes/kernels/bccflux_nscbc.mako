@@ -1,6 +1,7 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
 <%include file='pyfr.solvers.euler.kernels.flux'/>
+<%include file='pyfr.solvers.navstokes.kernels.flux'/>
 <%include file='pyfr.solvers.baseadvec.kernels.transform'/>
 
 <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
@@ -8,8 +9,11 @@
 <%def name="nidx(comp,phys)">
   <% return comp*ndims + phys %>
 </%def>\
-<%def name="nvidx(dim,fpt)">
+<%def name="nfidx(dim, fpt)">
   <% return dim*nfpts + fpt %>
+</%def>\
+<%def name="nuidx(dim, upt)">
+  <% return dim*nupts + upt %>
 </%def>\
 <% from math import sqrt %>\
 
@@ -30,11 +34,12 @@ c[${row}] += A[${row}][${col}]*b[${col}];
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
-              u_ele='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
-              u_fpt='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
-              gradu_fpt='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
+              u_upts='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
+              u_fpts='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
+              gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
+              gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
               nl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
-              smats_ele='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
+              smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
 ## printf("\n*************ELEMENT************\n");
@@ -42,25 +47,32 @@ c[${row}] += A[${row}][${col}]*b[${col}];
 ## Step 1: Compute transformed and physical flux at solution points
 fpdtype_t f_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
-for (int uidx = 0; uidx < ${nupts}; uidx++)
+% for upt in range(nupts):
 {
-  fpdtype_t ul[${nvars}];
+  fpdtype_t u[${nvars}];
+  fpdtype_t gradu[${ndims}][${nvars}];
   % for var in range(nvars):
-    ul[${var}] = u_ele[uidx][${var}];
+    u[${var}] = u_upts[${upt}][${var}];
+    % for dim in range(ndims):
+      gradu[${dim}][${var}] = gradu_upts[${nuidx(dim,upt)}][${var}];
+    % endfor
   % endfor
   fpdtype_t f[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
-  ${pyfr.expand('inviscid_flux', 'ul', 'f', 'p', 'v')};
+  ${pyfr.expand('inviscid_flux', 'u', 'f', 'p', 'v')};
+  ${pyfr.expand('viscous_flux_add', 'u', 'gradu', 'f')};
+
 
   % for var in range(nvars):
     % for phys in range(ndims):
       % for comp in range(ndims):
-        tF_upts[uidx][${comp}][${var}] += smats_ele[uidx][${nidx(comp,phys)}]*f[${phys}][${var}];
+        tF_upts[${upt}][${comp}][${var}] += smats_upts[${upt}][${nidx(comp,phys)}]*f[${phys}][${var}];
       % endfor
-      f_upts[uidx][${phys}][${var}] = f[${phys}][${var}];
+      f_upts[${upt}][${phys}][${var}] = f[${phys}][${var}];
     % endfor
   % endfor
 }
+% endfor
 
 ## Check
 ## % for upt in range(nupts):
@@ -71,7 +83,13 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 
 ## % for upt in range(nupts):
 ## % for var in range(nvars):
-##   printf("upt ${upt} ${var} = %.2f \n", u_ele[${upt}][${var}]);
+##   printf("upt ${upt} ${var} = %.2f \n", u_upts[${upt}][${var}]);
+## % endfor
+## % endfor
+
+## % for upt in range(nupts):
+## % for var in range(nvars):
+##   printf("grad_upt ${upt} ${var} = %.2f %.2f \n", gradu_upts[${nuidx(0,upt)}][${var}], gradu_upts[${nuidx(1,upt)}][${var}]);
 ## % endfor
 ## % endfor
 
@@ -88,17 +106,17 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
 
   ## Step 1: Compute transformed flux and metrics relative to face normal
   ## transformed orientation
-  fpdtype_t smats_ele_T[${nupts}][${ndims*ndims}]= {{0}};
+  fpdtype_t smats_upts_T[${nupts}][${ndims*ndims}]= {{0}};
   fpdtype_t tF_T[${nupts}][${ndims}][${nvars}] = {{{0}}};
-  for (int uidx = 0; uidx < ${nupts}; uidx++)
+  % for upt in range(nupts):
   {
     % for phys in range(ndims):
     {
       fpdtype_t smats_T_temp[${ndims}];
-      fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_ele[uidx][{nidx(comp,phys)}]' for comp in range(ndims)])}};
+      fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_upts[{upt}][{nidx(comp,phys)}]' for comp in range(ndims)])}};
       ${pyfr.expand('transform_to', 'bnorm', 'smats_temp', 'smats_T_temp', off=0)};
       % for comp in range(ndims):
-        smats_ele_T[uidx][${nidx(comp,phys)}] = smats_T_temp[${comp}];
+        smats_upts_T[${upt}][${nidx(comp,phys)}] = smats_T_temp[${comp}];
       % endfor
     }
     % endfor
@@ -106,20 +124,31 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
     % for var in range(nvars):
       % for comp in range(ndims):
         % for phys in range(ndims):
-          tF_T[uidx][${comp}][${var}] += smats_ele_T[uidx][${nidx(comp,phys)}]*f_upts[uidx][${phys}][${var}];
+          tF_T[${upt}][${comp}][${var}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*f_upts[${upt}][${phys}][${var}];
         % endfor
       % endfor
     % endfor
   }
+  % endfor
 
   ## Step 1a: Compute physical flux at our flux point
+  fpdtype_t ul[${nvars}];
+  fpdtype_t gradul[${ndims}][${nvars}];
+  % for var in range(nvars):
+    ul[${var}] = u_fpts[${fpt_idx}][${var}];
+    % for dim in range(ndims):
+      gradul[${dim}][${var}] = gradu_fpts[${nfidx(dim,nfpts)}][${var}];
+    % endfor
+  % endfor
   fpdtype_t fl[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
-  fpdtype_t ul[${nvars}];
-  % for var in range(nvars):
-    ul[${var}] = u_fpt[${fpt_idx}][${var}];
-  % endfor
   ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'p', 'v')};
+  ${pyfr.expand('viscous_flux_add', 'ul', 'gradul', 'fl')};
+
+  ## Check
+  ## % for var in range(nvars):
+  ##   printf("grad_fpt ${fpt_idx} ${var} = %.2f %.2f \n",gradu_fpts[${nfidx(0,fpt_idx)}][${var}], gradu_fpts[${nfidx(1,fpt_idx)}][${var}]);
+  ## % endfor
 
   ## Check
   ## % for var in range(nvars):
@@ -210,7 +239,7 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
         dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*m12_T[${comp}];
       % endfor
       % for phys in range(ndims):
-        dsmatsdE[${comp}][${phys}] += smats_ele_T[${upt}][${nidx(comp,phys)}]*m12_T[${comp}];
+        dsmatsdE[${comp}][${phys}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*m12_T[${comp}];
       % endfor
     % endfor
   }
@@ -270,18 +299,18 @@ for (int uidx = 0; uidx < ${nupts}; uidx++)
   {
     ## printf("\n VAR ${var} \n");
     ## we have dudt (~\del \dot ~f) at our flux point
-    u_fpt[${fpt_idx}][${var}] = dtFdE_Ts[${var}];
+    u_fpts[${fpt_idx}][${var}] = dtFdE_Ts[${var}];
     ## printf("dtFidE_* %.14e \n", ${'+'.join([f'dtFidE_star[{dim}][{var}]' for dim in range(ndims)])});
 
     ## subtract our flux gradient on the face (from interior values)
-    u_fpt[${fpt_idx}][${var}] -= dtFdE_T[0][${var}];
+    u_fpts[${fpt_idx}][${var}] -= dtFdE_T[0][${var}];
     ## printf("dtFidE %f \n", (${'+'.join([f'dtFidE[{dim}][{var}]' for dim in range(ndims)])}));
 
     ## divide by ~\del \dot g
-    u_fpt[${fpt_idx}][${var}] /= ${m11[f]};
+    u_fpts[${fpt_idx}][${var}] /= ${m11[f]};
 
     ## add the transformed, normal flux from interior values
-    u_fpt[${fpt_idx}][${var}] += fl_n[${var}];
+    u_fpts[${fpt_idx}][${var}] += fl_n[${var}];
 
     ## Check
     ## printf("f_n =  %.14e \n", u_fpt[${fpt_idx}][${var}]);
