@@ -421,10 +421,10 @@ class BaseElements:
         rmap = (0,)
         return (self._scal_fpts.mid,), rmap, cmap, (1,)
 
-    def _get_vect_upts_for_inter_ele(self, eidx, _):
+    def _get_grad_upts_for_inter_ele(self, eidx, _):
         cmap = (eidx,)
         rmap = (0,)
-        return (self._vect_upts.mid,), rmap, cmap, (1,)
+        return (self._grad_upts.mid,), rmap, cmap, (1,)
 
     def _get_vect_fpts_for_inter_ele(self, eidx, _):
         cmap = (eidx,)

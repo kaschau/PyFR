@@ -108,7 +108,7 @@ class BaseInters:
         with_perm = False
         return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
 
-    def _vect_upts_view(self, inter, meth):
+    def _grad_upts_view(self, inter, meth):
         basis = first(self.elemap.values()).basis
         vshape = (self.ndims*basis.nupts, self.nvars)
         with_perm = False
