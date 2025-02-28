@@ -60,7 +60,10 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t f[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
   ${pyfr.expand('inviscid_flux', 'u', 'f', 'p', 'v')};
-  ${pyfr.expand('viscous_flux_add', 'u', 'gradu', 'f')};
+
+  ## TODO: cache blocking can eliminate the gradu_upts
+  ## so need to address to incorporate viscous fluxes
+  ## ${pyfr.expand('viscous_flux_add', 'u', 'gradu', f')};
 
 
   % for var in range(nvars):
