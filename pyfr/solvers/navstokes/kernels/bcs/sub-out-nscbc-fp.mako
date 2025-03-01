@@ -6,7 +6,7 @@
  ## For outlets, we already have outward transformed and physical normals
 </%pyfr:macro>
 
-<%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S'>
+<%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
   fpdtype_t rho = u[0];
   fpdtype_t csq = ${c['gamma']}*p/rho;
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})/csq;

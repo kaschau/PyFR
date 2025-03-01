@@ -17,20 +17,47 @@
 </%def>\
 <%from math import sqrt %>\
 
-<%pyfr:macro name='mmmul' params='A, B, C'>
-% for row in range(nvars):
-% for col in range(nvars):
-  C[${row}][${col}] = ${'+'.join([f'A[{row}][{c}]*B[{c}][{col}]' for c in range(nvars)])};
-% endfor
-% endfor
+<%pyfr:macro name='PU.dE' params='dE, N'>
+fpdtype_t nx = norm_nl[0];
+fpdtype_t ny = norm_nl[1];
+
+fpdtype_t u_ = v[0];
+fpdtype_t v_ = v[1];
+fpdtype_t gmo = ${c['gamma'] - 1.0};
+
+fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
+
+fpdtype_t dE0 = dE[0];
+fpdtype_t dE1 = dE[1];
+fpdtype_t dE2 = dE[2];
+fpdtype_t dE4 = dE[3];
+
+N[0] = dE0 + gmo*(-dE4 - dE0*k + dE1*u_ + dE2*v_)*invcsq;
+N[1] = (dE2*nx-dE1*ny+dE0*ny*u_-dE0*nx*v_)*invrho;
+N[2] = ${1.0/sqrt(2)}*(dE4*gmo + c*dE1*nx + c*dE2*ny - dE1*gmo*u_ - dE2*gmo*v_ + dE0*(gmo*k - c*nx*u_ - c*ny*v_))*invc*invrho;
+N[3] = ${1.0/sqrt(2)}*(dE4*gmo - c*dE1*nx - c*dE2*ny - dE1*gmo*u_ - dE2*gmo*v_ + dE0*(gmo*k + c*nx*u_ + c*ny*v_))*invc*invrho;
 </%pyfr:macro>
 
-<%pyfr:macro name='mvmul' params='A, b, c'>
-% for row in range(nvars):
-% for col in range(nvars):
-c[${row}] += A[${row}][${col}]*b[${col}];
-% endfor
-% endfor
+
+<%pyfr:macro name='PUinv.N' params='N, dE'>
+fpdtype_t nx = norm_nl[0];
+fpdtype_t ny = norm_nl[1];
+
+fpdtype_t u_ = v[0];
+fpdtype_t v_ = v[1];
+fpdtype_t gmo = ${c['gamma'] - 1.0};
+
+fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
+
+fpdtype_t N0 = N[0];
+fpdtype_t N1 = N[1];
+fpdtype_t Np = N[2];
+fpdtype_t Nm = N[3];
+
+dE[0] = N0 + ${1.0/sqrt(2)}*(Nm+Np)*rho*invc;
+dE[1] = -N1*ny*rho + N0*u_ + ${1.0/sqrt(2)}*rho*invc*(Nm*(-c*nx+u_) + Np*(c*nx+u_));
+dE[2] = N1*nx*rho + ${1.0/sqrt(2)}*rho*(-Nm*ny + Np*ny) + N0*v_ + ${1.0/sqrt(2)}*rho*invc*v_*(Nm+Np);
+dE[3] = k*N0 + ${1.0/sqrt(2)}*(c*(Nm+Np)*rho/gmo + k*(Nm+Np)*rho*invc)-0.5*rho*(${sqrt(2)}*(Nm-Np)*(nx*u_+ny*v_) + 2.0*N1*(ny*u_-nx*v_));
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
@@ -160,58 +187,6 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## % endfor
   ##   printf("p = %f  v = %f %f \n", p, v[0], v[1]);
 
-  fpdtype_t rho = ul[0];
-  fpdtype_t invrho = 1.0/rho;
-  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
-  fpdtype_t invc = 1.0/c;
-  fpdtype_t invcsq = invc*invc;
-
-  fpdtype_t dQdU[${nvars}][${nvars}] = {
-    {1.0, 0.0, 0.0, 0.0},
-    {-v[0]*invrho, invrho, 0.0, 0.0},
-    {-v[1]*invrho, 0.0, invrho, 0.0},
-    {${(c['gamma']-1.0)/2.0}*(${pyfr.dot('v[{i}]', i=ndims)}), ${1.0-c['gamma']}*v[0], ${1.0-c['gamma']}*v[1], ${c['gamma']-1.0}},
-  };
-  fpdtype_t dUdQ[${nvars}][${nvars}] = {
-    {1.0, 0.0, 0.0, 0.0},
-    {v[0], rho, 0.0, 0.0},
-    {v[1], 0.0, rho, 0.0},
-    {0.5*(${pyfr.dot('v[{i}]', i=ndims)}), ul[1], ul[2], ${1.0/(c['gamma']-1)}}
-  };
-  fpdtype_t dWdQ[${nvars}][${nvars}] = {
-    {1.0, 0.0, 0.0, -invcsq},
-    {0.0, -norm_nl[1], norm_nl[0], 0.0},
-    {0.0,  norm_nl[0]*${1.0/sqrt(2)},  norm_nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
-    {0.0, -norm_nl[0]*${1.0/sqrt(2)}, -norm_nl[1]*${1.0/sqrt(2)}, invrho*invc*${1.0/sqrt(2)}},
-  };
-  fpdtype_t dQdW[${nvars}][${nvars}] = {
-    {1.0, 0.0, rho*invc*${1.0/sqrt(2)}, rho*invc*${1.0/sqrt(2)}},
-    {0.0, -norm_nl[1], norm_nl[0]*${1.0/sqrt(2)}, -norm_nl[0]*${1.0/sqrt(2)}},
-    {0.0,  norm_nl[0], norm_nl[1]*${1.0/sqrt(2)}, -norm_nl[1]*${1.0/sqrt(2)}},
-    {0.0, 0.0, rho*c*${1.0/sqrt(2)}, rho*c*${1.0/sqrt(2)}},
-  };
-
-  ## Check
-  ## % for row in range(nvars):
-  ##   printf("WQ[${row}] = %f %f %f %f \n", dWdQ[${row}][0],dWdQ[${row}][1],dWdQ[${row}][2],dWdQ[${row}][3]);
-  ## % endfor
-  ## % for row in range(nvars):
-  ##   printf("QU[${row}] = %f %f %f %f \n", dQdU[${row}][0],dQdU[${row}][1],dQdU[${row}][2],dQdU[${row}][3]);
-  ## % endfor
-
-  fpdtype_t PU[${nvars}][${nvars}] = {{0}};
-  ${pyfr.expand('mmmul','dWdQ','dQdU','PU')};
-  fpdtype_t PUinv[${nvars}][${nvars}] = {{0}};
-  ${pyfr.expand('mmmul','dUdQ','dQdW','PUinv')};
-
-  ## Check
-  ## fpdtype_t test[${nvars}][${nvars}] = {{0}};
-  ## ${pyfr.expand('mmmul','dWdQ','dQdW','test')};
-  ## % for row in range(nvars):
-  ##   ## printf("PU[${row}] = %f %f %f %f \n", PU[${row}][0],PU[${row}][1],PU[${row}][2],PU[${row}][3]);
-  ##   printf("test[${row}] = %f %f %f %f \n", test[${row}][0],test[${row}][1],test[${row}][2],test[${row}][3]);
-  ## % endfor
-
   ## Compute normal transformed flux
   fpdtype_t fl_n[${nvars}] = {0};
   % for upt in range(nupts):
@@ -254,8 +229,13 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## % endfor
 
   ## Step 4: Compute the characteristic wave strengths, N
-  fpdtype_t N[${nvars}] = {0};
-  fpdtype_t S[${nvars}] = {0};
+  fpdtype_t rho = ul[0];
+  fpdtype_t invrho = 1.0/rho;
+  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
+  fpdtype_t invc = 1.0/c;
+  fpdtype_t invcsq = invc*invc;
+  fpdtype_t N[${nvars}];
+  fpdtype_t S[${nvars}]={0};
   fpdtype_t source[${nvars}];
   {
     fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
@@ -269,26 +249,18 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     }
     % endfor
 
-    ${pyfr.expand('mvmul','PU','dEdE','N')}
-    ${pyfr.expand('mvmul','PU','dGdN','S')}
+    ${pyfr.expand('PU.dE','dEdE','N')}
+    ## HACK
+    ## ${pyfr.expand('PU.dE','dGdN','S')}
   }
 
   ## Step 5: Compute wave amplitudes for unknown waves
-  ${pyfr.expand('compute_wave_amp', 'ul', 'p', 'v', 'jac', 'N', 'S')};
-
-  ## printf("N_2 = %.14e \n", N[2]);
-  ## printf("S_2 = %.14e \n", S[2]);
-  ## printf("N_3 = %.14e \n", N[3]);
-  ## printf("S_3 = %.14e \n", S[3]);
-  ## Check
-  ## % for i in range(nvars):
-  ##   printf("N_${i} = %.14e \n", N[${i}]);
-  ## % endfor
+  ${pyfr.expand('compute_wave_amp', 'ul', 'p', 'v', 'jac', 'N', 'S', 'norm_nl')};
 
   ## ## Step 6: Compute dtFdE_T* values normal to face
-  fpdtype_t dtFdE_Ts[${nvars}] = {0};
+  fpdtype_t dtFdE_Ts[${nvars}];
   {
-    ${pyfr.expand('mvmul','PUinv','N','dtFdE_Ts')};
+    ${pyfr.expand('PUinv.N','N','dtFdE_Ts')};
     % for var in range(nvars):
       dtFdE_Ts[${var}] += source[${var}];
     % endfor
