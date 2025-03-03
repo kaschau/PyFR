@@ -13,7 +13,7 @@
   fpdtype_t alpha = sqrt(Msq);
 
   ## Only need incoming wave
-  N[${nvars-1}] = jac*${c['sigma']/sqrt(2)}/u[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
+  N[${nvars-1}] = jac*${c['K_p']/sqrt(2)}/u[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
 
 </%pyfr:macro>
 

@@ -14,9 +14,9 @@
   fpdtype_t nx = norm_nl[0];
   fpdtype_t ny = norm_nl[1];
 
-  fpdtype_t rhoR = jac*${c['sigma']}*(${c['rho']} - rho);
-  fpdtype_t uR = jac*${c['sigma']}*(${c['u']} - v[0]);
-  fpdtype_t vR = jac*${c['sigma']}*(${c['v']} - v[1]);
+  fpdtype_t rhoR = jac*${c['K_rho']}*(${c['rho']} - rho);
+  fpdtype_t uR = jac*${c['K_u']}*(${c['u']} - v[0]);
+  fpdtype_t vR = jac*${c['K_v']}*(${c['v']} - v[1]);
 
   ## Need to solve for all but outgoing wave
   N[0] = -(rhoR+S[0]) - rho*invc*(${sqrt(2)}*(N[3]+S[3]) + (uR*nx + vR*ny));
