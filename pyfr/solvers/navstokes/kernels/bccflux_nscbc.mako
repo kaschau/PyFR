@@ -47,7 +47,7 @@ fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 dE[0] = N[0] + ${1.0/sqrt(2)}*(N[2]+N[3])*rho*invc;
 dE[1] = -N[1]*ny*rho + N[0]*ux + ${1.0/sqrt(2)}*rho*invc*( N[3]*(-c*nx+ux) + N[2]*(c*nx+ux));
 dE[2] =  N[1]*nx*rho + N[0]*uy + ${1.0/sqrt(2)}*rho*invc*(-N[3]*( c*ny+uy) + N[2]*(c*ny+uy));
-dE[3] = k*N[0] + ${1.0/sqrt(2)}*c*(N[2]+N[3])*rho/gmo + ${1.0/sqrt(2)}*k*(N[2]+N[3])*rho*invc + ${1.0/sqrt(2)}*(N[2]-N[3])*nx*rho*ux - N[1]*rho*(ny*ux - nx*uy) + ${1.0/sqrt(2)}*(N[2]-N[3])*ny*rho*uy;
+dE[3] = k*N[0] + ${1.0/sqrt(2)}*(N[2]+N[3])*rho*(c/gmo + k*invc) + ${1.0/sqrt(2)}*rho*(N[2]-N[3])*(nx*ux+ny*uy) - N[1]*rho*(ny*ux - nx*uy);
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
