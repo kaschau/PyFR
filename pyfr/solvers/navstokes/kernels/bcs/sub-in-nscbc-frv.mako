@@ -19,9 +19,9 @@
   fpdtype_t vR = jac*${c['K_v']}*(${c['v']} - v[1]);
 
   ## Need to solve for all but outgoing wave
-  N[0] = -(rhoR+S[0]) - rho*invc*(${sqrt(2)}*(N[3]+S[3]) + (uR*nx + vR*ny));
-  N[1] = -vR*nx + uR*ny - S[1];
-  N[2] = N[3] + S[3] - ${sqrt(2)}*(uR*nx+vR*ny) - S[2];
+  N[0] = jac*(-(rhoR+S[0]) - rho*invc*(${sqrt(2)}*(N[3]+S[3]) + (uR*nx + vR*ny)));
+  N[1] = jac*(uR*ny - vR*nx - S[1]);
+  N[2] = jac*(N[3] + S[3] - ${sqrt(2)}*(uR*nx+vR*ny) - S[2]);
 
 </%pyfr:macro>
 
