@@ -21,16 +21,14 @@
 fpdtype_t nx = norm_nl[0];
 fpdtype_t ny = norm_nl[1];
 
-fpdtype_t ux = v[0];
-fpdtype_t uy = v[1];
 fpdtype_t gmo = ${c['gamma'] - 1.0};
 
 fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-N[0] = dE[0] + gmo*(-dE[3] - dE[0]*k + dE[1]*ux + dE[2]*uy)*invcsq;
-N[1] = (dE[2]*nx-dE[1]*ny+dE[0]*ny*ux-dE[0]*nx*uy)*invrho;
-N[2] = ${1.0/sqrt(2)}*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*ux - dE[2]*gmo*uy + dE[0]*(gmo*k - c*nx*ux - c*ny*uy))*invc*invrho;
-N[3] = ${1.0/sqrt(2)}*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*ux - dE[2]*gmo*uy + dE[0]*(gmo*k + c*nx*ux + c*ny*uy))*invc*invrho;
+N[0] = dE[0] + gmo*(-dE[3] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1])*invcsq;
+N[1] = (dE[2]*nx-dE[1]*ny+dE[0]*ny*v[0]-dE[0]*nx*v[1])*invrho;
+N[2] = ${1.0/sqrt(2)}*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*nx*v[0] - c*ny*v[1]))*invc*invrho;
+N[3] = ${1.0/sqrt(2)}*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*nx*v[0] + c*ny*v[1]))*invc*invrho;
 </%pyfr:macro>
 
 
@@ -38,16 +36,14 @@ N[3] = ${1.0/sqrt(2)}*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*ux - dE[2
 fpdtype_t nx = norm_nl[0];
 fpdtype_t ny = norm_nl[1];
 
-fpdtype_t ux = v[0];
-fpdtype_t uy = v[1];
 fpdtype_t gmo = ${c['gamma'] - 1.0};
 
 fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-dE[0] = N[0] + ${1.0/sqrt(2)}*(N[2]+N[3])*rho*invc;
-dE[1] = -N[1]*ny*rho + N[0]*ux + ${1.0/sqrt(2)}*rho*invc*( N[3]*(-c*nx+ux) + N[2]*(c*nx+ux));
-dE[2] =  N[1]*nx*rho + N[0]*uy + ${1.0/sqrt(2)}*rho*invc*(-N[3]*( c*ny+uy) + N[2]*(c*ny+uy));
-dE[3] = k*N[0] + ${1.0/sqrt(2)}*(N[2]+N[3])*rho*(c/gmo + k*invc) + ${1.0/sqrt(2)}*rho*(N[2]-N[3])*(nx*ux+ny*uy) - N[1]*rho*(ny*ux - nx*uy);
+dE[0] = N[0] + ${1.0/sqrt(2)}*(N[3]+N[2])*rho*invc;
+dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${1.0/sqrt(2)}*rho*invc*(N[3]*(-c*nx+v[0]) + N[2]*(c*nx+v[0]));
+dE[2] =  N[1]*nx*rho + ${1.0/sqrt(2)}*rho*(-N[3]*ny + N[2]*ny) + N[0]*v[1] + ${1.0/sqrt(2)}*rho*invc*v[1]*(N[3]+N[2]);
+dE[3] = k*N[0] + ${1.0/sqrt(2)}*(c*(N[3]+N[2])*rho/gmo + k*(N[3]+N[2])*rho*invc)-0.5*rho*(${sqrt(2)}*(N[3]-N[2])*(nx*v[0]+ny*v[1]) + 2.0*N[1]*(ny*v[0]-nx*v[1]));
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
