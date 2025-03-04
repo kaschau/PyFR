@@ -242,11 +242,11 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t invc = 1.0/c;
   fpdtype_t invcsq = invc*invc;
   fpdtype_t N[${nvars}];
-  fpdtype_t S[${nvars}]={0};
+  fpdtype_t S[${nvars}];
   fpdtype_t source[${nvars}];
   {
     fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
-    fpdtype_t dGdN[${nvars}] = {${','.join([f'dtFdE_T[{j+1}][{i}]' for i in range(nvars) for j in range(ndims)])}};
+    fpdtype_t dGdN[${nvars}] = {${','.join(['+'.join([f'dtFdE_T[{j+1}][{i}]' for j in range(ndims-1)]) for i in range(nvars)])}};
 
     % for var in range(nvars):
     {
@@ -276,7 +276,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ##   printf("NStar ${var} %e \n", N[${var}]);
   ## % endfor
 
-  ## ## Step 6: Compute dtFdE_T* values normal to face
+  ## Step 6: Compute dtFdE_T* values normal to face
   fpdtype_t dtFdE_Ts[${nvars}];
   {
     ${pyfr.expand('PUinv_dot_N','N','dtFdE_Ts')};
