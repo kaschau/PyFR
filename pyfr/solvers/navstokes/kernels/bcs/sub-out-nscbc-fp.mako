@@ -9,7 +9,7 @@
 <%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
   fpdtype_t rho = u[0];
   fpdtype_t csq = ${c['gamma']}*p/rho;
-  fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})/csq;
+  fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
   fpdtype_t alpha = sqrt(Msq);
 
   ## Only need incoming wave

@@ -25,10 +25,10 @@ fpdtype_t gmo = ${c['gamma'] - 1.0};
 
 fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-N[0] = dE[0] + gmo*(-dE[3] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1])*invcsq;
-N[1] = (dE[2]*nx-dE[1]*ny+dE[0]*ny*v[0]-dE[0]*nx*v[1])*invrho;
-N[2] = ${1.0/sqrt(2)}*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*nx*v[0] - c*ny*v[1]))*invc*invrho;
-N[3] = ${1.0/sqrt(2)}*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*nx*v[0] + c*ny*v[1]))*invc*invrho;
+N[0] = dE[0] - gmo*invcsq*(dE[0]*k - dE[1]*v[0] - dE[2]*v[1] + dE[3]);
+N[1] = invrho*(dE[0]*(ny*v[0] - nx*v[1]) - dE[1]*ny + dE[2]*nx);
+N[2] = ${1.0/sqrt(2)}*invc*invrho*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*(nx*v[0] - ny*v[1])));
+N[3] = ${1.0/sqrt(2)}*invc*invrho*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*(nx*v[0] + ny*v[1])));
 </%pyfr:macro>
 
 
@@ -40,10 +40,10 @@ fpdtype_t gmo = ${c['gamma'] - 1.0};
 
 fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-dE[0] = N[0] + ${1.0/sqrt(2)}*(N[3]+N[2])*rho*invc;
-dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${1.0/sqrt(2)}*rho*invc*(N[3]*(-c*nx+v[0]) + N[2]*(c*nx+v[0]));
-dE[2] =  N[1]*nx*rho + ${1.0/sqrt(2)}*rho*(-N[3]*ny + N[2]*ny) + N[0]*v[1] + ${1.0/sqrt(2)}*rho*invc*v[1]*(N[3]+N[2]);
-dE[3] = k*N[0] + ${1.0/sqrt(2)}*(c*(N[3]+N[2])*rho/gmo + k*(N[3]+N[2])*rho*invc)-0.5*rho*(${sqrt(2)}*(N[3]-N[2])*(nx*v[0]+ny*v[1]) + 2.0*N[1]*(ny*v[0]-nx*v[1]));
+dE[0] = N[0] + ${1.0/sqrt(2)}*rho*invc*(N[2] + N[3]);
+dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${1.0/sqrt(2)}*rho*invc*(N[2]*(c*nx + v[0]) - N[3]*(c*nx - v[0]));
+dE[2] =  N[1]*nx*rho + N[0]*v[1] + ${1.0/sqrt(2)}*rho*invc*(N[2]*(c*ny + v[1]) - N[3]*(c*ny - v[1]));
+dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2])*(c/gmo + k*invc) + (N[2] - N[3])*(nx*v[0] + ny*v[1]));
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
