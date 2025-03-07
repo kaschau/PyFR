@@ -2,14 +2,6 @@
 <%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
 <%from math import sqrt%>
 
-<%pyfr:macro name='set_normal' params='bnorm, norm_nl'>
- ## For inlets, we want inward facing normals
- % for dim in range(ndims):
-   bnorm[${dim}] *= -1.0;
-   norm_nl[${dim}] *= -1.0;
- % endfor
-</%pyfr:macro>
-
 <%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
   fpdtype_t nx = norm_nl[0];
   fpdtype_t ny = norm_nl[1];

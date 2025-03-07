@@ -2,10 +2,6 @@
 <%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
 <%from math import sqrt%>
 
-<%pyfr:macro name='set_normal' params='bnorm, norm_nl'>
- ## For outlets, we already have outward transformed and physical normals
-</%pyfr:macro>
-
 <%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
   fpdtype_t rho = u[0];
   fpdtype_t csq = ${c['gamma']}*p/rho;

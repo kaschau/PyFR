@@ -215,10 +215,21 @@ class NavierStokesSubOutflowBCInters(NavierStokesBaseBCInters):
 
 class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
+    @staticmethod
+    def transform_to(n, pts):
+        pts_T = np.empty(pts.shape)
+        if pts.shape[1] == 2:
+            pts_T[:,0] = n[0]*pts[:, 0] + n[1]*pts[:, 1]
+            pts_T[:,1] = n[0]*pts[:, 1] - n[1]*pts[:, 0]
+
+        return pts_T
+
+
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux_nscbc')
+        kname = 'pyfr.solvers.navstokes.kernels.bccflux_nscbc'
+        self._be.pointwise.register(kname)
 
         self._tplargs_efp = defaultdict(dict)
 
@@ -238,59 +249,94 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         # Create required element-face pairs
         ef_pairs = []
         for shape in set(t[0] for t in lhs):
-            for fidx in range(len(self.elemap[shape].basis.faces)):
-                lhs_efp = [t for t in lhs if t[0] == shape and t[2] == fidx]
-                if lhs_efp:
-                    ef_pairs.append((shape, fidx, lhs_efp))
-
-
-        for shape, fidx, lhs_efp in ef_pairs:
             basis = self.elemap[shape].basis
+            for fidx in range(len(basis.faces)):
+                lhs_idx = [i for i,t in enumerate(lhs)
+                           if t[0] == shape and t[2] == fidx]
+                if lhs_idx:
+                    ef_pairs.append((shape, fidx, lhs_idx))
+
+
+        for shape, fidx, lhs_idx in ef_pairs:
+            self._dim_lhs[shape][fidx] = len(lhs_idx)
+
+            # Basis in regular orientation
+            ele = self.elemap[shape]
+            basis = ele.basis
             nupts = basis.nupts
             nfpts = basis.nfpts
             nfacefpts = basis.nfacefpts[fidx]
             ndims = self.ndims
-            nvars = self.nvars
-
-            # Generate lhs for element-face pair
-            self._dim_lhs[shape][fidx] = len(lhs_efp)
+            facefpts = basis.facefpts[fidx]
 
             # Store tplargs for this element-face pair
             self._tplargs_efp[shape][fidx] = self._tplargs.copy()
             tplargs_efp = self._tplargs_efp[shape][fidx]
 
-            facefpts = basis.facefpts[fidx]
-            tplargs_efp['m0'] = basis.m0[facefpts]
-            tplargs_efp['m1'] = basis.m1.reshape(nupts,ndims,nupts)
-            tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
-            tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
-            tplargs_efp['m12'] = basis.m12[facefpts]
-
             tplargs_efp['nupts'] = nupts
             tplargs_efp['nfpts'] = nfpts
             tplargs_efp['nfacefpts'] = nfacefpts
             tplargs_efp['facefpts'] = basis.facefpts[fidx]
-            tplargs_efp['bnorm_facefpts'] = basis.norm_fpts[basis.facefpts[fidx]]
+            tplargs_efp['bnorms'] = basis.norm_fpts[basis.facefpts[fidx]]
+            ## Modify normals depending on bc type
+            if self.normal == 'inward':
+                tplargs_efp['bnorms'] *= -1
 
-            scal_upts = self._scal_upts_view(lhs_efp, '_get_scal_upts_for_inter_ele')
+            tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
+            tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
+            tplargs_efp['m12'] = basis.m12[facefpts]
+
+
+            # Create basis transformed to flux point normal
+            basiscls = type(basis)
+            class basiscls_T(basiscls):
+                pass
+
+            tplargs_efp['m12_T'] = np.empty(tplargs_efp['m12'].shape)
+            for i,fpt in enumerate(facefpts):
+                bnorm = tplargs_efp['bnorms'][i]
+                upts_T = self.transform_to(bnorm, basis.upts)
+                fpts_T = self.transform_to(bnorm, basis.fpts)
+
+                # overwrite the upts, fpts
+                basiscls_T.upts = upts_T
+                basiscls_T.fpts = fpts_T
+                basis_T = basiscls_T(ele.nspts, cfg)
+                tplargs_efp['m12_T'][i] = basis_T.m12[fpt]
+
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+
+            method = '_get_scal_upts_for_inter_ele'
+            scal_upts = self._scal_upts_view(lhs_efp, method)
             self._scal_upts[shape][fidx] = scal_upts
 
-            scal_fpts = self._scal_fpts_view(lhs_efp, '_get_scal_fpts_for_inter_ele')
+            method = '_get_scal_fpts_for_inter_ele'
+            scal_fpts = self._scal_fpts_view(lhs_efp, method)
             self._scal_fpts[shape][fidx] = scal_fpts
 
-            grad_upts = self._grad_upts_view(lhs_efp, '_get_grad_upts_for_inter_ele')
+            method = '_get_grad_upts_for_inter_ele'
+            grad_upts = self._grad_upts_view(lhs_efp, method)
             self._grad_upts[shape][fidx] = grad_upts
 
-            vect_fpts = self._vect_fpts_view(lhs_efp, '_get_vect_fpts_for_inter_ele')
+            method = '_get_vect_fpts_for_inter_ele'
+            vect_fpts = self._vect_fpts_view(lhs_efp, method)
             self._vect_fpts[shape][fidx] = vect_fpts
 
-            normnl_facefpts = self._fwise_const_mat(lhs_efp, '_get_normnls_facefpts')
+            ## Modify normals depending on bc type
+            if self.normal == 'inward':
+                method = '_get_inward_normnls_facefpts'
+            else:
+                method = '_get_normnls_facefpts'
+            normnl_facefpts = self._fwise_const_mat(lhs_efp, method)
             self._normnl_facefpts[shape][fidx] = normnl_facefpts
 
-            smats_upts = self._ewise_const_mat(lhs_efp, '_get_smats_upts')
+            method = '_get_smats_upts'
+            smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
-            jacs_facefpts = self._fwise_const_mat(lhs_efp, '_get_jacs_facefpts')
+            method = '_get_jacs_facefpts'
+            jacs_facefpts = self._fwise_const_mat(lhs_efp, method)
             self._jacs_facefpts[shape][fidx] = jacs_facefpts
 
     def gen_nscbc_kerns(self):
@@ -319,6 +365,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
 
     type = 'sub-out-nscbc-fp'
+    normal = 'outward'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
@@ -329,6 +376,7 @@ class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
 class NSCBCSubInFRVInters(NavierStokesCharacteristicBoundaryCondition):
 
     type = 'sub-in-nscbc-frv'
+    normal = 'inward'
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)

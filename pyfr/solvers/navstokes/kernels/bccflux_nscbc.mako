@@ -117,9 +117,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## printf("\n Flux point %d\n", ${fpt_idx});
 
   ## Get face normals at flux point
-  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorm_facefpts[f,:]])}};
+  fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorms[f,:]])}};
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
-  ${pyfr.expand('set_normal', 'bnorm', 'norm_nl')};
   fpdtype_t jac = jacs_ffpt[${f}];
 
   ## Check
@@ -212,15 +211,12 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t dsmatsdE[${ndims}][${ndims}] = {{0}};
   % for upt in range(nupts):
   {
-    fpdtype_t m12_temp[${ndims}] = {${','.join([str(m12[f,i,upt]) for i in range(ndims)])}};
-    fpdtype_t m12_T[${ndims}];
-    ${pyfr.expand('transform_to', 'bnorm', 'm12_temp', 'm12_T', off=0)};
     % for comp in range(ndims):
       % for var in range(nvars):
-        dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*m12_T[${comp}];
+        dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*${m12_T[f,comp,upt]};
       % endfor
       % for phys in range(ndims):
-        dsmatsdE[${comp}][${phys}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*m12_T[${comp}];
+        dsmatsdE[${comp}][${phys}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*${m12_T[f,comp,upt]};
       % endfor
     % endfor
   }
