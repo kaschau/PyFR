@@ -208,16 +208,16 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Step 3: Compute derivative in normal transformed space of tflux, at flux point
   ## Also compute gradient of smats for geometric source term
   fpdtype_t dtFdE_T[${ndims}][${nvars}] = {{0}};
-  fpdtype_t dsmatsdE[${ndims}][${ndims}] = {{0}};
+  fpdtype_t dsmatsdE[${ndims}] = {0};
   % for upt in range(nupts):
   {
     % for comp in range(ndims):
       % for var in range(nvars):
         dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*${m12_T[f,comp,upt]};
       % endfor
-      % for phys in range(ndims):
-        dsmatsdE[${comp}][${phys}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*${m12_T[f,comp,upt]};
-      % endfor
+    % endfor
+    % for phys in range(ndims):
+      dsmatsdE[${phys}] += smats_upts_T[${upt}][${nidx(0,phys)}]*${m12_T[f,0,upt]};
     % endfor
   }
   % endfor
@@ -242,7 +242,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
     % for var in range(nvars):
     {
-      source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[0][{dim}]' for dim in range(ndims)])};
+      source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
       dEdE[${var}] -= source[${var}];
       dGdN[${var}] += source[${var}];
     }
