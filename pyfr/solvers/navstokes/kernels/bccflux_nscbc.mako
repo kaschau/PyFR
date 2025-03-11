@@ -175,7 +175,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t fl[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
   ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'p', 'v')};
-  ${pyfr.expand('viscous_flux_add', 'ul', 'gradul', 'fl')};
+  ## TODO: Add later
+  ## ${pyfr.expand('viscous_flux_add', 'ul', 'gradul', 'fl')};
 
   ## Check
   ## % for var in range(nvars):
