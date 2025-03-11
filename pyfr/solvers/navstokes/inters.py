@@ -289,18 +289,24 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
             # Create basis transformed to flux point normal
             basiscls = type(basis)
-            class basiscls_T(basiscls):
-                pass
-
             tplargs_efp['m12_T'] = np.empty(tplargs_efp['m12'].shape)
             for i,fpt in enumerate(facefpts):
                 bnorm = tplargs_efp['bnorms'][i]
                 upts_T = self.transform_to(bnorm, basis.upts)
                 fpts_T = self.transform_to(bnorm, basis.fpts)
+                mpts_T = self.transform_to(bnorm, np.array(basis.mpts)).tolist
+                class basiscls_T(basiscls):
+                    # overwrite the upts, fpts
+                    @property
+                    def upts(self):
+                        return upts_T
+                    @property
+                    def fpts(self):
+                        return fpts_T
+                    @property
+                    def mpts(self):
+                        return mpts_T
 
-                # overwrite the upts, fpts
-                basiscls_T.upts = upts_T
-                basiscls_T.fpts = fpts_T
                 basis_T = basiscls_T(ele.nspts, cfg)
                 tplargs_efp['m12_T'][i] = basis_T.m12[fpt]
 
