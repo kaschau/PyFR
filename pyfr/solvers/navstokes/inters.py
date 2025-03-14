@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
@@ -216,14 +217,18 @@ class NavierStokesSubOutflowBCInters(NavierStokesBaseBCInters):
 class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
     @staticmethod
-    def transform_to(n, pts):
-        pts_T = np.empty(pts.shape)
-        if pts.shape[1] == 2:
-            pts_T[:,0] = n[0]*pts[:, 0] + n[1]*pts[:, 1]
-            pts_T[:,1] = n[0]*pts[:, 1] - n[1]*pts[:, 0]
+    def _transform_to_2d(n, pts):
+        pts = copy.copy(pts)
+        for pt in [*pts]:
+            temp = n[0]*pt[0] + n[1]*pt[1]
+            temp1 = n[0]*pt[1] - n[1]*pt[0]
+            pt[0], pt[1] = temp, temp1
 
-        return pts_T
+        return pts
 
+    def transform_to(self, n, pts):
+        if len(n) == 2:
+            return self._transform_to_2d(n, pts)
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
@@ -276,25 +281,54 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['nupts'] = nupts
             tplargs_efp['nfpts'] = nfpts
             tplargs_efp['nfacefpts'] = nfacefpts
-            tplargs_efp['facefpts'] = basis.facefpts[fidx]
-            tplargs_efp['bnorms'] = basis.norm_fpts[basis.facefpts[fidx]]
-            ## Modify normals depending on bc type
-            if self.normal == 'inward':
-                tplargs_efp['bnorms'] *= -1
+            tplargs_efp['facefpts'] = facefpts
+            norms = basis.norm_fpts[facefpts]
+            norms = norms/np.linalg.norm(norms, axis=-1)[:,None]
+            tplargs_efp['bnorms'] = norms
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
 
-
             # Create basis transformed to flux point normal
             basiscls = type(basis)
+            tplargs_efp['m2_T'] = np.empty(tplargs_efp['m2'].shape)
+            tplargs_efp['m11_T'] = np.empty(tplargs_efp['m11'].shape)
             tplargs_efp['m12_T'] = np.empty(tplargs_efp['m12'].shape)
             for i,fpt in enumerate(facefpts):
                 bnorm = tplargs_efp['bnorms'][i]
                 upts_T = self.transform_to(bnorm, basis.upts)
                 fpts_T = self.transform_to(bnorm, basis.fpts)
-                mpts_T = self.transform_to(bnorm, np.array(basis.mpts)).tolist
+                spts_T = list([list(s) for s in basis.spts])
+                spts_T = self.transform_to(bnorm, spts_T)
+                mpts_T = list([list(m) for m in basis.mpts])
+                mpts_T = self.transform_to(bnorm, mpts_T)
+
+                new_faces = []
+                projs = []
+                class proj:
+                    def __init__(self, j, bnorm, transform):
+                        self.j = j
+                        self.projector = basiscls.faces[j][1]
+                        self.bnorm = bnorm
+                        self.transform = transform
+
+                    def __call__(self, s):
+                        pts = np.atleast_2d(s.T)
+                        pts = np.broadcast_arrays(*self.projector(*pts))
+                        pts = np.vstack(pts).T
+                        return self.transform(self.bnorm, pts).T
+
+                for j,face in enumerate(basiscls.faces):
+                    face = list(face)
+                    n = self.transform_to(bnorm, np.array([face[2],]))[0]
+                    face[2] = tuple(n)
+                    projs.append(proj(j, bnorm, self.transform_to))
+
+                    face[1] = projs[j]
+                    new_faces.append(face)
+                new_faces = tuple(new_faces)
+
                 class basiscls_T(basiscls):
                     # overwrite the upts, fpts
                     @property
@@ -304,10 +338,18 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     def fpts(self):
                         return fpts_T
                     @property
+                    def spts(self):
+                        return spts_T
+                    @property
                     def mpts(self):
                         return mpts_T
+                    @property
+                    def faces(self):
+                        return new_faces
 
                 basis_T = basiscls_T(ele.nspts, cfg)
+                tplargs_efp['m2_T'][i] = basis_T.m2.reshape(nfpts,ndims,nupts)[fpt]
+                tplargs_efp['m11_T'][i] = basis_T.m11[fpt, fpt]
                 tplargs_efp['m12_T'][i] = basis_T.m12[fpt]
 
             # Generate lhs for element-face pair

@@ -92,11 +92,11 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 ## Check
 ## % for upt in range(nupts):
 ##   % for comp in range(ndims):
-##     printf("smats ${upt} %e %e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
+##     printf("smats ${upt} ${comp}_x=%e ${comp}_y=%e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
 ##   % endfor
-##   % for var in range(nvars):
-##     printf("tF_upts_${var} ${upt} = %.14e %.14e \n", tF_upts[${upt}][0][${var}], tF_upts[${upt}][1][${var}]);
-##   % endfor
+  ## % for var in range(nvars):
+  ##   printf("tF_upts_${var} ${upt} = %.14e %.14e \n", tF_upts[${upt}][0][${var}], tF_upts[${upt}][1][${var}]);
+  ## % endfor
 ## % endfor
 
 ## % for upt in range(nupts):
@@ -191,11 +191,11 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ##   printf("p = %f  v = %f %f \n", p, v[0], v[1]);
 
   ## Compute normal transformed flux
-  fpdtype_t fl_n[${nvars}] = {0};
+  fpdtype_t tfl_n[${nvars}] = {0};
   % for upt in range(nupts):
   % for comp in range(ndims):
   % for var in range(nvars):
-    fl_n[${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
+    tfl_n[${var}] += tF_T[${upt}][${comp}][${var}]*${m2_T[f,comp,upt]};
   % endfor
   % endfor
   % endfor
@@ -203,7 +203,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
   ## % for var in range(nvars):
   ##   printf("fl ${var} = %f %f \n", fl[0][${var}], fl[1][${var}]);
-  ##   printf("fl_n ${var} = %f \n", fl_n[${var}]);
+  ##   printf("tfl_n ${var} = %f \n", tfl_n[${var}]);
   ## % endfor
 
   ## Step 3: Compute derivative in normal transformed space of tflux, at flux point
@@ -294,7 +294,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     u_fpts[${fpt_idx}][${var}] /= ${m11[f]};
 
     ## add the transformed, normal flux from interior values
-    u_fpts[${fpt_idx}][${var}] += fl_n[${var}];
+    u_fpts[${fpt_idx}][${var}] += tfl_n[${var}];
 
     ## Check
     ## printf("f =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
