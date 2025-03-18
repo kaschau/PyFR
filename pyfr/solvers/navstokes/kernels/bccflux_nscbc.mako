@@ -55,7 +55,7 @@ dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2]
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-<% check = False %>
+<% check = True %>
 % if check:
 printf("\n*************ELEMENT************\n");
 % endif
