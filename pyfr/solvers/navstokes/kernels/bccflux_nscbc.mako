@@ -55,8 +55,8 @@ dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2]
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-## <% check = True %>
-<% check = False %>
+<% check = True %>
+## <% check = False %>
 % if check:
 printf("\n*************ELEMENT************\n");
 % endif
@@ -134,6 +134,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % if check:
   printf("bnorm %e %e \n", bnorm[0], bnorm[1]);
   printf("norm_nl %e %e \n", norm_nl[0], norm_nl[1]);
+  printf("jac %e \n", jac);
 % endif
 
   ## Step 1: Compute transformed flux and metrics relative to face normal
@@ -193,9 +194,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Check
 % if check:
-  % for var in range(nvars):
-    printf("grad_fpt ${fpt_idx} ${var} = %.2f %.2f \n",gradu_fpts[${nfidx(0,fpt_idx)}][${var}], gradu_fpts[${nfidx(1,fpt_idx)}][${var}]);
-  % endfor
+  ## % for var in range(nvars):
+  ##   printf("grad_fpt ${fpt_idx} ${var} = %.2f %.2f \n",gradu_fpts[${nfidx(0,fpt_idx)}][${var}], gradu_fpts[${nfidx(1,fpt_idx)}][${var}]);
+  ## % endfor
 
   ## Check
   % for var in range(nvars):
@@ -244,6 +245,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % if check:
   % for var in range(nvars):
     printf("dtFdE_T ${var} = %f %f \n", dtFdE_T[0][${var}], dtFdE_T[1][${var}]);
+  % endfor
+  % for phys in range(ndims):
+    printf("dsmatsdE ${phys} = %f \n", dsmatsdE[${phys}]);
   % endfor
 % endif
 
