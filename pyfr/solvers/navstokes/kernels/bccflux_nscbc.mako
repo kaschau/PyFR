@@ -55,7 +55,8 @@ dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2]
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-<% check = True %>
+## <% check = True %>
+<% check = False %>
 % if check:
 printf("\n*************ELEMENT************\n");
 % endif
@@ -320,13 +321,16 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
     ## divide by ~\del \dot g
     u_fpts[${fpt_idx}][${var}] /= ${m11[f]};
+% if check:
+    printf("after del g %.14e \n", u_fpts[${fpt_idx}][${var}]);
+% endif
 
     ## add the transformed, normal flux from interior values
     u_fpts[${fpt_idx}][${var}] += tfl_n[${var}];
 
     ## Check
 % if check:
-    printf("f =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
+    printf("final flux =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
 % endif
   }
   % endfor
