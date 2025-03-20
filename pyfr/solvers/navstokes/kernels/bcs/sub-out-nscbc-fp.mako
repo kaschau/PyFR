@@ -8,8 +8,10 @@
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})*invcsq;
   fpdtype_t alpha = sqrt(Msq);
 
+  fpdtype_t pR = jac*${c['K_p']/sqrt(2)}/u[0]*(1.0-Msq)*(p - ${c['p']});
+
   ## Only need incoming wave
-  N[${nvars-1}] = jac*${c['K_p']/sqrt(2)}/u[0]*(1.0-Msq)*(p - ${c['p']}) - (1.0 - alpha)*S[${nvars-1}];
+  N[${nvars-1}] = pR - (1.0 - alpha)*jac*S[${nvars-1}];
 
 </%pyfr:macro>
 

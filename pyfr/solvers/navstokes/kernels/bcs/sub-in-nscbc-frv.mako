@@ -2,7 +2,7 @@
 <%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
 <%from math import sqrt%>
 
-<%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
+<%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, JN, JS, norm_nl'>
   fpdtype_t nx = norm_nl[0];
   fpdtype_t ny = norm_nl[1];
 
@@ -11,9 +11,9 @@
   fpdtype_t vR = jac*${c['K_v']}*(${c['v']} - v[1]);
 
   ## Need to solve for all but outgoing wave
-  N[0] = jac*(-(rhoR+S[0]) + rho*invc*((uR*nx + vR*ny) - ${sqrt(2)}*(N[3] + S[3])));
-  N[1] = jac*(uR*ny - vR*nx - S[1]);
-  N[2] = jac*(N[3] + S[3] - ${sqrt(2)}*(uR*nx + vR*ny) - S[2]);
+  JN[0] = (-(rhoR+jac*JS[0]) + rho*invc*((uR*nx + vR*ny) - jac*${sqrt(2)}*(JN[3] + JS[3])));
+  JN[1] = (uR*ny - vR*nx - jac*JS[1]);
+  JN[2] = jac*(JN[3] + JS[3]) - ${sqrt(2)}*(uR*nx + vR*ny) - jac*JS[2];
 </%pyfr:macro>
 
 <%pyfr:macro name='bc_ldg_state' params='ul, nl, ur' externs='ploc, t'>
