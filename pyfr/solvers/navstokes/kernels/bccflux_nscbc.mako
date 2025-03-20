@@ -55,8 +55,8 @@ dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2]
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-<% check = True %>
-## <% check = False %>
+## <% check = True %>
+<% check = False %>
 % if check:
 printf("\n*************ELEMENT************\n");
 % endif
@@ -262,21 +262,20 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t N[${nvars}];
   fpdtype_t S[${nvars}];
   fpdtype_t source[${nvars}];
+
+  fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
+  fpdtype_t dGdN[${nvars}] = {${','.join(['+'.join([f'dtFdE_T[{j+1}][{i}]' for j in range(ndims-1)]) for i in range(nvars)])}};
+
+  % for var in range(nvars):
   {
-    fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
-    fpdtype_t dGdN[${nvars}] = {${','.join(['+'.join([f'dtFdE_T[{j+1}][{i}]' for j in range(ndims-1)]) for i in range(nvars)])}};
-
-    % for var in range(nvars):
-    {
-      source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
-      dEdE[${var}] -= source[${var}];
-      dGdN[${var}] += source[${var}];
-    }
-    % endfor
-
-    ${pyfr.expand('PU_dot_dE','dEdE','N')}
-    ${pyfr.expand('PU_dot_dE','dGdN','S')}
+    source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
+    dEdE[${var}] -= source[${var}];
+    dGdN[${var}] += source[${var}];
   }
+  % endfor
+
+  ${pyfr.expand('PU_dot_dE','dEdE','N')}
+  ${pyfr.expand('PU_dot_dE','dGdN','S')}
 
   ## Check
 % if check:
