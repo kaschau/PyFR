@@ -83,10 +83,12 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## ${pyfr.expand('viscous_flux_add', 'u', 'gradu', f')};
 
   % for var in range(nvars):
+    % for comp in range(ndims):
     % for phys in range(ndims):
-      % for comp in range(ndims):
         tF_upts[${upt}][${comp}][${var}] += smats_upts[${upt}][${nidx(comp,phys)}]*f[${phys}][${var}];
       % endfor
+    % endfor
+    % for phys in range(ndims):
       f_upts[${upt}][${phys}][${var}] = f[${phys}][${var}];
     % endfor
   % endfor
@@ -97,7 +99,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % if check:
 % for upt in range(nupts):
   % for comp in range(ndims):
-    printf("smats ${upt} ${comp}_x=%e ${comp}_y=%e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
+    printf("smats ${upt} ${comp}_x=%.14e ${comp}_y=%.14e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
   % endfor
   % for var in range(nvars):
     printf("tF_upts_${var} ${upt} = %.14e %.14e \n", tF_upts[${upt}][0][${var}], tF_upts[${upt}][1][${var}]);
@@ -132,9 +134,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Check
 % if check:
-  printf("bnorm %e %e \n", bnorm[0], bnorm[1]);
-  printf("norm_nl %e %e \n", norm_nl[0], norm_nl[1]);
-  printf("jac %e \n", jac);
+  printf("bnorm %.14e %.14e \n", bnorm[0], bnorm[1]);
+  printf("norm_nl %.14e %.14e \n", norm_nl[0], norm_nl[1]);
+  printf("jac %.14e \n", jac);
 % endif
 
   ## Step 1: Compute transformed flux and metrics relative to face normal
@@ -168,10 +170,10 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % if check:
   % for upt in range(nupts):
   % for comp in range(ndims):
-    printf("smats_T ${upt} %e %e \n", smats_upts_T[${upt}][${nidx(comp,0)}], smats_upts_T[${upt}][${nidx(comp,1)}]);
+    printf("smats_T ${upt} %.14e %.14e \n", smats_upts_T[${upt}][${nidx(comp,0)}], smats_upts_T[${upt}][${nidx(comp,1)}]);
   % endfor
   % for var in range(nvars):
-    printf("tF_T ${upt} ${var} %e %e \n", tF_T[${upt}][0][${var}], tF_T[${upt}][1][${var}]);
+    printf("tF_T ${upt} ${var} %.14e %.14e \n", tF_T[${upt}][0][${var}], tF_T[${upt}][1][${var}]);
   % endfor
   % endfor
 % endif
@@ -200,17 +202,17 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Check
   % for var in range(nvars):
-    printf("ul ${var} = %f\n", ul[${var}]);
-    printf("fl ${var} = %f %f \n", fl[0][${var}], fl[1][${var}]);
+    printf("ul ${var} = %.14e \n", ul[${var}]);
+    printf("fl ${var} = %.14e %.14e \n", fl[0][${var}], fl[1][${var}]);
   % endfor
-    printf("p = %f  v = %f %f \n", p, v[0], v[1]);
+    printf("p = %.14e  v = %.14e %.14e \n", p, v[0], v[1]);
 % endif
 
   ## Compute normal transformed flux
   fpdtype_t tfl_n[${nvars}] = {0};
   % for upt in range(nupts):
-  % for comp in range(ndims):
   % for var in range(nvars):
+  % for comp in range(ndims):
     tfl_n[${var}] += tF_T[${upt}][${comp}][${var}]*${m2_T[f,comp,upt]};
   % endfor
   % endfor
@@ -219,8 +221,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("fl ${var} = %f %f \n", fl[0][${var}], fl[1][${var}]);
-    printf("tfl_n ${var} = %f \n", tfl_n[${var}]);
+    printf("fl ${var} = %.14e %.14e \n", fl[0][${var}], fl[1][${var}]);
+    printf("tfl_n ${var} = %.14e \n", tfl_n[${var}]);
   % endfor
 % endif
 
@@ -230,8 +232,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t dsmatsdE[${ndims}] = {0};
   % for upt in range(nupts):
   {
+    % for var in range(nvars):
     % for comp in range(ndims):
-      % for var in range(nvars):
         dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*${m12_T[f,comp,upt]};
       % endfor
     % endfor
@@ -244,10 +246,10 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("dtFdE_T ${var} = %f %f \n", dtFdE_T[0][${var}], dtFdE_T[1][${var}]);
+    printf("dtFdE_T ${var} = %.14e %.14e \n", dtFdE_T[0][${var}], dtFdE_T[1][${var}]);
   % endfor
   % for phys in range(ndims):
-    printf("dsmatsdE ${phys} = %f \n", dsmatsdE[${phys}]);
+    printf("dsmatsdE ${phys} = %.14e \n", dsmatsdE[${phys}]);
   % endfor
 % endif
 
@@ -279,10 +281,10 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("source ${var} %e \n", source[${var}]);
+    printf("source ${var} %.14e \n", source[${var}]);
   % endfor
   % for var in range(nvars):
-    printf("N ${var} %e \n", N[${var}]);
+    printf("N ${var} %.14e \n", N[${var}]);
   % endfor
 % endif
 
@@ -292,7 +294,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("NStar ${var} %e \n", N[${var}]);
+    printf("NStar ${var} %.14e \n", N[${var}]);
   % endfor
 % endif
 
