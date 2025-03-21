@@ -244,6 +244,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._vect_fpts = defaultdict(dict)
         self._normnl_facefpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
+        self._jacs_upts = defaultdict(dict)
         self._jacs_facefpts = defaultdict(dict)
 
         # lhs length
@@ -283,7 +284,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['nfacefpts'] = nfacefpts
             tplargs_efp['facefpts'] = facefpts
             norms = basis.norm_fpts[facefpts]
-            norms = norms/np.linalg.norm(norms, axis=-1)[:,None]
+            tplargs_efp['magnl'] = np.linalg.norm(norms, axis=-1)
+            norms = norms/tplargs_efp['magnl'][:, None]
             tplargs_efp['bnorms'] = norms
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
@@ -383,6 +385,10 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
+            method = '_get_jacs_upts'
+            jacs_upts = self._ewise_const_mat(lhs_efp, method)
+            self._jacs_upts[shape][fidx] = jacs_upts
+
             method = '_get_jacs_facefpts'
             jacs_facefpts = self._fwise_const_mat(lhs_efp, method)
             self._jacs_facefpts[shape][fidx] = jacs_facefpts
@@ -404,6 +410,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     gradu_fpts=self._vect_fpts[shape][fidx],
                     normnl_ffpt=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
+                    jacs_upts=self._jacs_upts[shape][fidx],
                     jacs_ffpt=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))
 

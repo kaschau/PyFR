@@ -53,6 +53,7 @@ dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2]
               gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
               normnl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
+              jacs_upts='in fpdtype_t[${str(nupts)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
 ## <% check = True %>
@@ -332,6 +333,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
     ## add the transformed, normal flux from interior values
     u_fpts[${fpt_idx}][${var}] += tfl_n[${var}];
+    u_fpts[${fpt_idx}][${var}] *= ${magnl[f]};
 
     ## Check
 % if check:
