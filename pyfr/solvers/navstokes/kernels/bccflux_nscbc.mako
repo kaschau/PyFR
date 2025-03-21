@@ -326,7 +326,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % endif
 
     ## divide by ~\del \dot g
-    u_fpts[${fpt_idx}][${var}] /= ${m11[f]};
+    u_fpts[${fpt_idx}][${var}] *= ${1.0/m11[f]};
 % if check:
     printf("after del g %.14e \n", u_fpts[${fpt_idx}][${var}]);
 % endif
