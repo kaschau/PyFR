@@ -309,37 +309,35 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Step 7: Solve for normal transformed common flux
   % for var in range(nvars):
-  {
-% if check:
-    printf("\n VAR ${var} \n");
-% endif
+    % if check:
+        printf("\n VAR ${var} \n");
+    % endif
     ## we have dudt (~\del \dot ~f) at our flux point
     u_fpts[${fpt_idx}][${var}] = dtFdE_Ts[${var}];
-% if check:
-    printf("dtFidE_* %.14e \n", dtFdE_Ts[${var}]);
-% endif
+    % if check:
+        printf("dtFidE_* %.14e \n", dtFdE_Ts[${var}]);
+    % endif
 
     ## subtract our flux gradient on the face (from interior values)
     u_fpts[${fpt_idx}][${var}] -= dtFdE_T[0][${var}];
-% if check:
-    printf("dtFdE_T[0] %.14e \n", dtFdE_T[0][${var}]);
-% endif
+    % if check:
+        printf("dtFdE_T[0] %.14e \n", dtFdE_T[0][${var}]);
+    % endif
 
     ## divide by ~\del \dot g
     u_fpts[${fpt_idx}][${var}] *= ${1.0/m11[f]};
-% if check:
-    printf("after del g %.14e \n", u_fpts[${fpt_idx}][${var}]);
-% endif
+    % if check:
+        printf("after del g %.14e \n", u_fpts[${fpt_idx}][${var}]);
+    % endif
 
     ## add the transformed, normal flux from interior values
     u_fpts[${fpt_idx}][${var}] += tfl_n[${var}];
     u_fpts[${fpt_idx}][${var}] *= ${magnl[f]};
 
     ## Check
-% if check:
-    printf("final flux =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
-% endif
-  }
+    % if check:
+        printf("final flux =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
+    % endif
   % endfor
 }
 % endfor
