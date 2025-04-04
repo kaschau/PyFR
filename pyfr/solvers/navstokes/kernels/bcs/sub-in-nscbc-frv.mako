@@ -19,9 +19,9 @@
   printf("rhoR %e uR %e  vR %e\n", rhoR, uR, vR);
   % endif
 
-  N[0] = (-(rhoR) + rho*invc*((uR*nx + vR*ny) - ${sq2}*(N[3])));
-  N[1] = (uR*ny - vR*nx);
-  N[2] = (N[3] - ${sq2}*(uR*nx + vR*ny));
+  N[0] = jac*(-(rhoR) + rho*invc*((uR*nx + vR*ny) - ${sq2}*(N[3])));
+  N[1] = jac*(uR*ny - vR*nx);
+  N[2] = jac*(N[3] - ${sq2}*(uR*nx + vR*ny));
 
 % elif ndims == 3:
 
@@ -32,10 +32,10 @@
   printf("rhoR %e uR %e  vR %e wR %e\n", rhoR, uR, vR, wR);
   % endif
 
-  N[0] = -invc*(${sq2}*N[4]*nx*rho + (ny*ny+nz*nz-1.0)*rho*uR + c*(nx*rhoR + nz*vR - ny*wR) - nx*rho*(ny*vR + nz*wR));
-  N[1] =  invc*(${-sq2}*N[4]*ny*rho - c*(ny*rhoR - nz*uR + nx*wR) + ny*rho*(nx*uR + ny*vR + nz*wR));
-  N[2] =  invc*(${-sq2}*N[4]*nz*rho - c*(nz*rhoR + ny*uR - nx*vR) + nz*rho*(nx*uR + ny*vR + nz*wR));
-  N[3] = N[4] - ${sq2}*(nx*uR + ny*vR + nz*wR);
+  N[0] = -invc*jac*(${sq2}*N[4]*nx*rho + (ny*ny+nz*nz-1.0)*rho*uR + c*(nx*rhoR + nz*vR - ny*wR) - nx*rho*(ny*vR + nz*wR));
+  N[1] =  invc*jac*(${-sq2}*N[4]*ny*rho - c*(ny*rhoR - nz*uR + nx*wR) + ny*rho*(nx*uR + ny*vR + nz*wR));
+  N[2] =  invc*jac*(${-sq2}*N[4]*nz*rho - c*(nz*rhoR + ny*uR - nx*vR) + nz*rho*(nx*uR + ny*vR + nz*wR));
+  N[3] =       jac*(N[4] - ${sq2}*(nx*uR + ny*vR + nz*wR));
 
 % endif
 </%pyfr:macro>

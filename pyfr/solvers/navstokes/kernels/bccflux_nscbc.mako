@@ -6,6 +6,9 @@
 
 <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
 
+## <% check = True %>
+## <% check = False %>
+
 <%def name="nidx(comp,phys)">
   <% return comp*ndims + phys %>
 </%def>\
@@ -89,8 +92,6 @@ dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) + N[1]*(k*ny - nz*rho*v[0] + nx*
               jacs_upts='in fpdtype_t[${str(nupts)}]'
               jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
 
-## <% check = True %>
-<% check = False %>
 % if check:
 printf("\n*************ELEMENT************\n");
 % endif
@@ -136,7 +137,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ##   printf("smats ${upt} ${comp}_x=%.14e ${comp}_y=%.14e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
   ## % endfor
   % for var in range(nvars):
-    printf("tF_upts_${var} ${upt} = %.14e %.14e \n", tF_upts[${upt}][0][${var}], tF_upts[${upt}][1][${var}]);
+    printf("tF_upts_${var} ${upt} = ${pnd} \n", ${','.join([f'tF_upts[{upt}][{comp}][{var}]' for comp in range(ndims)])});
   % endfor
 % endfor
 % endif
@@ -172,12 +173,12 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Check
 % if check:
-  printf("bnorm %.14e %.14e \n", bnorm[0], bnorm[1]);
-  printf("t1 %.14e %.14e \n", t1[0], t1[1]);
+  printf("bnorm ${pnd} \n", ${','.join([f'bnorm[{comp}]' for comp in range(ndims)])});
+  printf("t1 ${pnd} \n", ${','.join([f't1[{comp}]' for comp in range(ndims)])});
   % if ndims == 3:
-  printf("t2 %.14e %.14e \n", t1[0], t1[1]);
+  printf("t2 ${pnd} \n", ${','.join([f't2[{comp}]' for comp in range(ndims)])});
   % endif
-  printf("norm_nl %.14e %.14e \n", norm_nl[0], norm_nl[1]);
+  printf("norm_nl ${pnd} \n", ${','.join([f'norm_nl[{comp}]' for comp in range(ndims)])});
   printf("jac %.14e \n", jac);
 % endif
 
@@ -243,9 +244,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
   % for var in range(nvars):
     printf("ul ${var} = %.14e \n", ul[${var}]);
-    printf("fl ${var} = %.14e %.14e \n", fl[0][${var}], fl[1][${var}]);
+    printf("fl ${var} = ${pnd} \n", ${','.join([f'fl[{phys}][{var}]' for phys in range(ndims)])});
   % endfor
-    printf("p = %.14e  v = %.14e %.14e \n", p, v[0], v[1]);
+    printf("p = %.14e  v = ${pnd} \n", p, ${','.join([f'v[{phys}]' for phys in range(ndims)])});
 % endif
 
   ## Compute normal transformed flux
@@ -253,7 +254,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   % for upt in range(nupts):
   % for var in range(nvars):
   % for comp in range(ndims):
+    % if abs(m2[f,comp,upt]) > 1e-10:
     tfl_n[${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
+    % endif
   % endfor
   % endfor
   % endfor
@@ -261,7 +264,6 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("fl ${var} = %.14e %.14e \n", fl[0][${var}], fl[1][${var}]);
     printf("tfl_n ${var} = %.14e \n", tfl_n[${var}]);
   % endfor
 % endif
@@ -275,7 +277,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     % for var in range(nvars):
     % for comp in range(ndims):
     % for comp2 in range(ndims):
+      % if abs(m12[f,comp2,upt]) > 1e-10:
         dtFdE_full[${comp}][${comp2}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m12[f,comp2,upt]};
+      % endif
     % endfor
     % endfor
     % endfor
@@ -291,14 +295,14 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   {
     fpdtype_t nE = bnorm[0];
     fpdtype_t nN = bnorm[1];
-    fpdtype_t tE = t1[0];
-    fpdtype_t tN = t1[1];
+    fpdtype_t t1E = t1[0];
+    fpdtype_t t1N = t1[1];
     % if ndims == 2:
     dtFdE_T[0][${var}] = nE*nE*dtFdE_full[0][0][${var}] + nN*nN*dtFdE_full[1][1][${var}] + nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
-    dtFdE_T[1][${var}] = tE*tE*dtFdE_full[0][0][${var}] + tN*tN*dtFdE_full[1][1][${var}] + tE*tN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
+    dtFdE_T[1][${var}] = t1E*t1E*dtFdE_full[0][0][${var}] + t1N*t1N*dtFdE_full[1][1][${var}] + t1E*t1N*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
     % else:
     fpdtype_t nC = bnorm[2];
-    fpdtype_t tC = t1[2];
+    fpdtype_t t1C = t1[2];
     fpdtype_t t2E = t2[0];
     fpdtype_t t2N = t2[1];
     fpdtype_t t2C = t2[2];
@@ -308,12 +312,12 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
                          nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
                          nE*nC*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
                          nN*nC*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
-    dtFdE_T[1][${var}] = tE*tE*dtFdE_full[0][0][${var}] +
-                         tN*tN*dtFdE_full[1][1][${var}] +
-                         tC*tC*dtFdE_full[2][2][${var}] +
-                         tE*tN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
-                         tE*tC*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
-                         tN*tC*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
+    dtFdE_T[1][${var}] = t1E*t1E*dtFdE_full[0][0][${var}] +
+                         t1N*t1N*dtFdE_full[1][1][${var}] +
+                         t1C*t1C*dtFdE_full[2][2][${var}] +
+                         t1E*t1N*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
+                         t1E*t1C*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
+                         t1N*t1C*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
     dtFdE_T[2][${var}] = t2E*t2E*dtFdE_full[0][0][${var}] +
                          t2N*t2N*dtFdE_full[1][1][${var}] +
                          t2C*t2C*dtFdE_full[2][2][${var}] +
@@ -328,11 +332,14 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Check
 % if check:
     % for var in range(nvars):
-        printf("dtFdE_full ${var} 0  = %.14e %.14e \n", dtFdE_full[${0}][0][${var}], dtFdE_full[${0}][1][${var}]);
-        printf("dtFdE_full ${var} 1  = %.14e %.14e \n", dtFdE_full[${1}][0][${var}], dtFdE_full[${1}][1][${var}]);
+        printf("dtFdE_full ${var} 0 = ${pnd} \n", ${','.join([f'dtFdE_full[0][{comp}][{var}]' for comp in range(ndims)])});
+        printf("dtFdE_full ${var} 1 = ${pnd} \n", ${','.join([f'dtFdE_full[1][{comp}][{var}]' for comp in range(ndims)])});
+        % if ndims == 3:
+        printf("dtFdE_full ${var} 2 = ${pnd} \n", ${','.join([f'dtFdE_full[2][{comp}][{var}]' for comp in range(ndims)])});
+        % endif
     % endfor
   % for var in range(nvars):
-    printf("dtFdE_T ${var} = %.14e %.14e \n", dtFdE_T[0][${var}], dtFdE_T[1][${var}]);
+    printf("dtFdE_T ${var} = ${pnd} \n", ${','.join([f'dtFdE_T[{comp}][{var}]' for comp in range(ndims)])});
   % endfor
   ## % for phys in range(ndims):
   ##   printf("dsmatsdE ${phys} = %.14e \n", dsmatsdE[${phys}]);
@@ -397,18 +404,78 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   {
     fpdtype_t nE = bnorm[0];
     fpdtype_t nN = bnorm[1];
-    fpdtype_t tE = t1[0];
-    fpdtype_t tN = t1[1];
-  % for var in range(nvars):
-  {
-    fpdtype_t dFstar = dtFdE_Ts[${var}];
-    fpdtype_t dFdN = dtFdE_full[0][1][${var}];
-    fpdtype_t dGdE = dtFdE_full[1][0][${var}];
-    fpdtype_t dGdN_T = dtFdE_T[1][${var}];
-    dtFdE[0][${var}] = -((dFstar - (dFdN + dGdE)*nE*nN)*tN*tN-nN*nN*(-((dFdN+dGdE)*tE*tN)+dGdN_T))/(nN*nN*tE*tE-nE*nE*tN*tN);
-    dtFdE[1][${var}] = (-tE*(dFstar*tE + (dFdN+dGdE)*nE*(-nN*tE+nE*tN))+nE*nE*dGdN_T)/(-nN*nN*tE*tE+nE*nE*tN*tN);
-  }
-  % endfor
+    fpdtype_t t1E = t1[0];
+    fpdtype_t t1N = t1[1];
+
+    % if ndims == 2:
+      % for var in range(nvars):
+      {
+        fpdtype_t dFstar = dtFdE_Ts[${var}];
+        fpdtype_t dFdN = dtFdE_full[0][1][${var}];
+        fpdtype_t dGdE = dtFdE_full[1][0][${var}];
+        fpdtype_t dGdN_T = dtFdE_T[1][${var}];
+        dtFdE[0][${var}] = -((dFstar - (dFdN + dGdE)*nE*nN)*t1N*t1N-nN*nN*(-((dFdN+dGdE)*t1E*t1N)+dGdN_T))/(nN*nN*t1E*t1E-nE*nE*t1N*t1N);
+        dtFdE[1][${var}] = (-t1E*(dFstar*t1E + (dFdN+dGdE)*nE*(-nN*t1E+nE*t1N))+nE*nE*dGdN_T)/(-nN*nN*t1E*t1E+nE*nE*t1N*t1N);
+      }
+      % endfor
+    % else:
+      fpdtype_t nC = bnorm[2];
+      fpdtype_t t1C = t1[2];
+      fpdtype_t t2E = t2[0];
+      fpdtype_t t2N = t2[1];
+      fpdtype_t t2C = t2[2];
+
+      % for var in range(nvars):
+      {
+        fpdtype_t dFstar = dtFdE_Ts[${var}];
+        fpdtype_t dFdN = dtFdE_full[0][1][${var}];
+        fpdtype_t dFdC = dtFdE_full[0][2][${var}];
+        fpdtype_t dGdE = dtFdE_full[1][0][${var}];
+        fpdtype_t dGdC = dtFdE_full[1][2][${var}];
+        fpdtype_t dHdE = dtFdE_full[2][0][${var}];
+        fpdtype_t dHdN = dtFdE_full[2][1][${var}];
+        fpdtype_t dGdN_T = dtFdE_T[1][${var}];
+        fpdtype_t dHdC_T = dtFdE_T[2][${var}];
+
+        fpdtype_t facn = nE*nN*(dGdE+dFdN) + nE*nC*(dHdE+dFdC) + nC*nN*(dGdC + dHdN);
+        fpdtype_t fact1 = t1E*t1N*(dGdE+dFdN) + t1E*t1C*(dHdE+dFdC) + t1C*t1N*(dGdC + dHdN);
+        fpdtype_t fact2 = t2E*t2N*(dGdE+dFdN) + t2E*t2C*(dHdE+dFdC) + t2C*t2N*(dGdC + dHdN);
+
+        dtFdE[0][${var}] = (-fact2*nN*nN*t1C*t1C +
+                            fact2*nC*nC*t1N*t1N +
+                            fact1*nN*nN*t2C*t2C +
+                            dFstar*t1N*t1N*t2C*t2C -
+                            facn*t1N*t1N*t2C*t2C -
+                            fact1*nC*nC*t2N*t2N -
+                            dFstar*t1C*t1C*t2N*t2N +
+                            facn*t1C*t1C*t2N*t2N +
+                            (-nN*nN*t2C*t2C + nC*nC*t2N*t2N)*dGdN_T + (nN*nN*t1C*t1C - nC*nC*t1N*t1N)*dHdC_T)/
+                            (nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + nE*nE*(t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N));
+
+        dtFdE[1][${var}] = (fact2*nE*nE*t1C*t1C -
+                           fact2*nC*nC*t1E*t1E -
+                           fact1*nE*nE*t2C*t2C -
+                           dFstar*t1E*t1E*t2C*t2C +
+                           facn*t1E*t1E*t2C*t2C +
+                           fact1*nC*nC*t2E*t2E +
+                           dFstar*t1C*t1C*t2E*t2E -
+                           facn*t1C*t1C*t2E*t2E +
+                           (nE*nE*t2C*t2C - nC*nC*t2E*t2E)*dGdN_T + (-nE*nE*t1C*t1C + nC*nC*t1E*t1E)*dHdC_T)/
+                           (nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + nE*nE*(t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N));
+
+        dtFdE[2][${var}] = (fact2*nN*nN*t1E*t1E -
+                           fact2*nE*nE*t1N*t1N -
+                           fact2*nN*nN*t2E*t2E -
+                           dFstar*t1N*t1N*t2E*t2E +
+                           facn*t1N*t1N*t2E*t2E +
+                           fact1*nE*nE*t2N*t2N +
+                           dFstar*t1E*t1E*t2N*t2N -
+                           facn*t1E*t1E*t2N*t2N +
+                           (nN*nN*t2E*t2E - nE*nE*t2N*t2N)*dGdN_T + (-nN*nN*t1E*t1E + nE*nE*t1N*t1N)*dHdC_T) /
+                           (nN*nN*(-t1E*t1E*t2C*t2C) + nE*nE*(t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N));
+        }
+      % endfor
+    % endif
   }
 
   ## Step 7: Solve for normal transformed common flux
