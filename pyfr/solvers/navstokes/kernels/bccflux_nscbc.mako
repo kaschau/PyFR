@@ -17,7 +17,7 @@
 </%def>\
 <%from math import sqrt %>\
 
-<%pyfr:macro name='PU_dot_dE' params='dE, N'>
+<%pyfr:macro name='WU_dot_dE' params='dE, N'>
 fpdtype_t nx = norm_nl[0];
 fpdtype_t ny = norm_nl[1];
 
@@ -32,7 +32,7 @@ N[3] = ${1.0/sqrt(2)}*invc*invrho*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*g
 </%pyfr:macro>
 
 
-<%pyfr:macro name='PUinv_dot_N' params='N, dE'>
+<%pyfr:macro name='WUinv_dot_N' params='N, dE'>
 fpdtype_t nx = norm_nl[0];
 fpdtype_t ny = norm_nl[1];
 
@@ -275,8 +275,8 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   }
   % endfor
 
-  ${pyfr.expand('PU_dot_dE','dEdE','N')}
-  ${pyfr.expand('PU_dot_dE','dGdN','S')}
+  ${pyfr.expand('WU_dot_dE','dEdE','N')}
+  ${pyfr.expand('WU_dot_dE','dGdN','S')}
 
   ## Check
 % if check:
@@ -301,7 +301,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Step 6: Compute dtFdE_T* values normal to face
   fpdtype_t dtFdE_Ts[${nvars}];
   {
-    ${pyfr.expand('PUinv_dot_N','N','dtFdE_Ts')};
+    ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts')};
     % for var in range(nvars):
       dtFdE_Ts[${var}] += source[${var}];
     % endfor

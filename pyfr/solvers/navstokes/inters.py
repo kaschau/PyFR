@@ -225,6 +225,13 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             pt[0], pt[1] = temp, temp1
 
         return pts
+    @staticmethod
+    def _newCS_2d(n):
+        return np.array([-n[0],n[1]])
+
+    def newCS(self, n):
+        if len(n) == 2:
+            return self._newCS_2d(n)
 
     def transform_to(self, n, pts):
         if len(n) == 2:
@@ -286,73 +293,17 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             norms = basis.norm_fpts[facefpts]
             tplargs_efp['magnl'] = np.linalg.norm(norms, axis=-1)
             norms = norms/tplargs_efp['magnl'][:, None]
+            if self.normal == 'inward':
+                norms *= -1.0
             tplargs_efp['bnorms'] = norms
+
+            tplargs_efp['t1'] = np.empty(norms.shape)
+            for i, norm in enumerate(norms):
+                tplargs_efp['t1'][i] = self.newCS(norm)
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
-
-            # Create basis transformed to flux point normal
-            basiscls = type(basis)
-            tplargs_efp['m2_T'] = np.empty(tplargs_efp['m2'].shape)
-            tplargs_efp['m11_T'] = np.empty(tplargs_efp['m11'].shape)
-            tplargs_efp['m12_T'] = np.empty(tplargs_efp['m12'].shape)
-            for i,fpt in enumerate(facefpts):
-                bnorm = tplargs_efp['bnorms'][i]
-                upts_T = self.transform_to(bnorm, basis.upts)
-                fpts_T = self.transform_to(bnorm, basis.fpts)
-                spts_T = list([list(s) for s in basis.spts])
-                spts_T = self.transform_to(bnorm, spts_T)
-                mpts_T = list([list(m) for m in basis.mpts])
-                mpts_T = self.transform_to(bnorm, mpts_T)
-
-                new_faces = []
-                projs = []
-                class proj:
-                    def __init__(self, j, bnorm, transform):
-                        self.j = j
-                        self.projector = basiscls.faces[j][1]
-                        self.bnorm = bnorm
-                        self.transform = transform
-
-                    def __call__(self, s):
-                        pts = np.atleast_2d(s.T)
-                        pts = np.broadcast_arrays(*self.projector(*pts))
-                        pts = np.vstack(pts).T
-                        return self.transform(self.bnorm, pts).T
-
-                for j,face in enumerate(basiscls.faces):
-                    face = list(face)
-                    n = self.transform_to(bnorm, np.array([face[2],]))[0]
-                    face[2] = tuple(n)
-                    projs.append(proj(j, bnorm, self.transform_to))
-
-                    face[1] = projs[j]
-                    new_faces.append(face)
-                new_faces = tuple(new_faces)
-
-                class basiscls_T(basiscls):
-                    # overwrite the upts, fpts
-                    @property
-                    def upts(self):
-                        return upts_T
-                    @property
-                    def fpts(self):
-                        return fpts_T
-                    @property
-                    def spts(self):
-                        return spts_T
-                    @property
-                    def mpts(self):
-                        return mpts_T
-                    @property
-                    def faces(self):
-                        return new_faces
-
-                basis_T = basiscls_T(ele.nspts, cfg)
-                tplargs_efp['m2_T'][i] = basis_T.m2.reshape(nfpts,ndims,nupts)[fpt]
-                tplargs_efp['m11_T'][i] = basis_T.m11[fpt, fpt]
-                tplargs_efp['m12_T'][i] = basis_T.m12[fpt]
 
             # Generate lhs for element-face pair
             lhs_efp = [lhs[i] for i in lhs_idx]
