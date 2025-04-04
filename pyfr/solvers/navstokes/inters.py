@@ -227,7 +227,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         return pts
     @staticmethod
     def _newCS_2d(n):
-        return np.array([-n[0],n[1]])
+        return np.array([-n[1],n[0]])
 
     def newCS(self, n):
         if len(n) == 2:

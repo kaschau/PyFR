@@ -89,9 +89,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
         tF_upts[${upt}][${comp}][${var}] += smats_upts[${upt}][${nidx(comp,phys)}]*f[${phys}][${var}];
       % endfor
     % endfor
-    % for phys in range(ndims):
-      f_upts[${upt}][${phys}][${var}] = f[${phys}][${var}];
-    % endfor
+    ## % for phys in range(ndims):
+    ##   f_upts[${upt}][${phys}][${var}] = f[${phys}][${var}];
+    ## % endfor
   % endfor
 }
 % endfor
@@ -99,9 +99,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 ## Check
 % if check:
 % for upt in range(nupts):
-  % for comp in range(ndims):
-    printf("smats ${upt} ${comp}_x=%.14e ${comp}_y=%.14e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
-  % endfor
+  ## % for comp in range(ndims):
+  ##   printf("smats ${upt} ${comp}_x=%.14e ${comp}_y=%.14e \n", smats_upts[${upt}][${nidx(comp,0)}], smats_upts[${upt}][${nidx(comp,1)}]);
+  ## % endfor
   % for var in range(nvars):
     printf("tF_upts_${var} ${upt} = %.14e %.14e \n", tF_upts[${upt}][0][${var}], tF_upts[${upt}][1][${var}]);
   % endfor
@@ -130,54 +130,53 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
   ## Get face normals at flux point
   fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorms[f,:]])}};
+  fpdtype_t t1[${ndims}] = {${','.join([str(i) for i in t1[f,:]])}};
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
   fpdtype_t jac = jacs_ffpt[${f}];
 
   ## Check
 % if check:
   printf("bnorm %.14e %.14e \n", bnorm[0], bnorm[1]);
+  printf("t1 %.14e %.14e \n", t1[0], t1[1]);
   printf("norm_nl %.14e %.14e \n", norm_nl[0], norm_nl[1]);
   printf("jac %.14e \n", jac);
 % endif
 
-  ## Step 1: Compute transformed flux and metrics relative to face normal
+  ## Step 1: Compute transformed flux dotted with normal CS
   ## transformed orientation
-  fpdtype_t smats_upts_T[${nupts}][${ndims*ndims}]= {{0}};
-  fpdtype_t tF_T[${nupts}][${ndims}][${nvars}] = {{{0}}};
-  % for upt in range(nupts):
-  {
-    % for phys in range(ndims):
-    {
-      fpdtype_t smats_T_temp[${ndims}];
-      fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_upts[{upt}][{nidx(comp,phys)}]' for comp in range(ndims)])}};
-      ${pyfr.expand('transform_to', 'bnorm', 'smats_temp', 'smats_T_temp', off=0)};
-      % for comp in range(ndims):
-        smats_upts_T[${upt}][${nidx(comp,phys)}] = smats_T_temp[${comp}];
-      % endfor
-    }
-    % endfor
+  ## fpdtype_t smats_upts_T[${nupts}][${ndims*ndims}]= {{0}};
+  ## fpdtype_t tF_T[${nupts}][${ndims}][${nvars}];
+  ## % for upt in range(nupts):
+  ## {
+    ## % for phys in range(ndims):
+    ## {
+    ##   fpdtype_t smats_T_temp[${ndims}];
+    ##   fpdtype_t smats_temp[${ndims}] = {${','.join([f'smats_upts[{upt}][{nidx(comp,phys)}]' for comp in range(ndims)])}};
+    ##   ${pyfr.expand('transform_to', 'bnorm', 'smats_temp', 'smats_T_temp', off=0)};
+    ##   % for comp in range(ndims):
+    ##     smats_upts_T[${upt}][${nidx(comp,phys)}] = smats_T_temp[${comp}];
+    ##   % endfor
+    ## }
+    ## % endfor
 
-    % for var in range(nvars):
-      % for comp in range(ndims):
-        % for phys in range(ndims):
-          tF_T[${upt}][${comp}][${var}] += smats_upts_T[${upt}][${nidx(comp,phys)}]*f_upts[${upt}][${phys}][${var}];
-        % endfor
-      % endfor
-    % endfor
-  }
-  % endfor
+  ##   % for var in range(nvars):
+  ##     tF_T[${upt}][0][${var}] = ${'+'.join([f'tF_upts[{upt}][{comp}][{var}]*bnorm[{comp}]' for comp in range(ndims)])};
+  ##     tF_T[${upt}][1][${var}] = ${'+'.join([f'tF_upts[{upt}][{comp}][{var}]*t1[{comp}]' for comp in range(ndims)])};
+  ##   % endfor
+  ## }
+  ## % endfor
 
   ## Check
-% if check:
-  % for upt in range(nupts):
-  % for comp in range(ndims):
-    printf("smats_T ${upt} %.14e %.14e \n", smats_upts_T[${upt}][${nidx(comp,0)}], smats_upts_T[${upt}][${nidx(comp,1)}]);
-  % endfor
-  % for var in range(nvars):
-    printf("tF_T ${upt} ${var} %.14e %.14e \n", tF_T[${upt}][0][${var}], tF_T[${upt}][1][${var}]);
-  % endfor
-  % endfor
-% endif
+## % if check:
+##   % for upt in range(nupts):
+  ## % for comp in range(ndims):
+  ##   printf("smats_T ${upt} %.14e %.14e \n", smats_upts_T[${upt}][${nidx(comp,0)}], smats_upts_T[${upt}][${nidx(comp,1)}]);
+  ## % endfor
+##   % for var in range(nvars):
+##     printf("tF_T ${upt} ${var} %.14e %.14e \n", tF_T[${upt}][0][${var}], tF_T[${upt}][1][${var}]);
+##   % endfor
+##   % endfor
+## % endif
 
 
   ## Step 1a: Compute physical flux at our flux point
@@ -185,9 +184,10 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t gradul[${ndims}][${nvars}];
   % for var in range(nvars):
     ul[${var}] = u_fpts[${fpt_idx}][${var}];
-    % for dim in range(ndims):
-      gradul[${dim}][${var}] = gradu_fpts[${nfidx(dim,nfpts)}][${var}];
-    % endfor
+    ## TODO: Add later
+    ## % for dim in range(ndims):
+    ##   gradul[${dim}][${var}] = gradu_fpts[${nfidx(dim,nfpts)}][${var}];
+    ## % endfor
   % endfor
   fpdtype_t fl[${ndims}][${nvars}];
   fpdtype_t p, v[${ndims}];
@@ -214,7 +214,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   % for upt in range(nupts):
   % for var in range(nvars):
   % for comp in range(ndims):
-    tfl_n[${var}] += tF_T[${upt}][${comp}][${var}]*${m2_T[f,comp,upt]};
+    tfl_n[${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
   % endfor
   % endfor
   % endfor
@@ -227,31 +227,50 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   % endfor
 % endif
 
-  ## Step 3: Compute derivative in normal transformed space of tflux, at flux point
+  ## Step 3: Compute derivative of face normal CS transformed flux, at flux point
   ## Also compute gradient of smats for geometric source term
-  fpdtype_t dtFdE_T[${ndims}][${nvars}] = {{0}};
-  fpdtype_t dsmatsdE[${ndims}] = {0};
+  fpdtype_t dtFdE_full[${ndims}][${ndims}][${nvars}] = {{{0}}};
+  ## fpdtype_t dsmatsdE[${ndims}] = {0};
   % for upt in range(nupts):
   {
     % for var in range(nvars):
     % for comp in range(ndims):
-        dtFdE_T[${comp}][${var}] += tF_T[${upt}][${comp}][${var}]*${m12_T[f,comp,upt]};
-      % endfor
+    % for comp2 in range(ndims):
+        dtFdE_full[${comp}][${comp2}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m12[f,comp2,upt]};
     % endfor
-    % for phys in range(ndims):
-      dsmatsdE[${phys}] += smats_upts_T[${upt}][${nidx(0,phys)}]*${m12_T[f,0,upt]};
     % endfor
+    % endfor
+    ## % for phys in range(ndims):
+    ##   dsmatsdE[${phys}] += smats_upts_T[${upt}][${nidx(0,phys)}]*${m12_T[f,0,upt]};
+    ## % endfor
+  }
+  % endfor
+
+  ## Compute directional derivative to get derivative of normal transformed flux w.r.t. normal CS
+  fpdtype_t dtFdE_T[${ndims}][${nvars}] = {{0}};
+  % for var in range(nvars):
+  {
+    fpdtype_t nE = bnorm[0];
+    fpdtype_t nN = bnorm[1];
+    dtFdE_T[0][${var}] = nE*nE*dtFdE_full[0][0][${var}] + nN*nN*dtFdE_full[1][1][${var}] + nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
+    fpdtype_t tE = t1[0];
+    fpdtype_t tN = t1[1];
+    dtFdE_T[1][${var}] = tE*tE*dtFdE_full[0][0][${var}] + tN*tN*dtFdE_full[1][1][${var}] + tE*tN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
   }
   % endfor
 
   ## Check
 % if check:
+    % for var in range(nvars):
+        printf("dtFdE_full ${var} 0  = %.14e %.14e \n", dtFdE_full[${0}][0][${var}], dtFdE_full[${0}][1][${var}]);
+        printf("dtFdE_full ${var} 1  = %.14e %.14e \n", dtFdE_full[${1}][0][${var}], dtFdE_full[${1}][1][${var}]);
+    % endfor
   % for var in range(nvars):
     printf("dtFdE_T ${var} = %.14e %.14e \n", dtFdE_T[0][${var}], dtFdE_T[1][${var}]);
   % endfor
-  % for phys in range(ndims):
-    printf("dsmatsdE ${phys} = %.14e \n", dsmatsdE[${phys}]);
-  % endfor
+  ## % for phys in range(ndims):
+  ##   printf("dsmatsdE ${phys} = %.14e \n", dsmatsdE[${phys}]);
+  ## % endfor
 % endif
 
   ## Step 4: Compute the characteristic wave strengths, N
@@ -262,14 +281,14 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t invcsq = invc*invc;
   fpdtype_t N[${nvars}];
   fpdtype_t S[${nvars}];
-  fpdtype_t source[${nvars}];
+  fpdtype_t source[${nvars}] = {0};
 
   fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
   fpdtype_t dGdN[${nvars}] = {${','.join(['+'.join([f'dtFdE_T[{j+1}][{i}]' for j in range(ndims-1)]) for i in range(nvars)])}};
 
   % for var in range(nvars):
   {
-    source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
+    ## source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
     dEdE[${var}] -= source[${var}];
     dGdN[${var}] += source[${var}];
   }
@@ -307,21 +326,40 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     % endfor
   }
 
+  ## Now solve for derivatives in the primary CS
+  fpdtype_t dtFdE[${ndims}][${nvars}] = {{0}};
+  {
+    fpdtype_t nE = bnorm[0];
+    fpdtype_t nN = bnorm[1];
+    fpdtype_t tE = t1[0];
+    fpdtype_t tN = t1[1];
+  % for var in range(nvars):
+  {
+    fpdtype_t dFstar = dtFdE_Ts[${var}];
+    fpdtype_t dFdN = dtFdE_full[0][1][${var}];
+    fpdtype_t dGdE = dtFdE_full[1][0][${var}];
+    fpdtype_t dGdN_T = dtFdE_T[1][${var}];
+    dtFdE[0][${var}] = -((dFstar - (dFdN + dGdE)*nE*nN)*tN*tN-nN*nN*(-((dFdN+dGdE)*tE*tN)+dGdN_T))/(nN*nN*tE*tE-nE*nE*tN*tN);
+    dtFdE[1][${var}] = (-tE*(dFstar*tE + (dFdN+dGdE)*nE*(-nN*tE+nE*tN))+nE*nE*dGdN_T)/(-nN*nN*tE*tE+nE*nE*tN*tN);
+  }
+  % endfor
+  }
+
   ## Step 7: Solve for normal transformed common flux
   % for var in range(nvars):
     % if check:
         printf("\n VAR ${var} \n");
     % endif
     ## we have dudt (~\del \dot ~f) at our flux point
-    u_fpts[${fpt_idx}][${var}] = dtFdE_Ts[${var}];
+    u_fpts[${fpt_idx}][${var}] = ${'+'.join([f'dtFdE[{comp}][{var}]' for comp in range(ndims)])};
     % if check:
-        printf("dtFidE_* %.14e \n", dtFdE_Ts[${var}]);
+        printf("dtFidE_* %.14e \n", u_fpts[${fpt_idx}][${var}]);
     % endif
 
     ## subtract our flux gradient on the face (from interior values)
-    u_fpts[${fpt_idx}][${var}] -= dtFdE_T[0][${var}];
+    u_fpts[${fpt_idx}][${var}] -= ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])};
     % if check:
-        printf("dtFdE_T[0] %.14e \n", dtFdE_T[0][${var}]);
+        printf("dtFdE_T[0] %.14e \n", ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])});
     % endif
 
     ## divide by ~\del \dot g
@@ -332,7 +370,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
     ## add the transformed, normal flux from interior values
     u_fpts[${fpt_idx}][${var}] += tfl_n[${var}];
-    u_fpts[${fpt_idx}][${var}] *= ${magnl[f]};
+    ## u_fpts[${fpt_idx}][${var}] *= ${magnl[f]};
 
     ## Check
     % if check:
