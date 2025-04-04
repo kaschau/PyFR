@@ -225,13 +225,30 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             pt[0], pt[1] = temp, temp1
 
         return pts
+
     @staticmethod
     def _newCS_2d(n):
         return np.array([-n[1],n[0]])
 
+    @staticmethod
+    def _newCS_3d(n):
+        nx = n[0]
+        ny = n[1]
+        nz = n[2]
+        if abs(nz) < 0.7:
+            t1 = 1.0/np.sqrt(nx**2+ny**2)*np.array([-ny, nx, 0.0])
+            t2 = 1.0/np.sqrt(nx**2+ny**2)*np.array([-nx*nz, -ny*nz, nx**2+ny**2])
+        else:
+            t1 = 1.0/np.sqrt(nz**2+ny**2)*np.array([0.0, -nz, ny])
+            t2 = 1.0/np.sqrt(nz**2+ny**2)*np.array([ny**2+nz**2, -nx*ny, -nx*nz])
+        return t1, t2
+
+
     def newCS(self, n):
         if len(n) == 2:
             return self._newCS_2d(n)
+        else:
+            return self._newCS_3d(n)
 
     def transform_to(self, n, pts):
         if len(n) == 2:
@@ -298,8 +315,13 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['bnorms'] = norms
 
             tplargs_efp['t1'] = np.empty(norms.shape)
+            if ndims == 3:
+                tplargs_efp['t2'] = np.empty(norms.shape)
             for i, norm in enumerate(norms):
-                tplargs_efp['t1'][i] = self.newCS(norm)
+                if ndims == 2:
+                    tplargs_efp['t1'][i] = self.newCS(norm)
+                else:
+                    tplargs_efp['t1'][i], tplargs_efp['t2'][i] = self.newCS(norm)
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]

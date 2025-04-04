@@ -15,20 +15,38 @@
 <%def name="nuidx(dim, upt)">
   <% return dim*nupts + upt %>
 </%def>\
-<%from math import sqrt %>\
+
+<% sq2 = 2**0.5 %>
+<% invsq2 = 2**-0.5 %>
+
+<% pnd = r"%.14e "*ndims %>\
 
 <%pyfr:macro name='WU_dot_dE' params='dE, N'>
-fpdtype_t nx = norm_nl[0];
-fpdtype_t ny = norm_nl[1];
+  fpdtype_t nx = norm_nl[0];
+  fpdtype_t ny = norm_nl[1];
 
-fpdtype_t gmo = ${c['gamma'] - 1.0};
+  fpdtype_t gmo = ${c['gamma'] - 1.0};
 
-fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
+  fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-N[0] = dE[0] - gmo*invcsq*(dE[0]*k - dE[1]*v[0] - dE[2]*v[1] + dE[3]);
-N[1] = invrho*(dE[0]*(ny*v[0] - nx*v[1]) - dE[1]*ny + dE[2]*nx);
-N[2] = ${1.0/sqrt(2)}*invc*invrho*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*(nx*v[0] + ny*v[1])));
-N[3] = ${1.0/sqrt(2)}*invc*invrho*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*(nx*v[0] + ny*v[1])));
+% if ndims == 2:
+
+  N[0] = dE[0] - gmo*invcsq*(dE[0]*k - dE[1]*v[0] - dE[2]*v[1] + dE[3]);
+  N[1] = invrho*(dE[0]*(ny*v[0] - nx*v[1]) - dE[1]*ny + dE[2]*nx);
+  N[2] = ${invsq2}*invc*invrho*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*(nx*v[0] + ny*v[1])));
+  N[3] = ${invsq2}*invc*invrho*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*(nx*v[0] + ny*v[1])));
+
+% elif ndims == 3:
+
+  fpdtype_t nz = norm_nl[2];
+
+  N[0] = gmo*nx*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*(-dE[3]*ny + dE[2]*nz + dE[0]*(nx*rho - nz*v[1] + ny*v[2]));
+  N[1] = gmo*ny*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*( dE[3]*nx - dE[1]*nz + dE[0]*(ny*rho + nz*v[0] - nx*v[2]));
+  N[2] = gmo*nz*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*(-dE[2]*nx + dE[1]*ny + dE[0]*(nz*rho - ny*v[0] + nx*v[1]));
+  N[3] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k) + c*(dE[1]*nx + dE[2]*ny + dE[3]*nz) - gmo*(dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) - c*dE[0]*(nx*v[0] + ny*v[1] + nz*v[2]));
+  N[4] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k) - c*(dE[1]*nx + dE[2]*ny + dE[3]*nz) - gmo*(dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + c*dE[0]*(nx*v[0] + ny*v[1] + nz*v[2]));
+
+% endif
 </%pyfr:macro>
 
 
@@ -40,10 +58,25 @@ fpdtype_t gmo = ${c['gamma'] - 1.0};
 
 fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-dE[0] = N[0] + ${1.0/sqrt(2)}*rho*invc*(N[2] + N[3]);
-dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${1.0/sqrt(2)}*rho*invc*(N[2]*(c*nx + v[0]) - N[3]*(c*nx - v[0]));
-dE[2] =  N[1]*nx*rho + N[0]*v[1] + ${1.0/sqrt(2)}*rho*invc*(N[2]*(c*ny + v[1]) - N[3]*(c*ny - v[1]));
-dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${1.0/sqrt(2)}*rho*((N[3] + N[2])*(c/gmo + k*invc) + (N[2] - N[3])*(nx*v[0] + ny*v[1]));
+% if ndims == 2:
+
+dE[0] = N[0] + ${invsq2}*rho*invc*(N[2] + N[3]);
+dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${invsq2}*rho*invc*(N[2]*(c*nx + v[0]) - N[3]*(c*nx - v[0]));
+dE[2] =  N[1]*nx*rho + N[0]*v[1] + ${invsq2}*rho*invc*(N[2]*(c*ny + v[1]) - N[3]*(c*ny - v[1]));
+dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${invsq2}*rho*((N[3] + N[2])*(c/gmo + k*invc) + (N[2] - N[3])*(nx*v[0] + ny*v[1]));
+
+% elif ndims == 3:
+fpdtype_t nz = norm_nl[2];
+
+dE[0] = N[0]*nx + N[1]*ny + N[2]*nz + ${invsq2}*invc*rho*(N[3] + N[4]);
+dE[1] = rho*(N[2]*ny - N[1]*nz) + N[0]*nx*v[0] + N[1]*ny*v[0] + N[2]*nz*v[0] + ${invsq2}*invc*rho*(N[3]*(c*nx+v[0]) + N[4]*(-c*nx + v[0]));
+dE[2] = rho*(N[0]*nz - N[2]*nx) + N[0]*nx*v[1] + N[1]*ny*v[1] + N[2]*nz*v[1] + ${invsq2}*invc*rho*(N[3]*(c*ny+v[1]) + N[4]*(-c*ny + v[1]));
+dE[3] = rho*(N[1]*nx - N[0]*ny) + N[0]*nx*v[2] + N[1]*ny*v[2] + N[2]*nz*v[2] + ${invsq2}*invc*rho*(N[3]*(c*nz+v[2]) + N[4]*(-c*nz + v[2]));
+dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) + N[1]*(k*ny - nz*rho*v[0] + nx*rho*v[2]) + N[2]*(k*nz + ny*rho*v[0] - nx*rho*v[1])
+        + rho*invc*${invsq2}/gmo*(N[3]*(c*c + gmo*k + c*gmo*(nx*v[0] + ny*v[1] + nz*v[2]))
+                                + N[4]*(c*c + gmo*k - c*gmo*(nx*v[0] + ny*v[1] + nz*v[2])));
+
+% endif
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
@@ -131,6 +164,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Get face normals at flux point
   fpdtype_t bnorm[${ndims}] = {${','.join([str(i) for i in bnorms[f,:]])}};
   fpdtype_t t1[${ndims}] = {${','.join([str(i) for i in t1[f,:]])}};
+  % if ndims == 3:
+    fpdtype_t t2[${ndims}] = {${','.join([str(i) for i in t2[f,:]])}};
+  % endif
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
   fpdtype_t jac = jacs_ffpt[${f}];
 
@@ -138,6 +174,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % if check:
   printf("bnorm %.14e %.14e \n", bnorm[0], bnorm[1]);
   printf("t1 %.14e %.14e \n", t1[0], t1[1]);
+  % if ndims == 3:
+  printf("t2 %.14e %.14e \n", t1[0], t1[1]);
+  % endif
   printf("norm_nl %.14e %.14e \n", norm_nl[0], norm_nl[1]);
   printf("jac %.14e \n", jac);
 % endif
@@ -252,10 +291,37 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   {
     fpdtype_t nE = bnorm[0];
     fpdtype_t nN = bnorm[1];
-    dtFdE_T[0][${var}] = nE*nE*dtFdE_full[0][0][${var}] + nN*nN*dtFdE_full[1][1][${var}] + nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
     fpdtype_t tE = t1[0];
     fpdtype_t tN = t1[1];
+    % if ndims == 2:
+    dtFdE_T[0][${var}] = nE*nE*dtFdE_full[0][0][${var}] + nN*nN*dtFdE_full[1][1][${var}] + nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
     dtFdE_T[1][${var}] = tE*tE*dtFdE_full[0][0][${var}] + tN*tN*dtFdE_full[1][1][${var}] + tE*tN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]);
+    % else:
+    fpdtype_t nC = bnorm[2];
+    fpdtype_t tC = t1[2];
+    fpdtype_t t2E = t2[0];
+    fpdtype_t t2N = t2[1];
+    fpdtype_t t2C = t2[2];
+    dtFdE_T[0][${var}] = nE*nE*dtFdE_full[0][0][${var}] +
+                         nN*nN*dtFdE_full[1][1][${var}] +
+                         nC*nC*dtFdE_full[2][2][${var}] +
+                         nE*nN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
+                         nE*nC*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
+                         nN*nC*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
+    dtFdE_T[1][${var}] = tE*tE*dtFdE_full[0][0][${var}] +
+                         tN*tN*dtFdE_full[1][1][${var}] +
+                         tC*tC*dtFdE_full[2][2][${var}] +
+                         tE*tN*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
+                         tE*tC*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
+                         tN*tC*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
+    dtFdE_T[2][${var}] = t2E*t2E*dtFdE_full[0][0][${var}] +
+                         t2N*t2N*dtFdE_full[1][1][${var}] +
+                         t2C*t2C*dtFdE_full[2][2][${var}] +
+                         t2E*t2N*(dtFdE_full[0][1][${var}] + dtFdE_full[1][0][${var}]) +
+                         t2E*t2C*(dtFdE_full[2][0][${var}] + dtFdE_full[0][2][${var}]) +
+                         t2N*t2C*(dtFdE_full[2][1][${var}] + dtFdE_full[1][2][${var}]);
+
+    % endif
   }
   % endfor
 
