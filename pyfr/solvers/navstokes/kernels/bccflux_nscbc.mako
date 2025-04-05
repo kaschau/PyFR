@@ -7,7 +7,7 @@
 <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
 
 ## <% check = True %>
-## <% check = False %>
+<% check = False %>
 
 <%def name="nidx(comp,phys)">
   <% return comp*ndims + phys %>
@@ -271,7 +271,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   ## Step 3: Compute derivative of face normal CS transformed flux, at flux point
   ## Also compute gradient of smats for geometric source term
   fpdtype_t dtFdE_full[${ndims}][${ndims}][${nvars}] = {{{0}}};
-  ## fpdtype_t dsmatsdE[${ndims}] = {0};
+  fpdtype_t dsmatsdE_full[${ndims}][${ndims}][${ndims}] = {{{0}}};
   % for upt in range(nupts):
   {
     % for var in range(nvars):
@@ -283,14 +283,20 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
     % endfor
     % endfor
     % endfor
-    ## % for phys in range(ndims):
-    ##   dsmatsdE[${phys}] += smats_upts_T[${upt}][${nidx(0,phys)}]*${m12_T[f,0,upt]};
-    ## % endfor
+    % for phys in range(ndims):
+    % for comp in range(ndims):
+    % for comp2 in range(ndims):
+      % if abs(m12[f,comp2,upt]) > 1e-10:
+        dsmatsdE_full[${comp}][${comp2}][${phys}] += smats_upts[${upt}][${nidx(comp,phys)}]*${m12[f,comp2,upt]};
+      % endif
+    % endfor
+    % endfor
+    % endfor
   }
   % endfor
 
   ## Compute directional derivative to get derivative of normal transformed flux w.r.t. normal CS
-  fpdtype_t dtFdE_T[${ndims}][${nvars}] = {{0}};
+  fpdtype_t dtFdE_T[${ndims}][${nvars}];
   % for var in range(nvars):
   {
     fpdtype_t nE = bnorm[0];
@@ -329,6 +335,33 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   }
   % endfor
 
+  fpdtype_t dsmatsdE_T[${ndims}];
+  {
+    fpdtype_t nE = bnorm[0];
+    fpdtype_t nN = bnorm[1];
+    fpdtype_t t1E = t1[0];
+    fpdtype_t t1N = t1[1];
+    % if ndims == 2:
+      % for phys in range(ndims):
+        dsmatsdE_T[${phys}] = nE*nE*dsmatsdE_full[0][0][${phys}] + nN*nN*dsmatsdE_full[1][1][${phys}] + nE*nN*(dsmatsdE_full[0][1][${phys}] + dsmatsdE_full[1][0][${phys}]);
+      % endfor
+    % else:
+    fpdtype_t nC = bnorm[2];
+    fpdtype_t t1C = t1[2];
+    fpdtype_t t2E = t2[0];
+    fpdtype_t t2N = t2[1];
+    fpdtype_t t2C = t2[2];
+    % for phys in range(ndims):
+      dsmatsdE_T[${phys}] = nE*nE*dsmatsdE_full[0][0][${phys}] +
+                            nN*nN*dsmatsdE_full[1][1][${phys}] +
+                            nC*nC*dsmatsdE_full[2][2][${phys}] +
+                            nE*nN*(dsmatsdE_full[0][1][${phys}] + dsmatsdE_full[1][0][${phys}]) +
+                            nE*nC*(dsmatsdE_full[2][0][${phys}] + dsmatsdE_full[0][2][${phys}]) +
+                            nN*nC*(dsmatsdE_full[2][1][${phys}] + dsmatsdE_full[1][2][${phys}]);
+      % endfor
+    % endif
+  }
+
   ## Check
 % if check:
     % for var in range(nvars):
@@ -341,9 +374,9 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   % for var in range(nvars):
     printf("dtFdE_T ${var} = ${pnd} \n", ${','.join([f'dtFdE_T[{comp}][{var}]' for comp in range(ndims)])});
   % endfor
-  ## % for phys in range(ndims):
-  ##   printf("dsmatsdE ${phys} = %.14e \n", dsmatsdE[${phys}]);
-  ## % endfor
+  % for phys in range(ndims):
+    printf("dsmatsdE_T ${phys} = %.14e \n", dsmatsdE_T[${phys}]);
+  % endfor
 % endif
 
   ## Step 4: Compute the characteristic wave strengths, N
@@ -354,14 +387,14 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
   fpdtype_t invcsq = invc*invc;
   fpdtype_t N[${nvars}];
   fpdtype_t S[${nvars}];
-  fpdtype_t source[${nvars}] = {0};
+  fpdtype_t source[${nvars}];
 
   fpdtype_t dEdE[${nvars}] = {${','.join([f'dtFdE_T[0][{i}]' for i in range(nvars)])}};
   fpdtype_t dGdN[${nvars}] = {${','.join(['+'.join([f'dtFdE_T[{j+1}][{i}]' for j in range(ndims-1)]) for i in range(nvars)])}};
 
   % for var in range(nvars):
   {
-    ## source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE[{dim}]' for dim in range(ndims)])};
+    source[${var}] = ${'+'.join([f'fl[{dim}][{var}]*dsmatsdE_T[{dim}]' for dim in range(ndims)])};
     dEdE[${var}] -= source[${var}];
     dGdN[${var}] += source[${var}];
   }
