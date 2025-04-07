@@ -413,4 +413,4 @@ class NSCBCSubInFRVInters(NavierStokesCharacteristicBoundaryCondition):
             ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs
         )
         for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
-            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=1.0)
