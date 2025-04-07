@@ -399,7 +399,7 @@ class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
         self.c |= self._exp_opts(['p'], lhs)
-        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=1.0)
+        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=0.25)
 
 class NSCBCSubInFRVInters(NavierStokesCharacteristicBoundaryCondition):
 
@@ -413,4 +413,4 @@ class NSCBCSubInFRVInters(NavierStokesCharacteristicBoundaryCondition):
             ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs
         )
         for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
-            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=1.0)
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
