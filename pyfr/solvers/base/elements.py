@@ -453,10 +453,6 @@ class BaseElements:
         smats = np.reshape(smats, (smats.shape[0],-1))
         return smats
 
-    def _get_jacs_upts(self, eidx, fidx):
-        jacs = 1.0 / self.rcpdjac_at_np('upts')[:, eidx]
-        return jacs
-
     def _get_jacs_facefpts(self, eidx, fidx):
         fpts_idx = self.basis.facefpts[fidx]
         jacs = 1.0 / self.rcpdjac_at_np('fpts')[fpts_idx, eidx]

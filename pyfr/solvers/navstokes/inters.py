@@ -217,16 +217,6 @@ class NavierStokesSubOutflowBCInters(NavierStokesBaseBCInters):
 class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
     @staticmethod
-    def _transform_to_2d(n, pts):
-        pts = copy.copy(pts)
-        for pt in [*pts]:
-            temp = n[0]*pt[0] + n[1]*pt[1]
-            temp1 = n[0]*pt[1] - n[1]*pt[0]
-            pt[0], pt[1] = temp, temp1
-
-        return pts
-
-    @staticmethod
     def _newCS_2d(n):
         return np.array([-n[1],n[0]])
 
@@ -250,10 +240,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         else:
             return self._newCS_3d(n)
 
-    def transform_to(self, n, pts):
-        if len(n) == 2:
-            return self._transform_to_2d(n, pts)
-
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
@@ -268,7 +254,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._vect_fpts = defaultdict(dict)
         self._normnl_facefpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
-        self._jacs_upts = defaultdict(dict)
         self._jacs_facefpts = defaultdict(dict)
 
         # lhs length
@@ -314,14 +299,14 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 norms *= -1.0
             tplargs_efp['bnorms'] = norms
 
-            tplargs_efp['t1'] = np.empty(norms.shape)
+            tplargs_efp['t1s'] = np.empty(norms.shape)
             if ndims == 3:
-                tplargs_efp['t2'] = np.empty(norms.shape)
+                tplargs_efp['t2s'] = np.empty(norms.shape)
             for i, norm in enumerate(norms):
                 if ndims == 2:
-                    tplargs_efp['t1'][i] = self.newCS(norm)
+                    tplargs_efp['t1s'][i] = self.newCS(norm)
                 else:
-                    tplargs_efp['t1'][i], tplargs_efp['t2'][i] = self.newCS(norm)
+                    tplargs_efp['t1s'][i], tplargs_efp['t2s'][i] = self.newCS(norm)
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
@@ -358,10 +343,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
-            method = '_get_jacs_upts'
-            jacs_upts = self._ewise_const_mat(lhs_efp, method)
-            self._jacs_upts[shape][fidx] = jacs_upts
-
             method = '_get_jacs_facefpts'
             jacs_facefpts = self._fwise_const_mat(lhs_efp, method)
             self._jacs_facefpts[shape][fidx] = jacs_facefpts
@@ -383,14 +364,13 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     gradu_fpts=self._vect_fpts[shape][fidx],
                     normnl_ffpt=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
-                    jacs_upts=self._jacs_upts[shape][fidx],
                     jacs_ffpt=self._jacs_facefpts[shape][fidx],
                     **self._external_vals))
 
         return self._be.unordered_meta_kernel(kerns)
 
 
-class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
+class NSCBCSubOutFpBCInters(NavierStokesCharacteristicBoundaryCondition):
 
     type = 'sub-out-nscbc-fp'
     normal = 'outward'
@@ -401,7 +381,7 @@ class NSCBCSubOutFPInters(NavierStokesCharacteristicBoundaryCondition):
         self.c |= self._exp_opts(['p'], lhs)
         self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=0.25)
 
-class NSCBCSubInFRVInters(NavierStokesCharacteristicBoundaryCondition):
+class NSCBCSubInFrvBCInters(NavierStokesCharacteristicBoundaryCondition):
 
     type = 'sub-in-nscbc-frv'
     normal = 'inward'
