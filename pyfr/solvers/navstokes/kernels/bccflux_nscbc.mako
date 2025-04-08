@@ -233,7 +233,7 @@ if ndims == 3:
   % for upt in range(nupts):
   % for var in range(nvars):
   % for comp in range(ndims):
-    % if abs(m2[f,comp,upt]) > 1e-10:
+    % if abs(m2[f,comp,upt]) > 0.0:
     tfl_n[${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
     % endif
   % endfor
