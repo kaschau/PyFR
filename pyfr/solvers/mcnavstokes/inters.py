@@ -202,10 +202,6 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts(
-            ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
-
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
         default = {spn: 0 for spn in self.c['names']}
