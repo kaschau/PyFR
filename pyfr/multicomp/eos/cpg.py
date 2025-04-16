@@ -17,6 +17,9 @@ class cpgEOS(BaseEOS):
         self.consts = consts
         consts['MW'] = props['MW']
         consts['cp0'] = props['cp0']
+        for MW,cp,name in zip(consts['MW'],consts['cp0'],consts['names']):
+            if cp < consts['Ru']/MW:
+                raise ValueError(f'Non physical properties for {name}.')
 
     def pri_to_con(self, pris):
         consts = self.consts
