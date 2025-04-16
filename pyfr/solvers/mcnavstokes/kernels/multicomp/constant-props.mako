@@ -48,7 +48,7 @@
     % for n in range(ns):
       // ${c['names'][n]} thermal conductivity
       sum1 += X[${n}] * ${c['kappa0'][n]};
-      sum2 += X[${n}] * ${1.0 / c['kappa0'][n]};
+      sum2 += X[${n}] * ${1.0 / (fpdtype_eps + c['kappa0'][n])};
     % endfor
     kappa = 0.5*(sum1 + 1.0 / sum2);
     qt[1] = kappa;

@@ -96,7 +96,7 @@
     fpdtype_t kappa_sp = ${'+ logT*('.join(str(c) for c in kappaPoly[n])+')'*deg};
     kappa_sp *= sqrtT;
     sum1 += X[${n}] * kappa_sp;
-    sum2 += X[${n}] / kappa_sp;
+    sum2 += X[${n}] / (kappa_sp + ${fpdtype_eps});
     }
   }
 % endfor
