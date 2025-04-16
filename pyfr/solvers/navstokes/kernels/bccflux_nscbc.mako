@@ -436,8 +436,8 @@ if ndims == 3:
                                dFstar*${t1C*t1C*t2N*t2N} +
                                facn  *${t1C*t1C*t2N*t2N} +
                               ${-nN*nN*t2C*t2C + nC*nC*t2N*t2N}*dGdN_T + ${nN*nN*t1C*t1C - nC*nC*t1N*t1N}*dHdC_T)/
-                              ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) +
-                                nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) +
+                              ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                                nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
                                 nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
 
           dtFdE[1][${var}] = (fact2*${nE*nE*t1C*t1C} -
@@ -449,8 +449,8 @@ if ndims == 3:
                               dFstar*${t1C*t1C*t2E*t2E} -
                               facn  *${t1C*t1C*t2E*t2E} +
                              ${nE*nE*t2C*t2C - nC*nC*t2E*t2E}*dGdN_T + ${-nE*nE*t1C*t1C + nC*nC*t1E*t1E}*dHdC_T)/
-                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) +
-                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) +
+                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
                                nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
 
           dtFdE[2][${var}] = (fact2*${nN*nN*t1E*t1E} -
@@ -462,8 +462,8 @@ if ndims == 3:
                               dFstar*${t1E*t1E*t2N*t2N} -
                               facn  *${t1E*t1E*t2N*t2N} +
                              ${nN*nN*t2E*t2E - nE*nE*t2N*t2N}*dGdN_T + ${-nN*nN*t1E*t1E + nE*nE*t1N*t1N}*dHdC_T) /
-                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) +
-                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) +
+                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
                                nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
           }
       % endif
