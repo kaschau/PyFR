@@ -28,7 +28,7 @@
       fpdtype_t mu_n = ${c['mu0'][n]};
       % for n2 in range(ns):
         {
-        fpdtype_t mu_n2 = ${c['mu0'][n2]};
+        fpdtype_t mu_n2 = ${max(c['mu0'][n2], fpdtype_eps)};
         fpdtype_t num = 1.0 + sqrt(mu_n / mu_n2 * sqrt(mu_n2 / mu_n));
         fpdtype_t phi = num*num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + c['MW'][n]/c['MW'][n2]))};
         phitemp += phi * X[${n2}];
