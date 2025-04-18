@@ -34,8 +34,8 @@
 
   N[0] = dE[0] - gmo*invcsq*(dE[0]*k - dE[1]*v[0] - dE[2]*v[1] + dE[3]);
   N[1] = invrho*(dE[0]*(ny*v[0] - nx*v[1]) - dE[1]*ny + dE[2]*nx);
-  N[2] = ${invsq2}*invc*invrho*(dE[3]*gmo + c*dE[1]*nx + c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k - c*(nx*v[0] + ny*v[1])));
-  N[3] = ${invsq2}*invc*invrho*(dE[3]*gmo - c*dE[1]*nx - c*dE[2]*ny - dE[1]*gmo*v[0] - dE[2]*gmo*v[1] + dE[0]*(gmo*k + c*(nx*v[0] + ny*v[1])));
+  N[2] = ${invsq2}*invc*invrho*(gmo*(dE[3] + dE[0]*k - (dE[1]*v[0] + dE[2]*v[1])) + c*(dE[1]*nx + dE[2]*ny - dE[0]*(nx*v[0] + ny*v[1])));
+  N[3] = ${invsq2}*invc*invrho*(gmo*(dE[3] + dE[0]*k - (dE[1]*v[0] + dE[2]*v[1])) - c*(dE[1]*nx + dE[2]*ny - dE[0]*(nx*v[0] + ny*v[1])));
 
 % elif ndims == 3:
 
@@ -73,8 +73,10 @@ dE[0] = N[0]*nx + N[1]*ny + N[2]*nz + ${invsq2}*invc*rho*(N[3] + N[4]);
 dE[1] = rho*(N[2]*ny - N[1]*nz) + N[0]*nx*v[0] + N[1]*ny*v[0] + N[2]*nz*v[0] + ${invsq2}*invc*rho*(N[3]*(c*nx+v[0]) + N[4]*(-c*nx + v[0]));
 dE[2] = rho*(N[0]*nz - N[2]*nx) + N[0]*nx*v[1] + N[1]*ny*v[1] + N[2]*nz*v[1] + ${invsq2}*invc*rho*(N[3]*(c*ny+v[1]) + N[4]*(-c*ny + v[1]));
 dE[3] = rho*(N[1]*nx - N[0]*ny) + N[0]*nx*v[2] + N[1]*ny*v[2] + N[2]*nz*v[2] + ${invsq2}*invc*rho*(N[3]*(c*nz+v[2]) + N[4]*(-c*nz + v[2]));
-dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) + N[1]*(k*ny - nz*rho*v[0] + nx*rho*v[2]) + N[2]*(k*nz + ny*rho*v[0] - nx*rho*v[1])
-        + rho*invc*${invsq2}/gmo*(N[3]*(c*c + gmo*k + c*gmo*(nx*v[0] + ny*v[1] + nz*v[2]))
+dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) +
+        N[1]*(k*ny - nz*rho*v[0] + nx*rho*v[2]) +
+        N[2]*(k*nz + ny*rho*v[0] - nx*rho*v[1]) +
+      rho*invc*${invsq2}/gmo*(N[3]*(c*c + gmo*k + c*gmo*(nx*v[0] + ny*v[1] + nz*v[2]))
                                 + N[4]*(c*c + gmo*k - c*gmo*(nx*v[0] + ny*v[1] + nz*v[2])));
 
 % endif
