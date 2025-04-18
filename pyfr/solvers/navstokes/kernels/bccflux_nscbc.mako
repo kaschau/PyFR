@@ -44,8 +44,8 @@
   N[0] = gmo*nx*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*(-dE[3]*ny + dE[2]*nz + dE[0]*(nx*rho - nz*v[1] + ny*v[2]));
   N[1] = gmo*ny*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*( dE[3]*nx - dE[1]*nz + dE[0]*(ny*rho + nz*v[0] - nx*v[2]));
   N[2] = gmo*nz*invcsq*(-dE[4] - dE[0]*k + dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + invrho*(-dE[2]*nx + dE[1]*ny + dE[0]*(nz*rho - ny*v[0] + nx*v[1]));
-  N[3] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k) + c*(dE[1]*nx + dE[2]*ny + dE[3]*nz) - gmo*(dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) - c*dE[0]*(nx*v[0] + ny*v[1] + nz*v[2]));
-  N[4] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k) - c*(dE[1]*nx + dE[2]*ny + dE[3]*nz) - gmo*(dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2]) + c*dE[0]*(nx*v[0] + ny*v[1] + nz*v[2]));
+  N[3] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k - (dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2])) + c*(dE[1]*nx + dE[2]*ny + dE[3]*nz - dE[0]*(nx*v[0] + ny*v[1] + nz*v[2])));
+  N[4] = invc*invrho*${invsq2}*(gmo*(dE[4] + dE[0]*k - (dE[1]*v[0] + dE[2]*v[1] + dE[3]*v[2])) - c*(dE[1]*nx + dE[2]*ny + dE[3]*nz - dE[0]*(nx*v[0] + ny*v[1] + nz*v[2])));
 
 % endif
 </%pyfr:macro>
