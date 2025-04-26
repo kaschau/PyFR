@@ -495,3 +495,7 @@ class BaseElements:
     def get_ploc_for_inter(self, eidx, fidx):
         fpts_idx = self._srtd_face_fpts[fidx][eidx]
         return self.plocfpts[fpts_idx, eidx]
+
+    def get_ploc_for_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        return self.plocfpts[fpts_idx, eidx]

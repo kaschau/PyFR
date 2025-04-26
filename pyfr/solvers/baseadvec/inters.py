@@ -9,7 +9,7 @@ class BaseAdvectionIntersMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._ef_enabled = (self.cfg.get('solver', 'shock-capturing') == 
+        self._ef_enabled = (self.cfg.get('solver', 'shock-capturing') ==
                             'entropy-filter' and
                             self.cfg.getint('solver', 'order'))
 
@@ -162,6 +162,29 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
             'ploc' not in self._external_args):
             spec = f'in fpdtype_t[{self.ndims}]'
             value = self._const_mat(lhs, 'get_ploc_for_inter')
+
+            self._set_external('ploc', spec, value=value)
+
+        return exprs
+
+    def _exp_opts_ele(self, opts, lhs, default={}):
+        cfg, sect = self.cfg, self.cfgsect
+
+        subs = cfg.items('constants')
+        subs |= dict(x='ploc[fidx][0]', y='ploc[fidx][1]', z='ploc[fidx][2]')
+        subs |= dict(abs='fabs', pi=str(math.pi))
+
+        exprs = {}
+        for k in opts:
+            if k in default:
+                exprs[k] = cfg.getexpr(sect, k, default[k], subs=subs)
+            else:
+                exprs[k] = cfg.getexpr(sect, k, subs=subs)
+
+        if (any('ploc' in ex for ex in exprs.values()) and
+            'ploc' not in self._external_args):
+            spec = f'in fpdtype_t[{self.ninterfpts}][{self.ndims}]'
+            value = self._fwise_const_mat(lhs, 'get_ploc_for_facefpts')
 
             self._set_external('ploc', spec, value=value)
 
