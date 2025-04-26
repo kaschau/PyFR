@@ -171,7 +171,7 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
         cfg, sect = self.cfg, self.cfgsect
 
         subs = cfg.items('constants')
-        subs |= dict(x='ploc[fpt_idx][0]', y='ploc[fpt_idx][1]', z='ploc[fpt_idx][2]')
+        subs |= dict(x='ploc[fidx][0]', y='ploc[fidx][1]', z='ploc[fidx][2]')
         subs |= dict(abs='fabs', pi=str(math.pi))
 
         exprs = {}
