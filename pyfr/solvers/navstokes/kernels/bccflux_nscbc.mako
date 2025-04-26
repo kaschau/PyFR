@@ -155,6 +155,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 ## Iterate over the flux points on our face
 % for f, fpt_idx in enumerate(facefpts):
 {
+  int fidx = ${f};
 <%
 nE = bnorms[f,0]
 nN = bnorms[f,1]
