@@ -6,6 +6,11 @@
 ## <% check = True %>
 
 <%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
+  fpdtype_t rho = u[0];
+  fpdtype_t invrho = 1.0/rho;
+  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
+  fpdtype_t invc = 1.0/c;
+
   fpdtype_t nx = norm_nl[0];
   fpdtype_t ny = norm_nl[1];
 

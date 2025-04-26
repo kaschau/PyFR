@@ -23,6 +23,12 @@
 </%def>\
 
 <%pyfr:macro name='WU_dot_dE' params='dE, N'>
+  fpdtype_t rho = ul[0];
+  fpdtype_t invrho = 1.0/rho;
+  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
+  fpdtype_t invc = 1.0/c;
+  fpdtype_t invcsq = invc*invc;
+
   fpdtype_t nx = norm_nl[0];
   fpdtype_t ny = norm_nl[1];
 
@@ -52,34 +58,40 @@
 
 
 <%pyfr:macro name='WUinv_dot_N' params='N, dE'>
-fpdtype_t nx = norm_nl[0];
-fpdtype_t ny = norm_nl[1];
+  fpdtype_t rho = ul[0];
+  fpdtype_t invrho = 1.0/rho;
+  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
+  fpdtype_t invc = 1.0/c;
+  fpdtype_t invcsq = invc*invc;
 
-fpdtype_t gmo = ${c['gamma'] - 1.0};
+  fpdtype_t nx = norm_nl[0];
+  fpdtype_t ny = norm_nl[1];
 
-fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
+  fpdtype_t gmo = ${c['gamma'] - 1.0};
 
-% if ndims == 2:
+  fpdtype_t k = 0.5*(${pyfr.dot('v[{i}]', i=ndims)});
 
-dE[0] = N[0] + ${invsq2}*rho*invc*(N[2] + N[3]);
-dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${invsq2}*rho*invc*(N[2]*(c*nx + v[0]) - N[3]*(c*nx - v[0]));
-dE[2] =  N[1]*nx*rho + N[0]*v[1] + ${invsq2}*rho*invc*(N[2]*(c*ny + v[1]) - N[3]*(c*ny - v[1]));
-dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${invsq2}*rho*((N[3] + N[2])*(c/gmo + k*invc) + (N[2] - N[3])*(nx*v[0] + ny*v[1]));
+  % if ndims == 2:
 
-% elif ndims == 3:
-fpdtype_t nz = norm_nl[2];
+  dE[0] = N[0] + ${invsq2}*rho*invc*(N[2] + N[3]);
+  dE[1] = -N[1]*ny*rho + N[0]*v[0] + ${invsq2}*rho*invc*(N[2]*(c*nx + v[0]) - N[3]*(c*nx - v[0]));
+  dE[2] =  N[1]*nx*rho + N[0]*v[1] + ${invsq2}*rho*invc*(N[2]*(c*ny + v[1]) - N[3]*(c*ny - v[1]));
+  dE[3] = k*N[0] - N[1]*rho*(ny*v[0] - nx*v[1]) + ${invsq2}*rho*((N[3] + N[2])*(c/gmo + k*invc) + (N[2] - N[3])*(nx*v[0] + ny*v[1]));
 
-dE[0] = N[0]*nx + N[1]*ny + N[2]*nz + ${invsq2}*invc*rho*(N[3] + N[4]);
-dE[1] = rho*(N[2]*ny - N[1]*nz) + N[0]*nx*v[0] + N[1]*ny*v[0] + N[2]*nz*v[0] + ${invsq2}*invc*rho*(N[3]*(c*nx+v[0]) + N[4]*(-c*nx + v[0]));
-dE[2] = rho*(N[0]*nz - N[2]*nx) + N[0]*nx*v[1] + N[1]*ny*v[1] + N[2]*nz*v[1] + ${invsq2}*invc*rho*(N[3]*(c*ny+v[1]) + N[4]*(-c*ny + v[1]));
-dE[3] = rho*(N[1]*nx - N[0]*ny) + N[0]*nx*v[2] + N[1]*ny*v[2] + N[2]*nz*v[2] + ${invsq2}*invc*rho*(N[3]*(c*nz+v[2]) + N[4]*(-c*nz + v[2]));
-dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) +
-        N[1]*(k*ny - nz*rho*v[0] + nx*rho*v[2]) +
-        N[2]*(k*nz + ny*rho*v[0] - nx*rho*v[1]) +
-      rho*invc*${invsq2}/gmo*(N[3]*(c*c + gmo*k + c*gmo*(nx*v[0] + ny*v[1] + nz*v[2]))
-                                + N[4]*(c*c + gmo*k - c*gmo*(nx*v[0] + ny*v[1] + nz*v[2])));
+  % elif ndims == 3:
+  fpdtype_t nz = norm_nl[2];
 
-% endif
+  dE[0] = N[0]*nx + N[1]*ny + N[2]*nz + ${invsq2}*invc*rho*(N[3] + N[4]);
+  dE[1] = rho*(N[2]*ny - N[1]*nz) + N[0]*nx*v[0] + N[1]*ny*v[0] + N[2]*nz*v[0] + ${invsq2}*invc*rho*(N[3]*(c*nx+v[0]) + N[4]*(-c*nx + v[0]));
+  dE[2] = rho*(N[0]*nz - N[2]*nx) + N[0]*nx*v[1] + N[1]*ny*v[1] + N[2]*nz*v[1] + ${invsq2}*invc*rho*(N[3]*(c*ny+v[1]) + N[4]*(-c*ny + v[1]));
+  dE[3] = rho*(N[1]*nx - N[0]*ny) + N[0]*nx*v[2] + N[1]*ny*v[2] + N[2]*nz*v[2] + ${invsq2}*invc*rho*(N[3]*(c*nz+v[2]) + N[4]*(-c*nz + v[2]));
+  dE[4] = N[0]*(k*nx + nz*rho*v[1] - ny*rho*v[2]) +
+          N[1]*(k*ny - nz*rho*v[0] + nx*rho*v[2]) +
+          N[2]*(k*nz + ny*rho*v[0] - nx*rho*v[1]) +
+        rho*invc*${invsq2}/gmo*(N[3]*(c*c + gmo*k + c*gmo*(nx*v[0] + ny*v[1] + nz*v[2]))
+                                  + N[4]*(c*c + gmo*k - c*gmo*(nx*v[0] + ny*v[1] + nz*v[2])));
+
+  % endif
 </%pyfr:macro>
 
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
@@ -96,7 +108,6 @@ printf("\n*************ELEMENT************\n");
 % endif
 
 ## Step 1: Compute transformed and physical flux at solution points
-fpdtype_t f_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % for upt in range(nupts):
 {
@@ -350,11 +361,6 @@ if ndims == 3:
 % endif
 
   ## Step 4: Compute the characteristic wave strengths, N
-  fpdtype_t rho = ul[0];
-  fpdtype_t invrho = 1.0/rho;
-  fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
-  fpdtype_t invc = 1.0/c;
-  fpdtype_t invcsq = invc*invc;
   fpdtype_t N[${nvars}];
   fpdtype_t S[${nvars}];
   fpdtype_t source[${nvars}];
