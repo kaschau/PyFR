@@ -22,8 +22,8 @@
   <% return dim*nupts + upt %>
 </%def>\
 
-<%pyfr:macro name='WU_dot_dE' params='dE, N'>
-  fpdtype_t rho = ul[0];
+<%pyfr:macro name='WU_dot_dE' params='dE, N, u, p, v'>
+  fpdtype_t rho = u[0];
   fpdtype_t invrho = 1.0/rho;
   fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
   fpdtype_t invc = 1.0/c;
@@ -57,8 +57,8 @@
 </%pyfr:macro>
 
 
-<%pyfr:macro name='WUinv_dot_N' params='N, dE'>
-  fpdtype_t rho = ul[0];
+<%pyfr:macro name='WUinv_dot_N' params='N, dE, u, p, v'>
+  fpdtype_t rho = u[0];
   fpdtype_t invrho = 1.0/rho;
   fpdtype_t c = sqrt(${c['gamma']}*p*invrho);
   fpdtype_t invc = 1.0/c;
@@ -376,8 +376,8 @@ if ndims == 3:
   }
   % endfor
 
-  ${pyfr.expand('WU_dot_dE','dEdE','N')}
-  ${pyfr.expand('WU_dot_dE','dGdN','S')}
+  ${pyfr.expand('WU_dot_dE','dEdE','N','ul','p','v')}
+  ${pyfr.expand('WU_dot_dE','dGdN','S','ul','p','v')}
 
   ## Check
 % if check:
@@ -402,7 +402,7 @@ if ndims == 3:
   ## Step 6: Compute dtFdE_T* values normal to face
   fpdtype_t dtFdE_Ts[${nvars}];
   {
-    ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts')};
+    ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts','ul','p','v')};
     % for var in range(nvars):
       dtFdE_Ts[${var}] += source[${var}];
     % endfor
