@@ -14,9 +14,9 @@ vfile = open('pyfr/_version.py').read()
 vsrch = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", vfile, re.M)
 
 if vsrch:
-    version = vsrch[1]
+    version = vsrch.group(1)
 else:
-    sys.exit('Unable to find a version string in pyfr/_version.py')
+    print('Unable to find a version string in pyfr/_version.py')
 
 # Modules
 modules = [
@@ -39,6 +39,9 @@ modules = [
     'pyfr.integrators.dual.pseudo.kernels',
     'pyfr.integrators.std',
     'pyfr.integrators.std.kernels',
+    'pyfr.multicomp',
+    'pyfr.multicomp.eos',
+    'pyfr.multicomp.transport',
     'pyfr.partitioners',
     'pyfr.plugins',
     'pyfr.plugins.kernels',
@@ -61,6 +64,13 @@ modules = [
     'pyfr.solvers.euler.kernels',
     'pyfr.solvers.euler.kernels.bcs',
     'pyfr.solvers.euler.kernels.rsolvers',
+    'pyfr.solvers.mceuler',
+    'pyfr.solvers.mceuler.kernels',
+    'pyfr.solvers.mceuler.kernels.bcs',
+    'pyfr.solvers.mceuler.kernels.rsolvers',
+    'pyfr.solvers.mcnavstokes',
+    'pyfr.solvers.mcnavstokes.kernels',
+    'pyfr.solvers.mcnavstokes.kernels.bcs',
     'pyfr.solvers.navstokes',
     'pyfr.solvers.navstokes.kernels',
     'pyfr.solvers.navstokes.kernels.bcs',
@@ -82,6 +92,7 @@ package_data = {
     'pyfr.backends.openmp.kernels': ['*.mako'],
     'pyfr.integrators.dual.pseudo.kernels': ['*.mako'],
     'pyfr.integrators.std.kernels': ['*.mako'],
+    'pyfr.multicomp': ['database/*.yaml'],
     'pyfr.plugins.kernels': ['*.mako'],
     'pyfr.quadrules': [
         'hex/*.txt',
@@ -102,6 +113,13 @@ package_data = {
     'pyfr.solvers.euler.kernels': ['*.mako'],
     'pyfr.solvers.euler.kernels.bcs': ['*.mako'],
     'pyfr.solvers.euler.kernels.rsolvers': ['*.mako'],
+    'pyfr.solvers.mceuler.kernels': ['*.mako'],
+    'pyfr.solvers.mceuler.kernels.bcs': ['*.mako'],
+    'pyfr.solvers.mceuler.kernels.multicomp': ['*.mako'],
+    'pyfr.solvers.mceuler.kernels.rsolvers': ['*.mako'],
+    'pyfr.solvers.mcnavstokes.kernels': ['*.mako'],
+    'pyfr.solvers.mcnavstokes.kernels.bcs': ['*.mako'],
+    'pyfr.solvers.mcnavstokes.kernels.multicomp': ['*.mako'],
     'pyfr.solvers.navstokes.kernels': ['*.mako'],
     'pyfr.solvers.navstokes.kernels.bcs': ['*.mako'],
     'pyfr.tests': ['*.npz']
@@ -113,15 +131,16 @@ install_requires = [
     'h5py >= 2.10',
     'mako >= 1.0.0',
     'mpi4py >= 4.0.0',
-    'numpy >= 2.4.2',
+    'numpy >= 1.26.4',
     'platformdirs >= 2.2.0',
     'pytools >= 2016.2.1',
-    'rtree >= 1.4.1'
+    'rtree >= 1.4.0',
+    'pyyaml >= 6.0'
 ]
 
 # Soft dependencies
 extras_require = {
-    'metal': ['pyobjc-framework-Metal >= 12.0']
+    'metal': ['pyobjc-framework-Metal >= 9.0']
 }
 
 # Scripts
@@ -136,7 +155,6 @@ classifiers = [
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
-    'Programming Language :: Python :: 3.14',
     'Topic :: Scientific/Engineering'
 ]
 
@@ -148,21 +166,19 @@ grids containing various element types. It is also designed to target a
 range of hardware platforms via use of an in-built domain specific
 language derived from the Mako templating engine.'''
 
-setup(
-    name='pyfr',
-    version=version,
-    description='Flux Reconstruction in Python',
-    long_description=long_description,
-    author='PyFR development team',
-    author_email='info@pyfr.org',
-    url='https://www.pyfr.org/',
-    license='BSD',
-    keywords='Math',
-    packages=['pyfr'] + modules + tests,
-    package_data=package_data,
-    entry_points={'console_scripts': console_scripts},
-    python_requires='>=3.11',
-    install_requires=install_requires,
-    extras_require=extras_require,
-    classifiers=classifiers
-)
+setup(name='pyfr',
+      version=version,
+      description='Flux Reconstruction in Python',
+      long_description=long_description,
+      author='Imperial College London',
+      author_email='info@pyfr.org',
+      url='http://www.pyfr.org/',
+      license='BSD',
+      keywords='Math',
+      packages=['pyfr'] + modules + tests,
+      package_data=package_data,
+      entry_points={'console_scripts': console_scripts},
+      python_requires='>=3.11',
+      install_requires=install_requires,
+      extras_require=extras_require,
+      classifiers=classifiers)

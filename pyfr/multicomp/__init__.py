@@ -1,4 +1,3 @@
-from pyfr.multicomp import eos, transport
 import numpy as np
 from pathlib import Path
 import yaml
