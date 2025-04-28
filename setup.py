@@ -130,6 +130,8 @@ package_data = {
     'pyfr.solvers.mcnavstokes.kernels': ['*.mako'],
     'pyfr.solvers.mcnavstokes.kernels.bcs': ['*.mako'],
     'pyfr.solvers.mcnavstokes.kernels.multicomp': ['*.mako'],
+    'pyfr.solvers.mcnavstokes.kernels.multicomp.cpg': ['*.mako'],
+    'pyfr.solvers.mcnavstokes.kernels.multicomp.tpg': ['*.mako'],
     'pyfr.solvers.navstokes.kernels': ['*.mako'],
     'pyfr.solvers.navstokes.kernels.bcs': ['*.mako'],
     'pyfr.tests': ['*.npz']
