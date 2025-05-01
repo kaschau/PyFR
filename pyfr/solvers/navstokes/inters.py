@@ -222,17 +222,18 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
     @staticmethod
     def _newCS_3d(n):
-        nx = n[0]
-        ny = n[1]
         nz = n[2]
-        if abs(nz) < 0.7:
-            t1 = 1.0/np.sqrt(nx**2+ny**2)*np.array([-ny, nx, 0.0])
-            t2 = 1.0/np.sqrt(nx**2+ny**2)*np.array([-nx*nz, -ny*nz, nx**2+ny**2])
+        if abs(nz) < 0.9:
+            temp = np.array([0, 0, 1])
         else:
-            t1 = 1.0/np.sqrt(nz**2+ny**2)*np.array([0.0, -nz, ny])
-            t2 = 1.0/np.sqrt(nz**2+ny**2)*np.array([ny**2+nz**2, -nx*ny, -nx*nz])
-        return t1, t2
+            temp = np.array([1, 0, 0])
 
+        t1 = np.cross(temp,n)
+        t1 /= np.linalg.norm(t1)
+
+        t2 = np.cross(n, t1)
+
+        return t1, t2
 
     def newCS(self, n):
         if len(n) == 2:
