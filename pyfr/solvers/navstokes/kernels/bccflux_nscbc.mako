@@ -463,7 +463,7 @@ if ndims == 3:
 
           dtFdE[2][${var}] = (fact2*${nN*nN*t1E*t1E} -
                               fact2*${nE*nE*t1N*t1N} -
-                              fact2*${nN*nN*t2E*t2E} -
+                              fact1*${nN*nN*t2E*t2E} -
                               dFstar*${t1N*t1N*t2E*t2E} +
                               facn  *${t1N*t1N*t2E*t2E} +
                               fact1 *${nE*nE*t2N*t2N} +
