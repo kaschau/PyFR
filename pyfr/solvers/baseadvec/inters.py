@@ -1,6 +1,7 @@
 import itertools as it
 import math
 
+from pyfr.util import first
 from pyfr.solvers.base import BaseInters
 from pyfr.nputil import npeval
 
@@ -183,7 +184,8 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
 
         if (any('ploc' in ex for ex in exprs.values()) and
             'ploc' not in self._external_args):
-            spec = f'in fpdtype_t[{self.ninterfpts}][{self.ndims}]'
+            basis = first(self.elemap.values()).basis
+            spec = f'in fpdtype_t[{basis.nfacefpts[first(lhs)[2]]}][{self.ndims}]'
             value = self._fwise_const_mat(lhs, 'get_ploc_for_facefpts')
 
             self._set_external('ploc', spec, value=value)
