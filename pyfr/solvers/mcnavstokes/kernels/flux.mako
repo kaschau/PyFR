@@ -63,10 +63,10 @@
     // Species mass diffusion
     fpdtype_t Jx, Jy;
 %   for n in range(ns):
-      Jx = Y_x[${n}] - q[${n}]*Vcx;
-      fout[0][${n}] -= Jx;
-      Jy = Y_y[${n}] - q[${n}]*Vcy;
-      fout[1][${n}] -= Jy;
+      Jx = -Y_x[${n}] + q[${n}]*Vcx;
+      fout[0][${n}] += Jx;
+      Jy = -Y_y[${n}] + q[${n}]*Vcy;
+      fout[1][${n}] += Jy;
 
       // Species thermal diffusion
       fout[0][${Eix}] += qh[${4 + n}] * Jx;
@@ -152,12 +152,12 @@
     fpdtype_t Jx, Jy, Jz;
 %   for n in range(ns):
       // Species mass diffusion
-      Jx = Y_x[${n}] - q[${n}]*Vcx;
-      fout[0][${n}] -= Jx;
-      Jy = Y_y[${n}] - q[${n}]*Vcy;
-      fout[1][${n}] -= Jy;
-      Jz = Y_z[${n}] - q[${n}]*Vcz;
-      fout[2][${n}] -= Jz;
+      Jx = -Y_x[${n}] + q[${n}]*Vcx;
+      fout[0][${n}] += Jx;
+      Jy = -Y_y[${n}] + q[${n}]*Vcy;
+      fout[1][${n}] += Jy;
+      Jz = -Y_z[${n}] + q[${n}]*Vcz;
+      fout[2][${n}] += Jz;
 
       // Species thermal diffusion
       fout[0][${Eix}] += qh[${4 + n}] * Jx;
