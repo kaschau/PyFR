@@ -25,9 +25,9 @@
   % endif
 
   fpdtype_t veloR = nx*uR + ny*vR;
-  N[0] = (-(rhoR) + rho*invc*(veloR - ${sq2}*(jac*N[3])));
-  N[1] = (uR*ny - vR*nx);
-  N[2] = (jac*N[3] - ${sq2}*veloR);
+  N[0] = -(rhoR) + rho*invc*(veloR - ${sq2}*(jac*N[3]));
+  N[1] = uR*ny - vR*nx;
+  N[2] = jac*N[3] - ${sq2}*veloR;
 
 % elif ndims == 3:
 
@@ -39,9 +39,9 @@
   % endif
 
   fpdtype_t veloR = nx*uR + ny*vR + nz*wR;
-  N[0] =  invc*(nx*rho*veloR - c*(nx*rhoR + nz*vR - ny*wR) - ${sq2}*jac*N[4]*nx*rho);
-  N[1] =  invc*(ny*rho*veloR - c*(ny*rhoR - nz*uR + nx*wR) - ${sq2}*jac*N[4]*ny*rho);
-  N[2] =  invc*(nz*rho*veloR - c*(nz*rhoR + ny*uR - nx*vR) - ${sq2}*jac*N[4]*nz*rho);
+  N[0] =  invc*nx*rho*(veloR - ${sq2}*jac*N[4]) - (nx*rhoR + nz*vR - ny*wR);
+  N[1] =  invc*ny*rho*(veloR - ${sq2}*jac*N[4]) - (ny*rhoR - nz*uR + nx*wR);
+  N[2] =  invc*nz*rho*(veloR - ${sq2}*jac*N[4]) - (nz*rhoR + ny*uR - nx*vR);
   N[3] =  (jac*N[4] - ${sq2}*veloR);
 
 % endif
