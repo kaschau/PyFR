@@ -14,6 +14,10 @@
     fpdtype_t u = q[${vix}], v = q[${vix + 1}];
     fpdtype_t mu = qt[0];
     fpdtype_t kappa = qt[1];
+    % if visc_sponge:
+      mu *= sponge_mult;
+      kappa *= sponge_mult;
+    % endif
 
     fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(ns)])};
     fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(ns)])};
