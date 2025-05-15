@@ -4,15 +4,16 @@
 <% invsq2 = 2**-0.5 %>
 
 <%pyfr:macro name='compute_wave_amp' params='u, p, v, jac, N, S, norm_nl'>
-  fpdtype_t rho = u[0];
-  fpdtype_t csq = ${c['gamma']}*p/rho;
+  fpdtype_t invrho = u[0];
+  fpdtype_t c = sqrt(${c['gamma']}*p/u[0]);
+  fpdtype_t csq = c*c;
   fpdtype_t Msq = (${pyfr.dot('v[{i}]', i=ndims)})/csq;
   fpdtype_t alpha = sqrt(Msq);
 
-  fpdtype_t pR = jac*${c['K_p']/sq2}/u[0]*(1.0-Msq)*(p - ${c['p']});
+  fpdtype_t pR = jac*${c['K_p']}*(${c['p']} - p);
 
   ## Only need incoming wave
-  N[${nvars-1}] = pR - (1.0 - alpha)*S[${nvars-1}];
+  N[${nvars-1}] = -${sq2}/c*invrho*pR + jac*N[${nvars-2}] + (1.0 - alpha)*jac*(S[${nvars-2}] + S[${nvars-1}]);
 
 </%pyfr:macro>
 
