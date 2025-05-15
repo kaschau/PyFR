@@ -248,6 +248,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._be.pointwise.register(kname)
 
         self._tplargs_efp = defaultdict(dict)
+        self._external_args_efp = defaultdict(dict)
+        self._external_vals_efp = defaultdict(dict)
 
         self._scal_upts = defaultdict(dict)
         self._scal_fpts = defaultdict(dict)
@@ -263,27 +265,26 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self.kernels['comm_flux'] = lambda: self.gen_nscbc_kerns()
 
         # Create required element-face pairs
-        ef_pairs = []
+        self.ef_pairs = []
         for shape in set(t[0] for t in lhs):
             basis = self.elemap[shape].basis
             for fidx in range(len(basis.faces)):
                 lhs_idx = [i for i,t in enumerate(lhs)
                            if t[0] == shape and t[2] == fidx]
                 if lhs_idx:
-                    ef_pairs.append((shape, fidx, lhs_idx))
+                    self.ef_pairs.append((shape, fidx, lhs_idx))
 
 
-        for shape, fidx, lhs_idx in ef_pairs:
+        for shape, fidx, lhs_idx in self.ef_pairs:
             self._dim_lhs[shape][fidx] = len(lhs_idx)
 
             # Generate lhs for element-face pair
             lhs_efp = [lhs[i] for i in lhs_idx]
 
-            self.c |= self._exp_opts_ele(
-                ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs_efp
-            )
-            for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
-                self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
+            # Store tplargs for this element-face pair
+            self._tplargs_efp[shape][fidx] = self._tplargs.copy()
+            self._external_args_efp[shape][fidx] = self._external_args.copy()
+            self._external_vals_efp[shape][fidx] = self._external_vals.copy()
 
             # Basis in regular orientation
             ele = self.elemap[shape]
@@ -294,8 +295,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             ndims = self.ndims
             facefpts = basis.facefpts[fidx]
 
-            # Store tplargs for this element-face pair
-            self._tplargs_efp[shape][fidx] = self._tplargs.copy()
             tplargs_efp = self._tplargs_efp[shape][fidx]
 
             tplargs_efp['nupts'] = nupts
@@ -364,7 +363,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 kerns.append(self._be.kernel(
                     'bccflux_nscbc', tplargs=tplargs_efp,
                     dims=[self._dim_lhs[shape][fidx]],
-                    extrns=self._external_args,
+                    extrns=self._external_args_efp[shape][fidx],
                     u_upts=self._scal_upts[shape][fidx],
                     u_fpts=self._scal_fpts[shape][fidx],
                     gradu_upts=self._grad_upts[shape][fidx],
@@ -372,7 +371,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     normnl_ffpt=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
                     jacs_ffpt=self._jacs_facefpts[shape][fidx],
-                    **self._external_vals))
+                    **self._external_vals_efp[shape][fidx]))
 
         return self._be.unordered_meta_kernel(kerns)
 
@@ -385,8 +384,13 @@ class NSCBCSubOutFpBCInters(NavierStokesCharacteristicBoundaryCondition):
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
 
-        self.c |= self._exp_opts_ele(['p'], lhs)
-        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=0.25)
+        for shape, fidx, lhs_idx in self.ef_pairs:
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+            self.c |= self._exp_opts_ele(['p'], lhs_efp,
+                                         self._external_args_efp[shape][fidx],
+                                         self._external_vals_efp[shape][fidx])
+        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=1.0)
 
 class NSCBCSubInFrvBCInters(NavierStokesCharacteristicBoundaryCondition):
 
@@ -395,3 +399,14 @@ class NSCBCSubInFrvBCInters(NavierStokesCharacteristicBoundaryCondition):
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
+        for shape, fidx, lhs_idx in self.ef_pairs:
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+
+            self.c |= self._exp_opts_ele(
+                ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs_efp,
+                self._external_args_efp[shape][fidx],
+                self._external_vals_efp[shape][fidx],
+            )
+        for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=1.0)

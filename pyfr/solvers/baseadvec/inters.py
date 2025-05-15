@@ -168,7 +168,7 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
 
         return exprs
 
-    def _exp_opts_ele(self, opts, lhs, default={}):
+    def _exp_opts_ele(self, opts, lhs, ex_args, ex_vals, default={}):
         cfg, sect = self.cfg, self.cfgsect
 
         subs = cfg.items('constants')
@@ -185,9 +185,12 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
         if (any('ploc' in ex for ex in exprs.values()) and
             'ploc' not in self._external_args):
             basis = first(self.elemap.values()).basis
-            spec = f'in fpdtype_t[{basis.nfacefpts[first(lhs)[2]]}][{self.ndims}]'
+            fidx = first(lhs)[2]
+            spec = f'in fpdtype_t[{basis.nfacefpts[fidx]}][{self.ndims}]'
             value = self._fwise_const_mat(lhs, 'get_ploc_for_facefpts')
 
-            self._set_external('ploc', spec, value=value)
+            #self._set_external('ploc', spec, value=value)
+            ex_args['ploc'] = spec
+            ex_vals['ploc'] = value
 
         return exprs
