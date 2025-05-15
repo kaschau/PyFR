@@ -276,6 +276,15 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         for shape, fidx, lhs_idx in ef_pairs:
             self._dim_lhs[shape][fidx] = len(lhs_idx)
 
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+
+            self.c |= self._exp_opts_ele(
+                ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs_efp
+            )
+            for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
+                self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
+
             # Basis in regular orientation
             ele = self.elemap[shape]
             basis = ele.basis
@@ -312,9 +321,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
-
-            # Generate lhs for element-face pair
-            lhs_efp = [lhs[i] for i in lhs_idx]
 
             method = '_get_scal_upts_for_inter_ele'
             scal_upts = self._scal_upts_view(lhs_efp, method)
@@ -389,9 +395,3 @@ class NSCBCSubInFrvBCInters(NavierStokesCharacteristicBoundaryCondition):
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfgsect, cfg)
-
-        self.c |= self._exp_opts_ele(
-            ['rho', 'u', 'v', 'w'][:self.ndims + 1], lhs
-        )
-        for i in ['rho', 'u', 'v', 'w'][:self.ndims + 1]:
-            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
