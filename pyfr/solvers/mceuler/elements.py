@@ -166,7 +166,7 @@ class BaseMCFluidElements:
             }
 
             if sub_steps == 'auto':
-                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 500)
+                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 10)
                 chem_tplargs['max_subs'] = max_subs
                 self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-auto',
                                    'finite_rate_auto',
