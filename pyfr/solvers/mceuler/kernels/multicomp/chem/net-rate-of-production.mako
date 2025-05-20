@@ -109,14 +109,14 @@
     <% Tss = c['fall_coeffs'][i][3]%>\
     % if Tss == 0.0: #Three Parameter Troe form
       // Three Troe Reaction
-      ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
+      double log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
       ## Convert to nat log and simplify
-      double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
+      ## double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
     % else: # Four Parameter Troe form
       // Four Troe Reaction
-      ## fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
+      double log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
       ## Convert to nat log and simplify
-      double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
+      ## double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
