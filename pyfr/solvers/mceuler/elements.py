@@ -155,7 +155,7 @@ class BaseMCFluidElements:
             consts = self.cfg.items_as('constants', float)
             consts |= self.mcfluid.consts
 
-            sub_steps = self.cfg.get('multi-component', 'sub-steps', default = False)
+            sub_steps = self.cfg.get('multi-component', 'sub-steps', default=0)
             chem_tplargs = {
                 'ndims': self.ndims,
                 'nvars': self.nvars,
@@ -165,18 +165,17 @@ class BaseMCFluidElements:
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
 
-            if not sub_steps:
-                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate',
-                                   'finite_rate',
-                                   chem_tplargs,
-                                   False,
-                                   True)
-
-            elif sub_steps == 'auto':
+            if sub_steps == 'auto':
                 max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 500)
                 chem_tplargs['max_subs'] = max_subs
                 self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-auto',
                                    'finite_rate_auto',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+            elif not int(sub_steps):
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate',
+                                   'finite_rate',
                                    chem_tplargs,
                                    False,
                                    True)
