@@ -1,9 +1,9 @@
 import itertools as it
 import math
 
+from pyfr.nputil import npeval
 from pyfr.util import first
 from pyfr.solvers.base import BaseInters
-from pyfr.nputil import npeval
 
 
 class BaseAdvectionIntersMixin:

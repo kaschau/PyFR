@@ -67,15 +67,14 @@ class PointLocator:
             p = np.frombuffer(pmem, dtype=dtype)
             q = np.frombuffer(qmem, dtype=dtype)
 
-            mask = p[fields[0]] < q[fields[0]]
-            for i, f in enumerate(fields[1:], start=1):
-                fmask = p[f] < q[f]
-                for g in fields[:i]:
-                    fmask &= p[g] == q[g]
+            lmask = p[fields[0]] < q[fields[0]]
+            emask = p[fields[0]] == q[fields[0]]
 
-                mask |= fmask
+            for f in fields[1:]:
+                lmask |= emask & p[f] < q[f]
+                emask &= p[f] == q[f]
 
-            q[mask] = p[mask]
+            q[lmask] = p[lmask]
 
         sbuf = (x, mpi.BYTE) if x is not mpi.IN_PLACE else x
         rbuf = (y, mpi.BYTE)
@@ -90,12 +89,11 @@ class PointLocator:
         nodes = self.mesh.raw['nodes'][start:end]['location']
 
         # Insert these points into a spatial index
-        props = Property(dimension=self.mesh.ndims, interleaved=True)
-        ins = ((i, [*p, *p], None) for i, p in enumerate(nodes))
-        idx = Index(ins, properties=props)
+        idx = Index((np.arange(len(nodes)), nodes, nodes),
+                    properties=Property(dimension=self.mesh.ndims))
 
         # Query the index to find our closest node
-        nearest = np.array([next(idx.nearest([*p, *p], 1)) for p in pts])
+        nearest = idx.nearest_v(pts, pts, strict=True)[0]
 
         buf = np.empty(len(pts), dtype=[('dist', float), ('idx', int)])
         buf['dist'] = np.linalg.norm(pts - nodes[nearest], axis=1)

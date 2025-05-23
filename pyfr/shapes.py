@@ -190,7 +190,7 @@ class BaseShape:
     @cached_property
     def _iqrules(self):
         return {kind: self._get_qrule('interfaces', kind, flags='s')
-                for kind in {k for k, p, n in self.faces}}
+                for kind, proj, norm in self.faces}
 
     @property
     def qpts(self):
@@ -494,7 +494,7 @@ class TetShape(BaseShape):
                 for p in pts1d[:(sptord + 1 - i - j)]]
 
     @classmethod
-    def valid_spt(spt, tol=1e-9):
+    def valid_spt(cls, spt, tol=1e-9):
         x, y, z = spt
 
         return (x + tol > -1 and x - tol < -1 - y - z and

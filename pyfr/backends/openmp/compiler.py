@@ -27,7 +27,7 @@ class OpenMPCompiler:
         self.proc = platform.processor()
 
         # Get the compiler version string
-        self.version = call_capture_output([self.cc, '-v'])
+        self.version = call_capture_output([self.cc, '-v'])[1]
 
         # Get the base compiler command strig
         self.cmd = self.cc_cmd(None, None)
@@ -95,7 +95,12 @@ class OpenMPCompiler:
 
         # Attempt to add the item to the cache and load
         if cpath := self.cache.set_with_path(ckey, lpath):
-            return CDLL(cpath)
+            while True:
+                try:
+                    return CDLL(cpath)
+                except OSError as e:
+                    if 'file inode changed' not in str(e):
+                        raise
         # Otherwise, load from the current temporary path
         else:
             return CDLL(lpath)

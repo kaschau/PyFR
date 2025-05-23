@@ -3,8 +3,8 @@ from itertools import chain
 
 import numpy as np
 
-from pyfr.nputil import fuzzysort, npeval
 from pyfr.cache import memoize
+from pyfr.nputil import fuzzysort, npeval
 from pyfr.quadrules import get_quadrule
 from pyfr.shapes import proj_l2
 
