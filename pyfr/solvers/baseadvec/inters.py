@@ -187,7 +187,7 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
             basis = first(self.elemap.values()).basis
             fidx = first(lhs)[2]
             spec = f'in fpdtype_t[{basis.nfacefpts[fidx]}][{self.ndims}]'
-            value = self._fwise_const_mat(lhs, 'get_ploc_for_facefpts')
+            value = self._ewise_const_mat(lhs, 'get_ploc_for_facefpts')
 
             #self._set_external('ploc', spec, value=value)
             ex_args['ploc'] = spec

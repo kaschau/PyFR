@@ -342,7 +342,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 method = '_get_inward_normnls_facefpts'
             else:
                 method = '_get_normnls_facefpts'
-            normnl_facefpts = self._fwise_const_mat(lhs_efp, method)
+            normnl_facefpts = self._ewise_const_mat(lhs_efp, method)
             self._normnl_facefpts[shape][fidx] = normnl_facefpts
 
             method = '_get_smats_upts'
@@ -350,7 +350,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             self._smats_upts[shape][fidx] = smats_upts
 
             method = '_get_jacs_facefpts'
-            jacs_facefpts = self._fwise_const_mat(lhs_efp, method)
+            jacs_facefpts = self._ewise_const_mat(lhs_efp, method)
             self._jacs_facefpts[shape][fidx] = jacs_facefpts
 
     def gen_nscbc_kerns(self):
@@ -358,10 +358,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         for shape in self._tplargs_efp.keys():
             for fidx in self._tplargs_efp[shape].keys():
 
-                tplargs_efp = self._tplargs_efp[shape][fidx]
-
                 kerns.append(self._be.kernel(
-                    'bccflux_nscbc', tplargs=tplargs_efp,
+                    'bccflux_nscbc',
+                    tplargs=self.tplargs_efp[shape][fidx],
                     dims=[self._dim_lhs[shape][fidx]],
                     extrns=self._external_args_efp[shape][fidx],
                     u_upts=self._scal_upts[shape][fidx],
