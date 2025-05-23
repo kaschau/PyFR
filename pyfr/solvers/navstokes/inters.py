@@ -360,7 +360,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
                 kerns.append(self._be.kernel(
                     'bccflux_nscbc',
-                    tplargs=self.tplargs_efp[shape][fidx],
+                    tplargs=self._tplargs_efp[shape][fidx],
                     dims=[self._dim_lhs[shape][fidx]],
                     extrns=self._external_args_efp[shape][fidx],
                     u_upts=self._scal_upts[shape][fidx],
