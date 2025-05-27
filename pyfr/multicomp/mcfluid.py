@@ -68,14 +68,9 @@ class MCFluid:
         # Finally, merge reactions data to the consts, make them numpy arrays
         chem = cfg.getbool('multi-component','chemistry', False)
         if chem:
-            dmap = {'single': np.float32, 'double':np.float64}
-            dtype = dmap[cfg.get('backend','precision')]
-            finfo = np.finfo(dtype)
             for k,v in userdata['reactions'].items():
                 if not isinstance(v[0], str):
-                    # clip by type
-                    temp = np.array(v).clip(finfo.min, finfo.max)
-                    self.consts[k] = temp
+                    self.consts[k] = np.array(v)
                 else:
                     self.consts[k] = v
 
