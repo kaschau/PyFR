@@ -75,10 +75,6 @@ class MCFluid:
                 if not isinstance(v[0], str):
                     # clip by type
                     temp = np.array(v).clip(finfo.min, finfo.max)
-                    temp = np.where(np.bitwise_and(abs(temp) < finfo.eps,
-                                                   temp > 0.0),
-                                                   finfo.eps,
-                                                   temp)
                     self.consts[k] = temp
                 else:
                     self.consts[k] = v
