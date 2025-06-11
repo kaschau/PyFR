@@ -39,6 +39,8 @@
 
   // Viscosity
   fpdtype_t mu_sp[${ns}]; // precompute pure species due to frequent access
+  fpdtype_t mu_spsqrt[${ns}];
+  fpdtype_t mu_spinvsqrt[${ns}];
   % for n in range(ns):
     // ${c['names'][n]} viscosity
     <% deg = len(muPoly[n]) - 1%>\
@@ -47,6 +49,8 @@
     // Set to correct dimensions
     mu_sp[${n}] *= sqrtsqrtT;
     mu_sp[${n}] *= mu_sp[${n}];
+    mu_spsqrt[${n}] = sqrt(mu_sp[${n}]);
+    mu_spinvsqrt[${n}] = 1.0/mu_spsqrt[${n}];
   % endfor
   {
     fpdtype_t mu = 0.0;
@@ -56,16 +60,19 @@
       {
         % for n2 in range(n, ns):
           {
-            fpdtype_t sqrt_mu_ratio = sqrt(mu_sp[${n}]/mu_sp[${n2}]);
-            fpdtype_t num = 1.0 + sqrt_mu_ratio * ${(MW[n2] / MW[n])**0.25};
-            fpdtype_t phi_n_n2 = num * num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
-            phitemp[${n}] += phi_n_n2 * X[${n2}];
-          % if n != n2:
+          % if n == n2:
+            phitemp[${n}] += X[${n2}];
+          % else:
             {
-              fpdtype_t sqrt_mu_ratio_inv = 1.0/sqrt_mu_ratio;
-              fpdtype_t num_inv = 1.0 + sqrt_mu_ratio_inv * ${(MW[n] / MW[n2])**0.25};
-              fpdtype_t phi_n2_n = num_inv * num_inv * ${1.0/(math.sqrt(8.0)*math.sqrt(1.0 + MW[n2]/MW[n]))};
-              phitemp[${n2}] += phi_n2_n * X[${n}];
+              fpdtype_t sqrt_mu_ratio = mu_spsqrt[${n}]*mu_spinvsqrt[${n2}];
+              fpdtype_t num = 1.0 + sqrt_mu_ratio * ${(MW[n2] / MW[n])**0.25};
+              fpdtype_t phi_temp = num * num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
+              phitemp[${n}] += phi_temp * X[${n2}];
+
+              sqrt_mu_ratio = mu_spsqrt[${n2}]*mu_spinvsqrt[${n}];
+              num = 1.0 + sqrt_mu_ratio * ${(MW[n] / MW[n2])**0.25};
+              phi_temp = num * num * ${1.0/(math.sqrt(8.0)*math.sqrt(1.0 + MW[n2]/MW[n]))};
+              phitemp[${n2}] += phi_temp * X[${n}];
             }
           % endif
           }
