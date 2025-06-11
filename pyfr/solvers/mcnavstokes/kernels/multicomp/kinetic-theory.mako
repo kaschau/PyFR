@@ -31,15 +31,11 @@
 % endfor
   }
 
-  // Evaluate all property poly'l
-  fpdtype_t logT = log(T);
-  fpdtype_t sqrtT = sqrt(T);
-  fpdtype_t sqrtsqrtT = sqrt(sqrtT);
-  fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
-
   // Viscosity
   // because we fit poly'l to sqrt(mu), and we need sqrt(mu) a lot, just
   // evaluate the poly'l first, then convert to physical viscosity at the end
+  fpdtype_t logT = log(T);
+  fpdtype_t sqrtT = sqrt(T);
   fpdtype_t polymu_sp[${ns}];
   fpdtype_t invpolymu_sp[${ns}];
   % for n in range(ns):
@@ -101,6 +97,7 @@
 
   // Diffusion coefficient
   {
+    fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
     fpdtype_t sum1[${ns}] = {0};
     fpdtype_t sum2[${ns}] = {0};
 
