@@ -38,19 +38,15 @@
   fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
 
   // Viscosity
-  fpdtype_t mu_sp[${ns}]; // precompute pure species due to frequent access
-  fpdtype_t mu_spsqrt[${ns}];
-  fpdtype_t mu_spinvsqrt[${ns}];
+  // because we fit poly'l to sqrt(mu), and we need sqrt(mu) a lot, just
+  // evaluate the poly'l first, then convert to physical viscosity at the end
+  fpdtype_t polymu_sp[${ns}];
+  fpdtype_t invpolymu_sp[${ns}];
   % for n in range(ns):
     // ${c['names'][n]} viscosity
     <% deg = len(muPoly[n]) - 1%>\
-    mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
-
-    // Set to correct dimensions
-    mu_sp[${n}] *= sqrtsqrtT;
-    mu_sp[${n}] *= mu_sp[${n}];
-    mu_spsqrt[${n}] = sqrt(mu_sp[${n}]);
-    mu_spinvsqrt[${n}] = 1.0/mu_spsqrt[${n}];
+    polymu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
+    invpolymu_sp[${n}] = 1.0/polymu_sp[${n}];
   % endfor
   {
     fpdtype_t mu = 0.0;
@@ -64,20 +60,22 @@
             phitemp[${n}] += X[${n2}];
           % else:
             {
-              fpdtype_t sqrt_mu_ratio = mu_spsqrt[${n}]*mu_spinvsqrt[${n2}];
-              fpdtype_t num = 1.0 + sqrt_mu_ratio * ${(MW[n2] / MW[n])**0.25};
+              fpdtype_t polymu_ratio = polymu_sp[${n}]*invpolymu_sp[${n2}];
+              fpdtype_t num = 1.0 + polymu_ratio * ${(MW[n2] / MW[n])**0.25};
               fpdtype_t phi_temp = num * num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
               phitemp[${n}] += phi_temp * X[${n2}];
 
-              sqrt_mu_ratio = mu_spsqrt[${n2}]*mu_spinvsqrt[${n}];
-              num = 1.0 + sqrt_mu_ratio * ${(MW[n] / MW[n2])**0.25};
+              polymu_ratio = polymu_sp[${n2}]*invpolymu_sp[${n}];
+              num = 1.0 + polymu_ratio * ${(MW[n] / MW[n2])**0.25};
               phi_temp = num * num * ${1.0/(math.sqrt(8.0)*math.sqrt(1.0 + MW[n2]/MW[n]))};
               phitemp[${n2}] += phi_temp * X[${n}];
             }
           % endif
           }
         % endfor
-        mu += mu_sp[${n}] * X[${n}] / phitemp[${n}];
+        // Set to correct dimensions
+        fpdtype_t mu_sp = polymu_sp[${n}] * polymu_sp[${n}]*sqrtT;
+        mu += mu_sp * X[${n}] / phitemp[${n}];
       }
     % endfor
     qt[0] = mu;
