@@ -37,28 +37,17 @@
   fpdtype_t sqrtsqrtT = sqrt(sqrtT);
   fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
 
-  fpdtype_t mu_sp[${ns}];
-  fpdtype_t invDij[${int((ns + 1)*ns/2)}];
+  // Viscosity
+  fpdtype_t mu_sp[${ns}]; // precompute pure species due to frequenc access
   % for n in range(ns):
-    // ${c['names'][n]} viscosity, diffusion coefficients
+    // ${c['names'][n]} viscosity
     <% deg = len(muPoly[n]) - 1%>\
     mu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
 
     // Set to correct dimensions
     mu_sp[${n}] *= sqrtsqrtT;
     mu_sp[${n}] *= mu_sp[${n}];
-
-    // Dont need to store every kappa!!!
-
-    % for n2 in range(n, ns):
-      <% ix = Dijix(n,n2)%>\
-      <% deg = len(DijPoly[ix]) - 1 %>\
-      invDij[${ix}] = (${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_m3o2;
-    % endfor
   % endfor
-
-  // Now every species' property is computed, generate mixture values
-  // Viscosity
   {
     fpdtype_t mu = 0.0;
     fpdtype_t phitemp[${ns}] = {0};
@@ -115,13 +104,15 @@
       % for n2 in range(n+1, ns):
       {
         <% ix = Dijix(n,n2) %>\
+        <% deg = len(DijPoly[ix]) - 1 %>\
+        fpdtype_t invDij = (${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_m3o2;
         // Contribute to species ${n} sums
-        fpdtype_t temp = X[${n2}] * invDij[${ix}];
+        fpdtype_t temp = X[${n2}] * invDij;
         sumd1[${n}] += temp;
         sumd2[${n}] += temp * ${MW[n2]};
 
         // Contribute to species ${n2} sums (symmetric)
-        temp = X[${n}] * invDij[${ix}];
+        temp = X[${n}] * invDij;
         sumd1[${n2}] += temp;
         sumd2[${n2}] += temp * ${MW[n]};
       }
