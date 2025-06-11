@@ -115,15 +115,15 @@
       % for n2 in range(n+1, ns):
       {
         <% ix = Dijix(n,n2) %>\
-        fpdtype_t inv_dij = invDij[${ix}];
-
         // Contribute to species ${n} sums
-        sumd1[${n}] += X[${n2}] * inv_dij;
-        sumd2[${n}] += X[${n2}] * ${MW[n2]} * inv_dij;
+        fpdtype_t temp = X[${n2}] * invDij[${ix}];
+        sumd1[${n}] += temp;
+        sumd2[${n}] += temp * ${MW[n2]};
 
         // Contribute to species ${n2} sums (symmetric)
-        sumd1[${n2}] += X[${n}] * inv_dij;
-        sumd2[${n2}] += X[${n}] * ${MW[n]} * inv_dij;
+        temp = X[${n}] * invDij[${ix}];
+        sumd1[${n2}] += temp;
+        sumd2[${n2}] += temp * ${MW[n]};
       }
       % endfor
     % endfor
