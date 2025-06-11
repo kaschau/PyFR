@@ -10,7 +10,7 @@
 <% Dijix = lambda n,n2 : int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>\
 
 <%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
-  fpdtype_t p = q[${pix}];
+  fpdtype_t invp = 1.0 / q[${pix}];
   fpdtype_t T = q[${Tix}];
 
   // Mole fraction
@@ -38,7 +38,7 @@
   fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
 
   // Viscosity
-  fpdtype_t mu_sp[${ns}]; // precompute pure species due to frequenc access
+  fpdtype_t mu_sp[${ns}]; // precompute pure species due to frequent access
   % for n in range(ns):
     // ${c['names'][n]} viscosity
     <% deg = len(muPoly[n]) - 1%>\
@@ -123,7 +123,7 @@
     % for n in range(ns):
     {
       fpdtype_t final_sum2 = sum2[${n}] * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-      qt[${2 + n}] = 1.0 / (p * (sum1[${n}] + final_sum2));
+      qt[${2 + n}] = invp / (sum1[${n}] + final_sum2);
     }
     % endfor
   }
