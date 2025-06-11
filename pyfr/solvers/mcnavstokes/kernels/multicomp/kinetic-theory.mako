@@ -96,8 +96,8 @@
 
   // Diffusion coefficient
   {
-    fpdtype_t sumd1[${ns}] = {0};
-    fpdtype_t sumd2[${ns}] = {0};
+    fpdtype_t sum1[${ns}] = {0};
+    fpdtype_t sum2[${ns}] = {0};
 
     // Iterate over upper triangle only
     % for n in range(ns):
@@ -108,13 +108,13 @@
         fpdtype_t invDij = (${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_m3o2;
         // Contribute to species ${n} sums
         fpdtype_t temp = X[${n2}] * invDij;
-        sumd1[${n}] += temp;
-        sumd2[${n}] += temp * ${MW[n2]};
+        sum1[${n}] += temp;
+        sum2[${n}] += temp * ${MW[n2]};
 
         // Contribute to species ${n2} sums (symmetric)
         temp = X[${n}] * invDij;
-        sumd1[${n2}] += temp;
-        sumd2[${n2}] += temp * ${MW[n]};
+        sum1[${n2}] += temp;
+        sum2[${n2}] += temp * ${MW[n]};
       }
       % endfor
     % endfor
@@ -122,9 +122,8 @@
     // Final computation for each species
     % for n in range(ns):
     {
-      fpdtype_t final_sumd1 = sumd1[${n}] * p;
-      fpdtype_t final_sumd2 = sumd2[${n}] * p * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-      qt[${2 + n}] = 1.0 / (final_sumd1 + final_sumd2);
+      fpdtype_t final_sum2 = sum2[${n}] * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+      qt[${2 + n}] = 1.0 / (p * (sum1[${n}] + final_sum2));
     }
     % endfor
   }
