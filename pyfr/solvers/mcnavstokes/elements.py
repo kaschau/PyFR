@@ -42,6 +42,7 @@ class MCNavierStokesElements(BaseMCFluidElements,
             'c': consts,
             'eos': self.mcfluid.eos,
             'trans': self.mcfluid.trans,
+            'mixing_rule': self.mcfluid.mixing_rule,
             'jac_exprs': self.basis.jac_exprs,
             'shock_capturing': shock_capturing,
         }

@@ -30,6 +30,7 @@ class TplargsMixin:
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              rsolver=rsolver,
                              eos = mcfluid.eos, trans = mcfluid.trans,
+                             mixing_rule = mcfluid.mixing_rule,
                              shock_capturing=shock_capturing, c=self.c,
                              d_min=self.d_min, inte_min=self.inte_min)
 

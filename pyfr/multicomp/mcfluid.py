@@ -15,6 +15,7 @@ class MCFluid:
             self.trans = 'None'
         else:
             self.trans = cfg.get('multi-component','transport', 'None')
+            self.mixing_rule = cfg.get('multi-component','mixing-rule', 'Wilke')
 
         eos_data = subclass_where(BaseEOS, name=self.eos)(cfg)
         if self.trans != 'None':

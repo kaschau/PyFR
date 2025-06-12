@@ -44,8 +44,11 @@
     polymu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
     invpolymu_sp[${n}] = 1.0/polymu_sp[${n}];
   % endfor
+
   {
-    fpdtype_t mu = 0.0;
+  fpdtype_t mu = 0.0;
+  % if mixing_rule == 'Wilke':
+    // Wilke Approximation
     fpdtype_t phitemp[${ns}] = {0};
     % for n in range(ns):
       // ${c['names'][n]} viscosity
@@ -74,7 +77,24 @@
         mu += mu_sp * X[${n}] / phitemp[${n}];
       }
     % endfor
-    qt[0] = mu;
+
+  % elif mixing_rule == 'Herning-Zipperer':
+    // Herning-Zipperer Approximation
+    fpdtype_t numerator = 0.0;
+    fpdtype_t denominator = 0.0;
+
+    % for n in range(ns):
+    {
+      fpdtype_t X_sqrt_MW = X[${n}] * ${math.sqrt(MW[n])};
+      // mu_sp[n] = polymu_sp[n]^2 * sqrtT, but we can factor out sqrtT
+      numerator += X_sqrt_MW * polymu_sp[${n}] * polymu_sp[${n}];
+      denominator += X_sqrt_MW;
+    }
+    % endfor
+    // Apply temperature scaling
+    mu = (numerator / denominator) * sqrtT;
+  % endif
+  qt[0] = mu;
   }
 
   // Thermal conductivity
