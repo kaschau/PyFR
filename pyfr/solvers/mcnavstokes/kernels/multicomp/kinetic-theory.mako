@@ -10,21 +10,21 @@
 <% Dijix = lambda n,n2 : int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>\
 
 <%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
-  fpdtype_t invp = 1.0 / q[${pix}];
+  fpdtype_t p = q[${pix}];
   fpdtype_t T = q[${Tix}];
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;
   fpdtype_t X[${ns}];
   {
-    fpdtype_t mass = 0.0;
+    fpdtype_t total_moles = 0.0;
 % for n in range(ns):
     X[${n}] = q[${n}] * ${1.0 / MW[n]};
-    mass += X[${n}];
+    total_moles += X[${n}];
 % endfor
-    fpdtype_t invmass = 1.0 / mass;
+    fpdtype_t inv_total_moles = 1.0 / total_moles;
 % for n in range(ns):
-    X[${n}] *= invmass;
+    X[${n}] *= inv_total_moles;
     MWmix += X[${n}] * ${MW[n]};
     // Avoid pure species condition
     X[${n}] = fmax(X[${n}], ${fpdtype_eps});
@@ -140,7 +140,7 @@
       }
       % endfor
       sum2[${n}] *= X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-      qt[${2 + n}] = invp / (sum1[${n}] + sum2[${n}]);
+      qt[${2 + n}] = 1.0 / (p * (sum1[${n}] + sum2[${n}]));
     % endfor
   }
 
