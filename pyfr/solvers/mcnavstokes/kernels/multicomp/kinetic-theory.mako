@@ -139,14 +139,8 @@
         sum2[${n2}] += temp * ${MW[n]};
       }
       % endfor
-    % endfor
-
-    // Final computation for each species
-    % for n in range(ns):
-    {
-      fpdtype_t final_sum2 = sum2[${n}] * X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
-      qt[${2 + n}] = invp / (sum1[${n}] + final_sum2);
-    }
+      sum2[${n}] *= X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+      qt[${2 + n}] = invp / (sum1[${n}] + sum2[${n}]);
     % endfor
   }
 
