@@ -55,15 +55,17 @@
 
 <%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
 
-  // Concentrations
-  fpdtype_t cs[${ns}];
   // Kahan summation error compensation for omega accumulation
   fpdtype_t omega_c[${ns}] = {0};
   % for n in range(ns):
     omega[${n}] = 0.0;  // omega must start at zero
   % endfor
+  // Concentrations (log space only)
+  fpdtype_t log_cs[${ns}];
+  fpdtype_t cs_temp;
   % for n in range(ns):
-    cs[${n}] = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
+    cs_temp = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
+    log_cs[${n}] = log(cs_temp);
   % endfor
 
   // Gibbs energy (kept in log space)
@@ -102,26 +104,33 @@
   {
   fpdtype_t log_k_f = ${logRateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
-  // Three body reaction with Kahan summation
-  fpdtype_t cTBC = 0.0;
-  fpdtype_t cTBC_c = 0.0;  // compensation
+  // Three body reaction - keep in log space
+  fpdtype_t log_cTBC_terms[${sum(1 for eff in c['aij'][i] if eff != 0.0)}];
+  <% term_idx = 0 %>\
   % for n, eff in enumerate(c['aij'][i]):
     % if eff != 0.0:
-    {
-      fpdtype_t y = ${eff}*cs[${n}] - cTBC_c;
-      fpdtype_t t = cTBC + y;
-      cTBC_c = (t - cTBC) - y;
-      cTBC = t;
-    }
+      log_cTBC_terms[${term_idx}] = ${math.log(eff)} + log_cs[${n}];
+      <% term_idx += 1 %>
     % endif
   % endfor
+
+  // Compute log_cTBC using log-sum-exp for numerical stability
+  fpdtype_t log_cTBC = log_cTBC_terms[0];
+  % for j in range(1, term_idx):
+  {
+    fpdtype_t max_term = fmax(log_cTBC, log_cTBC_terms[${j}]);
+    fpdtype_t min_term = fmin(log_cTBC, log_cTBC_terms[${j}]);
+    log_cTBC = max_term + log(1.0 + exp(min_term - max_term));
+  }
+  % endfor
+
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
-    log_k_f += log(cTBC);
+    log_k_f += log_cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction (log space)
     fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
-    fpdtype_t log_Pr = log(cTBC) + log_k0_kf;
+    fpdtype_t log_Pr = log_cTBC + log_k0_kf;
     fpdtype_t Pr = exp(log_Pr);
     fpdtype_t pmod = Pr/(1.0 + Pr);
     log_k_f += log(pmod);
@@ -140,7 +149,7 @@
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
     fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
-    fpdtype_t log_Pr = log(cTBC) + log_k0_kf;
+    fpdtype_t log_Pr = log_cTBC + log_k0_kf;
     fpdtype_t Pr = exp(log_Pr);
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
@@ -151,14 +160,14 @@
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
 
-  // Set rates of progress
+  // Set rates of progress (log space)
   <% nu_sum = nu_b[:,i] - nu_f[:,i] %>\
-  fpdtype_t k_f = exp(log_k_f);
   % if c['r_type'][i] == "Arrhenius Custom Order":
-    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(c['orders'][i]) if float(v) != 0.0])};
+    fpdtype_t log_rp = log_k_f + ${"+".join([f"({v})*log_cs[{n}]" for n,v in enumerate(c['orders'][i]) if float(v) != 0.0])};
   % else:
-    fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_f[:,i]) if float(v) != 0.0])};
+    fpdtype_t log_rp = log_k_f + ${"+".join([f"({v})*log_cs[{n}]" for n,v in enumerate(nu_f[:,i]) if float(v) != 0.0])};
   % endif
+  fpdtype_t rp = exp(log_rp);
 
   % if c['reversible'][i]:
     // Equilibrium constant with Kahan summation
@@ -176,8 +185,9 @@
     % endfor
     // Work in log space to avoid overflow
     fpdtype_t log_k_r = log_k_f - ${Kc_log(sum(nu_sum))};
-    fpdtype_t k_r = exp(log_k_r);
-    rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
+    fpdtype_t log_rp_reverse = log_k_r + ${"+".join([f"({v})*log_cs[{n}]" for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
+    fpdtype_t rp_reverse = exp(log_rp_reverse);
+    rp -= rp_reverse;
   % endif
 
   // Add this reaction to the sources that use it (Kahan summation)
