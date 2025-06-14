@@ -9,25 +9,6 @@
 <% Ru = c['Ru'] %>\
 <% fast_props = N7.shape[1] == 7 %>\
 
-<%def name="rateConst(A, m, Ea)">
-  <% m = float(m) %>\
-  % if m == 0.0 and Ea == 0.0:
-    ${A}
-  % elif m == 0.0 and Ea != 0.0:
-    exp(${math.log(A)}-(${Ea}*Tinv))
-  % elif m.is_integer() and Ea == 0.0:
-  %   if m < 0.0:
-    ${A}${"".join("*Tinv" for _ in range(int(abs(m))))}
-  %   elif m > 0.0:
-    ${A}${"".join("*T" for _ in range(int(m)))}
-  %   endif
-  % elif m != 0.0 and Ea == 0.0:
-    exp(${math.log(A)}+(${m}*logT))
-  % elif Ea != 0.0:
-    exp(${math.log(A)}+(${m}*logT)-(${Ea}*Tinv))
-  % endif
-</%def>\
-
 <%def name="logRateConst(A, m, Ea)">
   ${math.log(A)}+(${m}*logT)-(${Ea}*Tinv)
 </%def>\
@@ -148,14 +129,13 @@
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
-    fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
-    fpdtype_t log_Pr = log_cTBC + log_k0_kf;
-    fpdtype_t Pr = exp(log_Pr);
-    fpdtype_t A = log10(Pr) + C;
+    fpdtype_t log_Pr = log_cTBC + ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])};
+    fpdtype_t log10_Pr = log_Pr * 0.4342944819032518; // log_Pr / ln(10)
+    fpdtype_t A = log10_Pr + C;
     fpdtype_t f1 = A/(N - 0.14*A);
-    fpdtype_t F_pdr = exp(log10Fcent/(1.0+f1*f1) * 2.302585092994046); // ln(10)
-    fpdtype_t pmod = Pr/(1.0 + Pr) * F_pdr;
-    log_k_f += log(pmod);
+    fpdtype_t log_F_pdr = log10Fcent/(1.0+f1*f1) * 2.302585092994046; // ln(10)
+    fpdtype_t log_pmod = log_Pr - log(1.0 + exp(log_Pr)) + log_F_pdr;
+    log_k_f += log_pmod;
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
@@ -183,6 +163,7 @@
     }
       % endif
     % endfor
+
     // Work in log space to avoid overflow
     fpdtype_t log_k_r = log_k_f - ${Kc_log(sum(nu_sum))};
     fpdtype_t log_rp_reverse = log_k_r + ${"+".join([f"({v})*log_cs[{n}]" for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
