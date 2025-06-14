@@ -28,6 +28,10 @@
   % endif
 </%def>\
 
+<%def name="logRateConst(A, m, Ea)">
+  ${math.log(A)}+(${m}*logT)-(${Ea}*Tinv)
+</%def>\
+
 <%def name="Kc_log(nusum)">
   <% nusum = float(nusum) %>\
   % if nusum != 0.0:
@@ -96,7 +100,7 @@
   % for i in range(nr):
   // Reaction ${i} - ${c['r_type'][i]}
   {
-  fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
+  fpdtype_t log_k_f = ${logRateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction with Kahan summation
   fpdtype_t cTBC = 0.0;
@@ -113,12 +117,14 @@
   % endfor
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
-    k_f *= cTBC;
+    log_k_f += log(cTBC);
   % elif c['r_type'][i] == 'falloff-Lindemann':
-    // Lindemann Reaction
-    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    // Lindemann Reaction (log space)
+    fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
+    fpdtype_t log_Pr = log(cTBC) + log_k0_kf;
+    fpdtype_t Pr = exp(log_Pr);
     fpdtype_t pmod = Pr/(1.0 + Pr);
-    k_f *= pmod;
+    log_k_f += log(pmod);
   % elif c['r_type'][i] == 'falloff-Troe':
     <% alpha = c['fall_coeffs'][i][0]%>\
     <% Tsss = c['fall_coeffs'][i][1]%>\
@@ -133,18 +139,21 @@
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
-    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
+    fpdtype_t log_Pr = log(cTBC) + log_k0_kf;
+    fpdtype_t Pr = exp(log_Pr);
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
     fpdtype_t F_pdr = exp(log10Fcent/(1.0+f1*f1) * 2.302585092994046); // ln(10)
     fpdtype_t pmod = Pr/(1.0 + Pr) * F_pdr;
-    k_f *= pmod;
+    log_k_f += log(pmod);
   % elif c['r_type'][i] == 'SRI':
   <% raise ImplementedError("SRI reactions not supporeted")%>
   % endif
 
   // Set rates of progress
   <% nu_sum = nu_b[:,i] - nu_f[:,i] %>\
+  fpdtype_t k_f = exp(log_k_f);
   % if c['r_type'][i] == "Arrhenius Custom Order":
     fpdtype_t rp = k_f * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(c['orders'][i]) if float(v) != 0.0])};
   % else:
@@ -166,7 +175,7 @@
       % endif
     % endfor
     // Work in log space to avoid overflow
-    fpdtype_t log_k_r = log(k_f) - ${Kc_log(sum(nu_sum))};
+    fpdtype_t log_k_r = log_k_f - ${Kc_log(sum(nu_sum))};
     fpdtype_t k_r = exp(log_k_r);
     rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
