@@ -36,8 +36,6 @@
 
 <%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
 
-  // Kahan summation error compensation for omega accumulation
-  fpdtype_t omega_c[${ns}] = {0};
   % for n in range(ns):
     omega[${n}] = 0.0;  // omega must start at zero
   % endfor
@@ -148,19 +146,8 @@
   fpdtype_t rp = exp(log_rp);
 
   % if c['reversible'][i]:
-    // Equilibrium constant with Kahan summation
-    fpdtype_t log_Kp = 0.0;
-    fpdtype_t log_Kp_c = 0.0;  // compensation
-    % for n, v in enumerate(nu_sum):
-      % if float(v) != 0.0:
-    {
-      fpdtype_t y = ${v}*gbs[${n}] - log_Kp_c;
-      fpdtype_t t = log_Kp + y;
-      log_Kp_c = (t - log_Kp) - y;
-      log_Kp = t;
-    }
-      % endif
-    % endfor
+    // Equilibrium constant
+    fpdtype_t log_Kp = ${"+".join([f"({v})*gbs[{n}]" for n,v in enumerate(nu_sum) if float(v) != 0.0])};
 
     // Work in log space to avoid overflow
     fpdtype_t log_k_r = log_k_f - ${Kc_log(sum(nu_sum))};
@@ -169,16 +156,11 @@
     rp -= rp_reverse;
   % endif
 
-  // Add this reaction to the sources that use it (Kahan summation)
+  // Add this reaction to the sources that use it
   % for n in range(ns):
     <% nu = nu_b[n,i] - nu_f[n,i] %>\
     % if abs(nu) > 0.0:
-      {
-        fpdtype_t y = ${nu}*rp - omega_c[${n}];
-        fpdtype_t t = omega[${n}] + y;
-        omega_c[${n}] = (t - omega[${n}]) - y;
-        omega[${n}] = t;
-      }
+      omega[${n}] += ${nu}*rp;
     % endif
   % endfor
   }
