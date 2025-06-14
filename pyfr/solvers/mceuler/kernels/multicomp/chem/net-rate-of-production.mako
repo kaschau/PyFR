@@ -28,45 +28,24 @@
   % endif
 </%def>\
 
-<%def name="Kcinv(nusum)">
+<%def name="Kc_log(nusum)">
   <% nusum = float(nusum) %>\
   % if nusum != 0.0:
     % if nusum == 1.0:
-      prefRuTinv*Kp
+      -(log_Kp + log_prefRuTinv)
     % elif nusum == -1.0:
-      Kp*prefRuT
+      -(log_Kp + log_prefRuT)
     % elif nusum.is_integer():
       % if nusum > 0.0:
-        Kp*${pyfr.intpow("prefRuTinv", nusum)}
+        -(log_Kp + ${nusum}*log_prefRuTinv)
       % else:
-        Kp*${pyfr.intpow("prefRuT", -nusum)}
+        -(log_Kp + ${-nusum}*log_prefRuT)
       % endif:
     % else:
-      Kp*pow(prefRuTinv,${nusum})
+      -(log_Kp + ${nusum}*log_prefRuTinv)
     %   endif
   % else:
-      Kp
-  % endif
-</%def>\
-
-<%def name="Kcinv_log(nusum)">
-  <% nusum = float(nusum) %>\
-  % if nusum != 0.0:
-    % if nusum == 1.0:
-      log_Kp + log_prefRuTinv
-    % elif nusum == -1.0:
-      log_Kp + log_prefRuT
-    % elif nusum.is_integer():
-      % if nusum > 0.0:
-        log_Kp + ${nusum}*log_prefRuTinv
-      % else:
-        log_Kp + ${-nusum}*log_prefRuT
-      % endif:
-    % else:
-      log_Kp + ${nusum}*log_prefRuTinv
-    %   endif
-  % else:
-      log_Kp
+      -log_Kp
   % endif
 </%def>\
 
@@ -187,7 +166,7 @@
       % endif
     % endfor
     // Work in log space to avoid overflow
-    fpdtype_t log_k_r = log(k_f) + ${Kcinv_log(sum(nu_sum))};
+    fpdtype_t log_k_r = log(k_f) - ${Kc_log(sum(nu_sum))};
     fpdtype_t k_r = exp(log_k_r);
     rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
