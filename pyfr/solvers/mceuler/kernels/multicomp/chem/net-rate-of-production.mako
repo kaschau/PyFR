@@ -49,6 +49,27 @@
   % endif
 </%def>\
 
+<%def name="Kcinv_log(nusum)">
+  <% nusum = float(nusum) %>\
+  % if nusum != 0.0:
+    % if nusum == 1.0:
+      log_Kp + log_prefRuTinv
+    % elif nusum == -1.0:
+      log_Kp + log_prefRuT
+    % elif nusum.is_integer():
+      % if nusum > 0.0:
+        log_Kp + ${nusum}*log_prefRuTinv
+      % else:
+        log_Kp + ${-nusum}*log_prefRuT
+      % endif:
+    % else:
+      log_Kp + ${nusum}*log_prefRuTinv
+    %   endif
+  % else:
+      log_Kp
+  % endif
+</%def>\
+
 <%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
 
   // Concentrations
@@ -68,6 +89,8 @@
   fpdtype_t Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
+  fpdtype_t log_prefRuT = log(prefRuT);
+  fpdtype_t log_prefRuTinv = log(prefRuTinv);
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
@@ -134,7 +157,7 @@
     fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
-    fpdtype_t F_pdr = pow(10.0,log10Fcent/(1.0+f1*f1));
+    fpdtype_t F_pdr = exp(log10Fcent/(1.0+f1*f1) * 2.302585092994046); // ln(10)
     fpdtype_t pmod = Pr/(1.0 + Pr) * F_pdr;
     k_f *= pmod;
   % elif c['r_type'][i] == 'SRI':
@@ -163,8 +186,9 @@
     }
       % endif
     % endfor
-    fpdtype_t Kp = exp(log_Kp);
-    fpdtype_t k_r = ${Kcinv(sum(nu_sum))}*k_f;
+    // Work in log space to avoid overflow
+    fpdtype_t log_k_r = log(k_f) + ${Kcinv_log(sum(nu_sum))};
+    fpdtype_t k_r = exp(log_k_r);
     rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
 
