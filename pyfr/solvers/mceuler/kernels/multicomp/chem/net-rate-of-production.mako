@@ -110,11 +110,9 @@
     log_k_f += log_cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction (log space)
-    fpdtype_t log_k0_kf = ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // log(k0/k_f)
-    fpdtype_t log_Pr = log_cTBC + log_k0_kf;
-    fpdtype_t Pr = exp(log_Pr);
-    fpdtype_t pmod = Pr/(1.0 + Pr);
-    log_k_f += log(pmod);
+    fpdtype_t log_Pr = log_cTBC + ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])};
+    fpdtype_t log_pmod = log_Pr - log(1.0 + exp(log_Pr));
+    log_k_f += log_pmod;
   % elif c['r_type'][i] == 'falloff-Troe':
     <% alpha = c['fall_coeffs'][i][0]%>\
     <% Tsss = c['fall_coeffs'][i][1]%>\
