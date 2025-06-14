@@ -58,21 +58,21 @@
     cs[${n}] = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
   % endfor
 
-  // Gibbs energy
-  double egbs[${ns}];
-  double logT = log(T);
-  double Tinv = 1.0/T;
+  // Gibbs energy (kept in log space)
+  fpdtype_t gbs[${ns}];
+  fpdtype_t logT = log(T);
+  fpdtype_t Tinv = 1.0/T;
   fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
   fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
-      egbs[${n}] = exp(${pyfr.nasa_gbs(N7[n,:], 0)});
+      gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 0)};
     % else:
       if (T < ${N7[n,0]}){
-        egbs[${n}] = exp(${pyfr.nasa_gbs(N7[n,:], 8)});
+        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 8)};
       }else{
-        egbs[${n}] = exp(${pyfr.nasa_gbs(N7[n,:], 1)});
+        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 1)};
       }
     % endif
   % endfor
@@ -90,7 +90,7 @@
   % for i in range(nr):
   // Reaction ${i} - ${c['r_type'][i]}
   {
-  double k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
+  fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
   fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{n}])" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])};
@@ -99,7 +99,7 @@
     k_f *= cTBC;
   % elif c['r_type'][i] == 'falloff-Lindemann':
     // Lindemann Reaction
-    double Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t pmod = Pr/(1.0 + Pr);
     k_f *= pmod;
   % elif c['r_type'][i] == 'falloff-Troe':
@@ -109,18 +109,14 @@
     <% Tss = c['fall_coeffs'][i][3]%>\
     % if Tss == 0.0: #Three Parameter Troe form
       // Three Troe Reaction
-      double log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
-      ## Convert to nat log and simplify
-      ## double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)})));
+      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
     % else: # Four Parameter Troe form
       // Four Troe Reaction
-      double log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
-      ## Convert to nat log and simplify
-      ## double log10Fcent = ${1.0/math.log(10)}*(-T*${1.0/Tsss} + log(${1.0 - alpha} + ${alpha}*exp(T*${(-Tsss+Ts)/(Tsss*Ts)}) + exp(${-Tss}*Tinv + T*${1.0/Tsss})));
+      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
-    double Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
+    fpdtype_t Pr = cTBC*${rateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])}; // <- ratio k0/k_f
     fpdtype_t A = log10(Pr) + C;
     fpdtype_t f1 = A/(N - 0.14*A);
     fpdtype_t F_pdr = pow(10.0,log10Fcent/(1.0+f1*f1));
@@ -139,8 +135,9 @@
   % endif
 
   % if c['reversible'][i]:
-    double Kp = ${"*".join([pyfr.intpow(f"egbs[{n}]",v) for n,v in enumerate(nu_sum) if float(v) != 0.0])};
-    double k_r = ${Kcinv(sum(nu_sum))}*k_f;
+    fpdtype_t log_Kp = ${"+".join([f"({v})*gbs[{n}]" for n,v in enumerate(nu_sum) if float(v) != 0.0])};
+    fpdtype_t Kp = exp(log_Kp);
+    fpdtype_t k_r = ${Kcinv(sum(nu_sum))}*k_f;
     rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
 
