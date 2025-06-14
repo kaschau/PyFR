@@ -53,8 +53,12 @@
 
   // Concentrations
   fpdtype_t cs[${ns}];
+  // Kahan summation error compensation for omega accumulation
+  fpdtype_t omega_c[${ns}] = {0};
   % for n in range(ns):
     omega[${n}] = 0.0;  // omega must start at zero
+  % endfor
+  % for n in range(ns):
     cs[${n}] = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
   % endfor
 
@@ -92,8 +96,19 @@
   {
   fpdtype_t k_f = ${rateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
-  // Three body reaction
-  fpdtype_t cTBC = ${"+".join([f"({eff}*cs[{n}])" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])};
+  // Three body reaction with Kahan summation
+  fpdtype_t cTBC = 0.0;
+  fpdtype_t cTBC_c = 0.0;  // compensation
+  % for n, eff in enumerate(c['aij'][i]):
+    % if eff != 0.0:
+    {
+      fpdtype_t y = ${eff}*cs[${n}] - cTBC_c;
+      fpdtype_t t = cTBC + y;
+      cTBC_c = (t - cTBC) - y;
+      cTBC = t;
+    }
+    % endif
+  % endfor
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
     k_f *= cTBC;
@@ -135,17 +150,34 @@
   % endif
 
   % if c['reversible'][i]:
-    fpdtype_t log_Kp = ${"+".join([f"({v})*gbs[{n}]" for n,v in enumerate(nu_sum) if float(v) != 0.0])};
+    // Equilibrium constant with Kahan summation
+    fpdtype_t log_Kp = 0.0;
+    fpdtype_t log_Kp_c = 0.0;  // compensation
+    % for n, v in enumerate(nu_sum):
+      % if float(v) != 0.0:
+    {
+      fpdtype_t y = ${v}*gbs[${n}] - log_Kp_c;
+      fpdtype_t t = log_Kp + y;
+      log_Kp_c = (t - log_Kp) - y;
+      log_Kp = t;
+    }
+      % endif
+    % endfor
     fpdtype_t Kp = exp(log_Kp);
     fpdtype_t k_r = ${Kcinv(sum(nu_sum))}*k_f;
     rp -= k_r * ${"*".join([pyfr.intpow(f"cs[{n}]",v) for n,v in enumerate(nu_b[:,i]) if float(v) != 0.0])};
   % endif
 
-  // Add this reaction to the sources that use it
+  // Add this reaction to the sources that use it (Kahan summation)
   % for n in range(ns):
     <% nu = nu_b[n,i] - nu_f[n,i] %>\
     % if abs(nu) > 0.0:
-      omega[${n}] += ${nu}*rp;
+      {
+        fpdtype_t y = ${nu}*rp - omega_c[${n}];
+        fpdtype_t t = omega[${n}] + y;
+        omega_c[${n}] = (t - omega[${n}]) - y;
+        omega[${n}] = t;
+      }
     % endif
   % endfor
   }
