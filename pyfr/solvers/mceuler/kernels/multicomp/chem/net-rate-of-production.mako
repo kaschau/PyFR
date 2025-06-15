@@ -75,26 +75,9 @@
   {
   fpdtype_t log_k_f = ${logRateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
-  // Three body reaction - keep in log space
-  fpdtype_t log_cTBC_terms[${sum(1 for eff in c['aij'][i] if eff != 0.0)}];
-  <% term_idx = 0 %>\
-  % for n, eff in enumerate(c['aij'][i]):
-    % if eff != 0.0:
-      log_cTBC_terms[${term_idx}] = ${math.log(eff)} + log_cs[${n}];
-      <% term_idx += 1 %>
-    % endif
-  % endfor
-
-  // Compute log_cTBC using log-sum-exp for numerical stability
-  fpdtype_t log_cTBC = log_cTBC_terms[0];
-  % for j in range(1, term_idx):
-  {
-    fpdtype_t max_term = fmax(log_cTBC, log_cTBC_terms[${j}]);
-    fpdtype_t min_term = fmin(log_cTBC, log_cTBC_terms[${j}]);
-    log_cTBC = max_term + log(1.0 + exp(min_term - max_term));
-  }
-  % endfor
-
+  // Three body reaction
+  fpdtype_t cTBC = rho * (${"+".join([f"({eff})*q[{n}]*{1.0/c['MW'][n]}" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])});
+  fpdtype_t log_cTBC = log(cTBC);
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
     log_k_f += log_cTBC;
