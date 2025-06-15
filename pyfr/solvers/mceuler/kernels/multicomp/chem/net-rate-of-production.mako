@@ -33,10 +33,8 @@
   % endfor
   // Concentrations (log space only)
   fpdtype_t log_cs[${ns}];
-  fpdtype_t cs_temp;
   % for n in range(ns):
-    cs_temp = fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]});
-    log_cs[${n}] = log(cs_temp);
+    log_cs[${n}] = log(fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]}));
   % endfor
 
   // Gibbs energy (kept in log space)
