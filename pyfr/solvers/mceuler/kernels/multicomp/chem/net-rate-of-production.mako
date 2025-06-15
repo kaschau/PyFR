@@ -14,24 +14,16 @@
 </%def>\
 
 <%def name="Kc_log(nusum)">
-  <% nusum = float(nusum) %>\
-  % if nusum != 0.0:
-    % if nusum == 1.0:
-      -(log_Kp + log_prefRuTinv)
-    % elif nusum == -1.0:
-      -(log_Kp + log_prefRuT)
-    % elif nusum.is_integer():
-      % if nusum > 0.0:
-        -(log_Kp + ${nusum}*log_prefRuTinv)
-      % else:
-        -(log_Kp + ${-nusum}*log_prefRuT)
-      % endif:
-    % else:
-      -(log_Kp + ${nusum}*log_prefRuTinv)
-    %   endif
-  % else:
-      -log_Kp
-  % endif
+  <%
+  nusum = float(nusum)
+  if nusum > 0.0:
+      log_term = f"{nusum}*log_prefRuTinv"
+  elif nusum < 0.0:
+      log_term = f"{-nusum}*log_prefRuT"
+  else:
+      log_term = "0.0"
+  %>
+  -(log_Kp + ${log_term})
 </%def>\
 
 <%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
