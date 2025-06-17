@@ -62,6 +62,11 @@ class MCFluid:
         self.consts['ns'] = len(usersp)
         self.consts['names'] = [key for key in usersp]
 
+        # User defined temperature ranges
+        self.consts['Tmin'] = self.cfg.getfloat("multi-component", "T-min", 300.0)
+        self.consts['Tmax'] = self.cfg.getfloat("multi-component", "T-max", 3500.0)
+
+
         eos_data.compute_consts(self.input_props, self.consts)
         if self.trans != 'None':
             trans_data.compute_consts(self.input_props, self.consts)

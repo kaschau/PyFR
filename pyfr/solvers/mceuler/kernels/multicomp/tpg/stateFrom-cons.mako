@@ -47,12 +47,12 @@
     fpdtype_t cp;
     % if fast_props:
     // Quadratic guess for T
-    fpdtype_t a = (${'+'.join([f'{N7[n,1]*Ru/MW[n]/2.0}*q[{n}]' for n in range(ns)])});
-    fpdtype_t b = (${'+'.join([f'{N7[n,0]*Ru/MW[n]}*q[{n}]' for n in range(ns)])} - R);
-    fpdtype_t c = -(e - (${'+'.join([f'{N7[n,5]*Ru/MW[n]}*q[{n}]' for n in range(ns)])}));
-    fpdtype_t T = (-b + sqrt(b*b-4*a*c))/(2*a);
+    fpdtype_t a = -(${'+'.join([f'{N7[n,1]*Ru/MW[n]/2.0}*q[{n}]' for n in range(ns)])});
+    fpdtype_t b = R - (${'+'.join([f'{N7[n,0]*Ru/MW[n]}*q[{n}]' for n in range(ns)])});
+    fpdtype_t c = e - (${'+'.join([f'{N7[n,5]*Ru/MW[n]}*q[{n}]' for n in range(ns)])});
+    fpdtype_t T = fmin(${c['Tmax']}, fmax(${c['Tmin']}, fabs(a) < ${fpdtype_eps} ? -c/b : (-b + sqrt(fmax(0.0,b*b-4*a*c)))/(2*a)));
     % else:
-    fpdtype_t T = 300.0; // Initial guess
+    fpdtype_t T = ${0.5*(c['Tmax']-c['Tmin'])}; // Initial guess
     % endif
     ${pyfr.expand('T_iter', 'e', 'cp', 'R', 'T', 'q', 'qh')};
 
