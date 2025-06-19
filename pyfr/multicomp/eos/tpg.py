@@ -22,16 +22,36 @@ class tpgEOS(BaseEOS):
         # Determine if we are using strict property cals or fast
         prop_calc = self.cfg.get('multi-component', 'property-calc', 'strict')
         if prop_calc == 'strict':
-            consts['NASA7'] = props['NASA7']
+            # Restructure NASA7 data for cleaner access
+            N7 = props['NASA7']
+            ns = consts['ns']
+            
+            # Separate temperature cutoffs and coefficient arrays
+            consts['T_cutoff'] = N7[:, 0]  # Temperature cutoff for each species
+            
+            # High temperature range coefficients (columns 1-7)
+            consts['NASA7_Thigh'] = []
+            for n in range(ns):
+                coeffs = N7[n, 1:8].tolist()  # Convert to list for easier access
+                consts['NASA7_Thigh'].append(coeffs)
+            
+            # Low temperature range coefficients (columns 8-14)
+            consts['NASA7_Tlow'] = []
+            for n in range(ns):
+                coeffs = N7[n, 8:15].tolist()  # Convert to list for easier access
+                consts['NASA7_Tlow'].append(coeffs)
         elif prop_calc == 'fast':
             N7 = props['NASA7']
             Tmin = self.cfg.getfloat('multi-component', 'T-min', 300.0)
             Tmax = self.cfg.getfloat('multi-component', 'T-max', 3500.0)
             Ts = np.linspace(Tmin, Tmax, 500)
+            ns = consts['ns']
 
-            consts['NASA7'] = np.empty((consts['ns'], 7))
-            for n in range(consts['ns']):
-
+            # Store fitted coefficients as list of lists for cleaner access
+            consts['fast_coeff'] = []
+            
+            for n in range(ns):
+                # Determine which temperature range to use
                 m = np.where(Ts <= N7[n, 0], 8, 1)
 
                 w = np.ones(500)
@@ -69,7 +89,7 @@ class tpgEOS(BaseEOS):
                           + Ts*(coeffs[3] / 4.0
                           + Ts*(coeffs[4] / 5.0))))))
 
-                # User smallest h as integration constant
+                # Use smallest h as integration constant
                 hmin = np.argmin(np.abs(h))
                 a5 = h[hmin] - h_new[hmin]
                 coeffs.append(a5)
@@ -102,7 +122,8 @@ class tpgEOS(BaseEOS):
                 # plt.legend()
                 # plt.show()
 
-                consts['NASA7'][n, :] = coeffs
+                # Store coefficients for this species
+                consts['fast_coeff'].append(coeffs)
         else:
             raise ValueError(f'Unknown property-calc method "{prop_calc}".')
 
@@ -111,7 +132,6 @@ class tpgEOS(BaseEOS):
         consts = self.consts
         Ru = consts['Ru']
         MW = consts['MW']
-        NASA7 = consts['NASA7']
         ns = consts['ns']
         ndims = len(pris) - (ns - 1) - 2
 
@@ -132,20 +152,31 @@ class tpgEOS(BaseEOS):
         # Compute h
         h = 0.0
         for n, Y in enumerate(it.chain(pris[ndims+2::],[Yns])):
-            N7 = np.copy(NASA7[n])
-            if len(N7) == 15: # strict
-                m = np.where(T <= N7[0], 8, 1)
-                N7[1::] *= Ru/MW[n]
-            elif len(NASA7[n]) == 7:
-                m = 0
-                N7 *= Ru/MW[n]
+            if 'fast_coeff' in consts:
+                # Fast mode: use fitted coefficients
+                coeffs = consts['fast_coeff'][n]
+                # Integrate polynomial: c0*T + c1*T^2/2 + c2*T^3/3 + ... + h_const
+                h_species = 0.0
+                for i in range(len(coeffs) - 2):  # Exclude integration constants
+                    h_species += coeffs[i] * T**(i+1) / (i+1)
+                h_species += coeffs[-2]  # Add enthalpy integration constant
+                h_species *= Ru / MW[n]
+                h += h_species * Y
             else:
-                raise ValueError("NASA7 Issue.")
-            h += (  T*(N7[m + 0]
-                  + T*(N7[m + 1] / 2.0
-                  + T*(N7[m + 2] / 3.0
-                  + T*(N7[m + 3] / 4.0
-                  + T*(N7[m + 4] / 5.0))))) + N7[m + 5]) * Y
+                # Strict mode: use temperature-dependent NASA polynomials
+                if T <= consts['T_cutoff'][n]:
+                    coeffs = consts['NASA7_Tlow'][n]
+                else:
+                    coeffs = consts['NASA7_Thigh'][n]
+                
+                # NASA polynomial enthalpy calculation
+                h_species = (  T*(coeffs[0]
+                      + T*(coeffs[1] / 2.0
+                      + T*(coeffs[2] / 3.0
+                      + T*(coeffs[3] / 4.0
+                      + T*(coeffs[4] / 5.0))))) + coeffs[5])
+                h_species *= Ru / MW[n]
+                h += h_species * Y
 
         # Compute density
         rho = p/(Rmix*T)
@@ -167,7 +198,6 @@ class tpgEOS(BaseEOS):
         consts = self.consts
         Ru = consts['Ru']
         MW = consts['MW']
-        NASA7 = consts['NASA7']
         ns = consts['ns']
         ndims = len(cons)-(ns-1)-2
 
@@ -195,28 +225,49 @@ class tpgEOS(BaseEOS):
             h = 0.0
             cp = 0.0
             for n, Y in enumerate(Yk):
-                N7 = np.copy(NASA7[n])
-                if len(N7) == 15: # strict
-                    m = np.where(T <= N7[0], 8, 1)
-                    N7[1::] *= Ru/MW[n]
-                elif len(NASA7[n]) == 7:
-                    m = 0
-                    N7 *= Ru/MW[n]
+                if 'fast_coeff' in consts:
+                    # Fast mode: use fitted coefficients
+                    coeffs = consts['fast_coeff'][n]
+                    
+                    # C_p polynomial: c0 + c1*T + c2*T^2 + c3*T^3 + c4*T^4
+                    cp_species = 0.0
+                    for i in range(len(coeffs) - 2):  # Exclude integration constants
+                        cp_species += coeffs[i] * T**i
+                    cp_species *= Ru / MW[n]
+                    cp += cp_species * Y
+                    
+                    # Enthalpy polynomial: integrated C_p
+                    h_species = 0.0
+                    for i in range(len(coeffs) - 2):
+                        h_species += coeffs[i] * T**(i+1) / (i+1)
+                    h_species += coeffs[-2]  # Add enthalpy integration constant
+                    h_species *= Ru / MW[n]
+                    h += h_species * Y
                 else:
-                    raise ValueError("NASA7 Issue.")
-
-                cp += (     N7[m + 0]
-                       + T*(N7[m + 1]
-                       + T*(N7[m + 2]
-                       + T*(N7[m + 3]
-                       + T*(N7[m + 4] ))))) * Y
-
-                h += (  T*(N7[m + 0]
-                      + T*(N7[m + 1] /2.0
-                      + T*(N7[m + 2] /3.0
-                      + T*(N7[m + 3] /4.0
-                      + T*(N7[m + 4] /5.0)))))
-                      +    N7[m + 5]) * Y
+                    # Strict mode: use temperature-dependent NASA polynomials
+                    if T <= consts['T_cutoff'][n]:
+                        coeffs = consts['NASA7_Tlow'][n]
+                    else:
+                        coeffs = consts['NASA7_Thigh'][n]
+                    
+                    # C_p calculation
+                    cp_species = (     coeffs[0]
+                           + T*(coeffs[1]
+                           + T*(coeffs[2]
+                           + T*(coeffs[3]
+                           + T*(coeffs[4] )))))
+                    cp_species *= Ru / MW[n]
+                    cp += cp_species * Y
+                    
+                    # Enthalpy calculation
+                    h_species = (  T*(coeffs[0]
+                          + T*(coeffs[1] /2.0
+                          + T*(coeffs[2] /3.0
+                          + T*(coeffs[3] /4.0
+                          + T*(coeffs[4] /5.0)))))
+                          +    coeffs[5])
+                    h_species *= Ru / MW[n]
+                    h += h_species * Y
             error = e - (h - Rmix * T)
             # Newtons Method
             T -= error / (-cp + Rmix)
@@ -227,7 +278,6 @@ class tpgEOS(BaseEOS):
 
     def diff_con_to_pri(self, cons, diff_cons):
         consts = self.consts
-        NASA7 = consts['NASA7']
         Ru = consts['Ru']
         MW = consts['MW']
         ns = consts['ns']
@@ -268,31 +318,54 @@ class tpgEOS(BaseEOS):
         cp = 0.0
         for n, (Y, diff_Y) in enumerate(zip(Yk, diff_Yk)):
             Rmix += Y / MW[n]
-            N7 = np.copy(NASA7[n])
-            if len(N7) == 15: # strict
-                m = np.where(T <= N7[0], 8, 1)
-                N7[1::] *= Ru/MW[n]
-            elif len(NASA7[n]) == 7:
-                m = 0
-                N7 *= Ru/MW[n]
+            
+            if 'fast_coeff' in consts:
+                # Fast mode: use fitted coefficients
+                coeffs = consts['fast_coeff'][n]
+                
+                # C_p polynomial
+                cp_species = 0.0
+                for i in range(len(coeffs) - 2):
+                    cp_species += coeffs[i] * T**i
+                cp_species *= Ru / MW[n]
+                cp += cp_species * Y
+                
+                # Enthalpy calculation for energy balance
+                hk = 0.0
+                for i in range(len(coeffs) - 2):
+                    hk += coeffs[i] * T**(i+1) / (i+1)
+                hk += coeffs[-2]  # Add enthalpy integration constant
+                hk *= Ru / MW[n]
+                
+                e_Y = hk - T*Ru/MW[n]
+                diff_T -= e_Y*diff_Y
             else:
-                raise ValueError("NASA7 Issue.")
-
-            cp += (     N7[m + 0]
-                   + T*(N7[m + 1]
-                   + T*(N7[m + 2]
-                   + T*(N7[m + 3]
-                   + T*(N7[m + 4] ))))) * Y
-
-            hk = (  T*(N7[m + 0]
-                  + T*(N7[m + 1] /2.0
-                  + T*(N7[m + 2] /3.0
-                  + T*(N7[m + 3] /4.0
-                  + T*(N7[m + 4] /5.0)))))
-                  +    N7[m + 5])
-
-            e_Y =  hk - T*Ru/MW[n]
-            diff_T -= e_Y*diff_Y
+                # Strict mode: use temperature-dependent NASA polynomials
+                if T <= consts['T_cutoff'][n]:
+                    coeffs = consts['NASA7_Tlow'][n]
+                else:
+                    coeffs = consts['NASA7_Thigh'][n]
+                
+                # C_p calculation
+                cp_species = (     coeffs[0]
+                       + T*(coeffs[1]
+                       + T*(coeffs[2]
+                       + T*(coeffs[3]
+                       + T*(coeffs[4] )))))
+                cp_species *= Ru / MW[n]
+                cp += cp_species * Y
+                
+                # Enthalpy calculation
+                hk = (  T*(coeffs[0]
+                      + T*(coeffs[1] /2.0
+                      + T*(coeffs[2] /3.0
+                      + T*(coeffs[3] /4.0
+                      + T*(coeffs[4] /5.0)))))
+                      +    coeffs[5])
+                hk *= Ru / MW[n]
+                
+                e_Y = hk - T*Ru/MW[n]
+                diff_T -= e_Y*diff_Y
 
         Rmix *= Ru
         diff_T /= (cp - Rmix)

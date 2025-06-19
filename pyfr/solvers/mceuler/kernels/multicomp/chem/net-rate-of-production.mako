@@ -5,9 +5,15 @@
 
 <% nr = c['Ea_f'].shape[0] %>\
 <% MW = c['MW'] %>\
-<% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
-<% fast_props = N7.shape[1] == 7 %>\
+<% fast_props = 'fast_coeff' in c %>\
+% if fast_props:
+<% fast_coeff = c['fast_coeff'] %>\
+% else:
+<% T_cutoff = c['T_cutoff'] %>\
+<% NASA7_Thigh = c['NASA7_Thigh'] %>\
+<% NASA7_Tlow = c['NASA7_Tlow'] %>\
+% endif\
 
 <%def name="logRateConst(A, m, Ea)">
   ${math.log(A)}+(${m}*logT)-(${Ea}*Tinv)
@@ -46,12 +52,12 @@
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
-      gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 0)};
+      gbs[${n}] = ${pyfr.nasa_gbs(fast_coeff[n])};
     % else:
-      if (T < ${N7[n,0]}){
-        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 8)};
+      if (T < ${T_cutoff[n]}){
+        gbs[${n}] = ${pyfr.nasa_gbs(NASA7_Tlow[n])};
       }else{
-        gbs[${n}] = ${pyfr.nasa_gbs(N7[n,:], 1)};
+        gbs[${n}] = ${pyfr.nasa_gbs(NASA7_Thigh[n])};
       }
     % endif
   % endfor

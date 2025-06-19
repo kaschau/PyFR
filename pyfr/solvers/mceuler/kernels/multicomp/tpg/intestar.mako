@@ -2,10 +2,16 @@
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
-<% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% fast_props = N7.shape[1] == 7 %>\
+<% fast_props = 'fast_coeff' in c %>\
+% if fast_props:
+<% fast_coeff = c['fast_coeff'] %>\
+% else:
+<% T_cutoff = c['T_cutoff'] %>\
+<% NASA7_Thigh = c['NASA7_Thigh'] %>\
+<% NASA7_Tlow = c['NASA7_Tlow'] %>\
+% endif\
 
 <%pyfr:macro name='compute_intestar' params='u, q, qh, intestar'>
 
@@ -16,14 +22,14 @@
 % for n in range(ns):
 
     % if fast_props:
-      intestar -= u[${n}] * ${N7[n,5] * Ru/MW[n]};
+      intestar -= u[${n}] * ${fast_coeff[n][-2] * Ru/MW[n]};
     % else:
-      if (T < ${N7[n,0]})
+      if (T < ${T_cutoff[n]})
       {
-        intestar -= u[${n}] * ${N7[n,8 + 5] * Ru/MW[n]};
+        intestar -= u[${n}] * ${NASA7_Tlow[n][5] * Ru/MW[n]};
       }else
       {
-        intestar -= u[${n}] * ${N7[n,1 + 5] * Ru/MW[n]};
+        intestar -= u[${n}] * ${NASA7_Thigh[n][5] * Ru/MW[n]};
       }
     % endif
 % endfor

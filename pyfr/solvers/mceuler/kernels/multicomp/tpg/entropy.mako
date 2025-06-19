@@ -2,10 +2,16 @@
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
-<% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
-<% fast_props = N7.shape[1] == 7 %>\
+<% fast_props = 'fast_coeff' in c %>\
+% if fast_props:
+<% fast_coeff = c['fast_coeff'] %>\
+% else:
+<% T_cutoff = c['T_cutoff'] %>\
+<% NASA7_Thigh = c['NASA7_Thigh'] %>\
+<% NASA7_Tlow = c['NASA7_Tlow'] %>\
+% endif\
 
 <%pyfr:macro name='compute_entropy' params='u, q, s'>
 
@@ -18,13 +24,13 @@
     {
       fpdtype_t ss;
       % if fast_props:
-        ss = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 0)};
+        ss = ${pyfr.nasa_s(fast_coeff[n], Ru, MW[n])};
       % else:
-        if (T < ${N7[n,0]})
+        if (T < ${T_cutoff[n]})
         {
-          ss = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 8)};
+          ss = ${pyfr.nasa_s(NASA7_Tlow[n], Ru, MW[n])};
         }else{
-          ss = ${pyfr.nasa_s(N7[n,:], Ru, MW[n], 1)};
+          ss = ${pyfr.nasa_s(NASA7_Thigh[n], Ru, MW[n])};
         }
       % endif
 

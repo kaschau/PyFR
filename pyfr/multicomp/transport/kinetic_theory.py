@@ -38,17 +38,31 @@ class KineticTheory(BaseTransport):
                 return cp0 * T / (Ru * MW)
 
         elif eos in ["tpg", "cubic"]:
-            NASA7 = props["NASA7"]
             cp0 = [None for n in range(ns)]
 
-            def cp_R(cp0, poly, T, MW):
-                if len(poly == 15):  # strict
-                    if T <= poly[0]:
-                        return sum([poly[i + 1 + 7] * T ** (i) for i in range(5)])
+            def cp_R(cp0, species_idx, T, MW, mode='strict', **kwargs):
+                if mode == 'fast':
+                    # Fast mode: use fitted coefficients
+                    fast_coeff = kwargs['fast_coeff']
+                    coeffs = fast_coeff[species_idx]
+                    # Exclude integration constants (last two)
+                    return sum([coeffs[i] * T ** i for i in range(len(coeffs) - 2)])
+                elif mode == 'strict':
+                    # Strict mode: use temperature-dependent NASA polynomials
+                    T_cutoff = kwargs['T_cutoff']
+                    NASA7_Thigh = kwargs['NASA7_Thigh']
+                    NASA7_Tlow = kwargs['NASA7_Tlow']
+                    
+                    # Select appropriate coefficient set based on temperature
+                    if T <= T_cutoff[species_idx]:
+                        coeffs = NASA7_Tlow[species_idx]
                     else:
-                        return sum([poly[i + 1] * T ** (i) for i in range(5)])
+                        coeffs = NASA7_Thigh[species_idx]
+                    
+                    # coeffs = [c0, c1, c2, c3, c4, h_const, s_const]
+                    return sum([coeffs[i] * T ** i for i in range(5)])
                 else:
-                    return sum([poly[i + 1] * T ** (i) for i in range(5)])
+                    raise ValueError(f"Unknown mode: {mode}")
 
         maxdeg = 4
         prop_calc = self.cfg.get("multi-component", "property-calc", "strict")
@@ -218,7 +232,14 @@ class KineticTheory(BaseTransport):
                     5 / 3 * rotDOF[k] + f_int
                 )
                 c1 = 2.0 / np.pi * A_factor / B_factor
-                cv_int = cp_R(cp0[k], NASA7[k], T, MW[k]) - 2.5 - cv_rot
+                # Determine mode and get coefficient data
+                if 'fast_coeff' in consts:
+                    cv_int = cp_R(cp0[k], k, T, MW[k], mode='fast', fast_coeff=consts['fast_coeff']) - 2.5 - cv_rot
+                else:
+                    cv_int = cp_R(cp0[k], k, T, MW[k], mode='strict', 
+                                 T_cutoff=consts['T_cutoff'],
+                                 NASA7_Thigh=consts['NASA7_Thigh'], 
+                                 NASA7_Tlow=consts['NASA7_Tlow']) - 2.5 - cv_rot
                 f_rot = f_int * (1.0 + c1)
                 f_trans = 2.5 * (1.0 - c1 * cv_rot / 1.5)
                 cond[i, k] = (

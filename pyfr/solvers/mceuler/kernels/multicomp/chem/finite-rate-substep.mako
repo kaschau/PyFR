@@ -4,11 +4,10 @@
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
 <% MW = c['MW'] %>\
-<% N7 = c['NASA7'] %>\
 <% Ru = c['Ru'] %>\
 <% nu_f = c['nu_f'] %>\
 <% nu_b = c['nu_b'] %>\
-<% fast_props = N7.shape[1] == 7 %>\
+<% fast_props = 'fast_coeff' in c %>\
 <% tSub = dt / float(sub_steps) %>\
 
 <%pyfr:macro name='finite_rate_substep' params='t, u, ploc, src'>
