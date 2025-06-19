@@ -309,13 +309,3 @@ def nasa_s(context, N7, Ru, MW, m):
         return f'({N7[m + 0]*Ru/MW} * logT + T*(' + f'+ T*('.join(str(c) for c in N7[m+1:m+5]*(Ru/MW)/div)+')'*4 + f'+ {N7[m + 6]*Ru/MW})'
     except ValueError:
         return ''
-
-def intpow(context, A, x):
-    if x.is_integer():
-        x = int(x)
-        if x > 0:
-            return f'({'*'.join([f'{A}' for _ in range(x)])})'
-        else:
-            return f'(1.0/({'*'.join([f'{A}' for _ in range(abs(x))])}))'
-    else:
-        return f'pow({A},{x})'
