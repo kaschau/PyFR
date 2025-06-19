@@ -41,10 +41,8 @@
   fpdtype_t gbs[${ns}];
   fpdtype_t logT = log(T);
   fpdtype_t Tinv = 1.0/T;
-  fpdtype_t prefRuT = ${101325.0/c['Ru']}*Tinv;
-  fpdtype_t prefRuTinv = ${c['Ru']/101325.0}*T;
-  fpdtype_t log_prefRuT = log(prefRuT);
-  fpdtype_t log_prefRuTinv = log(prefRuTinv);
+  fpdtype_t log_prefRuT = log(${101325.0/c['Ru']}*Tinv);
+  fpdtype_t log_prefRuTinv = log(${c['Ru']/101325.0}*T);
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
