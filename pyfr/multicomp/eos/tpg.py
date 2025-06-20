@@ -154,6 +154,43 @@ def fit_monotonic_polynomial(x, y, degree):
 
     return result.x
 
+def evaluate_polynomial(x, coefficients):
+    """
+    Evaluate polynomial at given points.
+
+    Parameters:
+    -----------
+    x : array-like
+        Points at which to evaluate the polynomial
+    coefficients : array-like
+        Polynomial coefficients [c0, c1, c2, ..., c_n]
+
+    Returns:
+    --------
+    y : ndarray
+        Polynomial values at x points
+    """
+    x = np.asarray(x, dtype=float)
+    result = np.zeros_like(x, dtype=float)
+
+    for i, coef in enumerate(coefficients):
+        result += coef * (x ** i)
+
+    return result
+
+def fit_monotonic_linear_numpy(x, y):
+    """Fast monotonic linear fit using numpy (degree 1)"""
+    # Use numpy's polyfit for speed
+    slope, intercept = np.polyfit(x, y, 1)
+
+    # Ensure monotonicity: slope >= 0
+    if slope < 0:
+        # Project to monotonic solution: slope = 0 (constant function)
+        return np.array([np.mean(y), 0.0])
+
+    return np.array([intercept, slope])
+
+
 def get_smart_initial_guess(x, y, degree, coef_unconstrained):
     """Generate smart initial guess for constrained optimization"""
 
