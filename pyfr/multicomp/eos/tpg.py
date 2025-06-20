@@ -177,7 +177,6 @@ def fit_adaptive_monotonic_polynomial(x, y, tolerance=0.01):
         rel_error = abs_error / np.max(np.abs(y)) if np.max(np.abs(y)) > 1e-12 else abs_error
 
         if rel_error < tolerance:
-            print(degree)
             return coeffs
 
         # # Check if this degree is good enough
