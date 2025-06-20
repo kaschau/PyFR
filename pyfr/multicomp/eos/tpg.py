@@ -1,44 +1,10 @@
 from pyfr.multicomp.eos.base import BaseEOS
 import itertools as it
 import numpy as np
-from scipy.optimize import minimize, LinearConstraint
+from scipy.optimize import minimize
 from scipy.linalg import lstsq
 
-def fit_monotonic_polynomial(x, y, degree):
-    """
-    Fit a monotonic polynomial to data using constrained optimization.
-
-    This function fits a polynomial of specified odd degree that is guaranteed
-    to be monotonically increasing over the data range.
-
-    Parameters:
-    -----------
-    x : array-like
-        Input x values
-    y : array-like
-        Input y values
-    degree : int
-        Odd degree of the polynomial
-
-    Returns:
-    --------
-    coefficients : ndarray
-        Polynomial coefficients [c0, c1, c2, ..., c_degree]
-        where polynomial is c0 + c1*x + c2*x^2 + ... + c_degree*x^degree
-
-    Raises:
-    -------
-    ValueError
-        If degree is not odd or if x and y have different lengths
-
-    Example:
-    --------
-    >>> x = np.array([1, 2, 3, 4, 5])
-    >>> y = np.array([1, 2.1, 3.3, 4.8, 6.2])
-    >>> coefs = fit_monotonic_polynomial(x, y, degree=3)
-    >>> print("Coefficients:", coefs)
-    """
-
+def fit_monotonic_polynomial(x, y, degree, coef_init=None):
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
 
@@ -48,28 +14,7 @@ def fit_monotonic_polynomial(x, y, degree):
     if len(x) != len(y):
         raise ValueError("x and y must have the same length")
 
-    # Check for constant or approximately constant data
-    y_range = np.max(y) - np.min(y)
-    y_mean = np.mean(y)
-
-    # If y values are constant or nearly constant (within 5% relative tolerance), return constant polynomial
-    relative_tolerance = 0.05  # 5%
-    absolute_tolerance = 1e-12  # For near-zero values
-
-    if y_range <= max(relative_tolerance * abs(y_mean), absolute_tolerance):
-        # Return constant polynomial: f(x) = mean(y)
-        coefficients = np.zeros(degree + 1)
-        coefficients[0] = y_mean
-        return coefficients
-
-    # Sort data by x values if not already sorted
-    if not np.all(x[:-1] <= x[1:]):
-        sort_idx = np.argsort(x)
-        x = x[sort_idx]
-        y = y[sort_idx]
-
     n_coef = degree + 1
-
     # Create Vandermonde matrix for polynomial fitting
     A = np.vander(x, n_coef, increasing=True)
 
@@ -90,7 +35,6 @@ def fit_monotonic_polynomial(x, y, degree):
 
     # Constraint: derivative >= small positive value (for strict monotonicity)
     lower_bounds = np.full(n_constraint_points, 1e-6)
-    upper_bounds = np.full(n_constraint_points, np.inf)
 
     # Objective function: minimize sum of squared residuals
     def objective(coef):
@@ -102,44 +46,11 @@ def fit_monotonic_polynomial(x, y, degree):
         pred = np.dot(A, coef)
         return 2 * np.dot(A.T, pred - y)
 
-    # Hessian of objective function (constant for linear least squares)
-    def objective_hess(coef):
-        return 2 * np.dot(A.T, A)
-
-    # Linear constraint for monotonicity
-    linear_constraint = LinearConstraint(constraint_matrix, lower_bounds, upper_bounds)
-
-    # Fast path: Try numpy solutions first
-    # For degree 1: Use fast numpy polyfit with monotonicity
-    if degree == 1:
-        return fit_monotonic_linear_numpy(x, y)
-
-    # Fast path: Check if unconstrained solution is already monotonic
-    coef_unconstrained, _, _, _ = lstsq(A, y)
-    if check_monotonicity(coef_unconstrained, (x.min(), x.max())):
-        return coef_unconstrained
-
-    # Fast path: Try constrained linear first (often good enough)
-    if degree >= 3:
-        linear_coeffs = fit_monotonic_linear_numpy(x, y)
-        y_linear = linear_coeffs[0] + linear_coeffs[1] * x
-        linear_error = np.max(np.abs(y - y_linear)) / np.max(np.abs(y))
-
-        # If linear fit is already pretty good, use it instead of higher degree
-        if linear_error < 0.02:  # 2% tolerance
-            padded_coeffs = np.zeros(degree + 1)
-            padded_coeffs[:2] = linear_coeffs
-            return padded_coeffs
-
     # Try smart initial guess based on data characteristics
-    coef_init = get_smart_initial_guess(x, y, degree, coef_unconstrained)
-
-    # Quick check: if smart guess is already good enough and monotonic
-    if check_monotonicity(coef_init, (x.min(), x.max())):
-        y_fit = np.dot(A, coef_init)
-        error = np.max(np.abs(y - y_fit)) / np.max(np.abs(y))
-        if error < 0.01:  # 1% error tolerance for quick acceptance
-            return coef_init
+    if not coef_init:
+        poly = np.polynomial.Polynomial.fit(x, y, degree)
+        coef_unconstrained = list(poly.convert().coef)
+        coef_init = get_smart_initial_guess(x, y, degree, coef_unconstrained)
 
     # Use faster optimization with looser tolerances
     result = minimize(objective, coef_init, method='SLSQP',
@@ -152,7 +63,7 @@ def fit_monotonic_polynomial(x, y, degree):
     if not result.success:
         print(f"Warning: Optimization may not have converged: {result.message}")
 
-    return result.x
+    return result.x.tolist()
 
 def evaluate_polynomial(x, coefficients):
     """
@@ -177,18 +88,6 @@ def evaluate_polynomial(x, coefficients):
         result += coef * (x ** i)
 
     return result
-
-def fit_monotonic_linear_numpy(x, y):
-    """Fast monotonic linear fit using numpy (degree 1)"""
-    # Use numpy's polyfit for speed
-    slope, intercept = np.polyfit(x, y, 1)
-
-    # Ensure monotonicity: slope >= 0
-    if slope < 0:
-        # Project to monotonic solution: slope = 0 (constant function)
-        return np.array([np.mean(y), 0.0])
-
-    return np.array([intercept, slope])
 
 
 def get_smart_initial_guess(x, y, degree, coef_unconstrained):
@@ -260,6 +159,51 @@ def check_monotonicity(coefficients, x_range, n_points=100):
     # Check if derivative is non-negative (allowing small numerical errors)
     return np.all(deriv_values >= -1e-10)
 
+def fit_adaptive_monotonic_polynomial(x, y, tolerance=0.01):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    best_error = np.inf
+    for degree in [0,1,2,3,4]:
+        # Fit unconstrained
+        poly = np.polynomial.Polynomial.fit(x, y, degree)
+        coeffs = list(poly.convert().coef)
+
+        # Evaluate polynomial
+        y_fit = evaluate_polynomial(x, coeffs)
+
+        # Calculate L∞ norm (maximum absolute error)
+        abs_error = np.max(np.abs(y_fit - y))
+        rel_error = abs_error / np.max(np.abs(y)) if np.max(np.abs(y)) > 1e-12 else abs_error
+
+        if rel_error < tolerance:
+            print(degree)
+            return coeffs
+
+        # # Check if this degree is good enough
+        # if rel_error <= tolerance and check_monotonicity((x.min(), x.max()), coeffs):
+        #     return list(coeffs)
+        # elif degree < 1 and rel_error <= 0.05:
+        #     # Check for constant
+        #     return list(coeffs)
+        # elif degree < 1:
+        #     continue
+
+        # # Fit monotonic poly'l
+        # coeffs_mono = fit_monotonic_polynomial(x, y, degree, coeffs)
+        # y_fit = evaluate_polynomial(x, coeffs_mono)
+        # abs_error = np.max(np.abs(y_fit - y))
+        # rel_error = abs_error / np.max(np.abs(y)) if np.max(np.abs(y)) > 1e-12 else abs_error
+
+        # if rel_error < tolerance:
+        #     return coeffs_mono
+        # if rel_error < best_error:
+        #     best_error = rel_error
+        #     best_coeffs = coeffs_mono
+
+    return coeffs
+
+
 class tpgEOS(BaseEOS):
     name = 'tpg'
     def __init__(self, cfg):
@@ -306,76 +250,56 @@ class tpgEOS(BaseEOS):
             consts['fast_coeff'] = []
 
             for n in range(ns):
-                # Determine which temperature range to use
-                m = np.where(Ts <= N7[n, 0], 8, 1)
-
-                w = np.ones(500)
-
                 # Fit cp
-                cp = (       N7[n, m + 0]
+                m = np.where(Ts <= N7[n, 0], 8, 1)
+                cp_ref = (       N7[n, m + 0]
                        + Ts*(N7[n, m + 1]
                        + Ts*(N7[n, m + 2]
                        + Ts*(N7[n, m + 3]
                        + Ts*(N7[n, m + 4] )))))
 
-                cp_poly = np.polynomial.Polynomial.fit(Ts, cp, 4, w=w)
-                coeffs = list(cp_poly.convert().coef)
+                # Adaptive monotonic polynomial fitting
+                coeffs = fit_adaptive_monotonic_polynomial(Ts, cp_ref)
 
                 # import matplotlib.pyplot as plt
-                # plt.plot(Ts, cp, label="ref")
-                # cp_new = (   coeffs[0]
-                #        + Ts*(coeffs[1]
-                #        + Ts*(coeffs[2]
-                #        + Ts*(coeffs[3]
-                #        + Ts*(coeffs[4] )))))
+                # plt.plot(Ts, cp_ref, label="ref")
+                # cp_new = evaluate_polynomial(Ts, coeffs)
                 # plt.plot(Ts, cp_new, '--', label="new")
                 # plt.title(f'c_p {consts['names'][n]}')
                 # plt.legend()
                 # plt.show()
 
-                h  = (  Ts*(N7[n, m + 0]
-                      + Ts*(N7[n, m + 1] / 2.0
-                      + Ts*(N7[n, m + 2] / 3.0
-                      + Ts*(N7[n, m + 3] / 4.0
-                      + Ts*(N7[n, m + 4] / 5.0))))) + N7[n, m + 5])
-                h_new  = (  Ts*(coeffs[0]
-                          + Ts*(coeffs[1] / 2.0
-                          + Ts*(coeffs[2] / 3.0
-                          + Ts*(coeffs[3] / 4.0
-                          + Ts*(coeffs[4] / 5.0))))))
+                h_ref  = (  Ts*(N7[n, m + 0]
+                          + Ts*(N7[n, m + 1] / 2.0
+                          + Ts*(N7[n, m + 2] / 3.0
+                          + Ts*(N7[n, m + 3] / 4.0
+                          + Ts*(N7[n, m + 4] / 5.0))))) + N7[n, m + 5])
 
-                # Use smallest h as integration constant
-                hmin = np.argmin(np.abs(h))
-                a5 = h[hmin] - h_new[hmin]
+                # Enthalpy from monotonic polynomial (integrated analytically)
+                h_new = np.zeros_like(Ts)
+                for i,coef in enumerate(coeffs):
+                    h_new += coef * Ts**(i+1) / (i+1)
+
+                # Find integration constant to match reference enthalpy
+                hmin = np.argmin(np.abs(h_ref))
+                a5 = h_ref[hmin] - h_new[hmin]
                 coeffs.append(a5)
 
-                # plt.plot(Ts, h, label="ref")
-                # plt.plot(Ts, h_new + a5, "--", label="new")
-                # plt.title(f'Enthalpy {consts['names'][n]}')
-                # plt.legend()
-                # plt.show()
-
                 # entropy integration constant
-                s = (  np.log(Ts)*N7[n, m + 0]
-                            +(Ts *(N7[n, m + 1]
-                            + Ts *(N7[n, m + 2] / 2.0
-                            + Ts *(N7[n, m + 3] / 3.0
-                            + Ts *(N7[n, m + 4] / 4.0))))) + N7[n, m + 6])
+                s_ref = (  np.log(Ts)*N7[n, m + 0]
+                                +(Ts *(N7[n, m + 1]
+                                + Ts *(N7[n, m + 2] / 2.0
+                                + Ts *(N7[n, m + 3] / 3.0
+                                + Ts *(N7[n, m + 4] / 4.0))))) + N7[n, m + 6])
 
-                s_new = (  np.log(Ts)*coeffs[0]
-                               + (Ts*(coeffs[1]
-                               +  Ts*(coeffs[2] / 2.0
-                               +  Ts*(coeffs[3] / 3.0
-                               +  Ts*(coeffs[4] / 4.0))))))
-                smin = np.argmin(np.abs(s))
-                a6 = s[smin] - s_new[smin]
+                # Entropy from monotonic polynomial
+                s_new = coeffs[0] * np.log(Ts)
+                for i in range(1, len(coeffs)-1):
+                    s_new += coeffs[i] * Ts**i / i
+                # Find integration constant to match reference entropy
+                smin = np.argmin(np.abs(s_ref))
+                a6 = s_ref[smin] - s_new[smin]
                 coeffs.append(a6)
-
-                # plt.plot(Ts, s, label="ref")
-                # plt.plot(Ts, s_new + a6, "--", label="new")
-                # plt.title(f'Entropy {consts['names'][n]}')
-                # plt.legend()
-                # plt.show()
 
                 # Store coefficients for this species
                 consts['fast_coeff'].append(coeffs)
