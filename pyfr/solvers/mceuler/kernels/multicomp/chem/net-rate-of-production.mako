@@ -94,11 +94,21 @@
     <% Ts = c['fall_coeffs'][i][2]%>\
     <% Tss = c['fall_coeffs'][i][3]%>\
     % if Tss == 0.0: #Three Parameter Troe form
-      // Three Troe Reaction
-      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}));
+      // Three Parameter Troe - numerically stable log-sum-exp
+      // Always use α*exp(-T/T*) as reference (dominates at combustion T)
+      fpdtype_t log_ref = ${math.log(alpha)} - T*${1.0/Ts};
+      fpdtype_t log_ratio = ${math.log((1.0 - alpha)/alpha)} - T*${1.0/Tsss - 1.0/Ts};
+      fpdtype_t log_sum = log_ref + log(1.0 + exp(log_ratio));
+      fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
     % else: # Four Parameter Troe form
-      // Four Troe Reaction
-      fpdtype_t log10Fcent = log10((${1.0 - alpha})*exp(-T*${1.0/Tsss}) + ${alpha}*exp(-T*${1.0/Ts}) + exp(-${Tss}*Tinv));
+      // Four Parameter Troe - numerically stable log-sum-exp
+      // Choose reference to avoid single precision overflow (exp arg > 88)
+      fpdtype_t log_term1 = ${math.log(1.0 - alpha)} - T*${1.0/Tsss};
+      fpdtype_t log_term2 = ${math.log(alpha)} - T*${1.0/Ts};
+      fpdtype_t log_term3 = -${Tss}*Tinv;
+      fpdtype_t log_ref = fmax(fmax(log_term1, log_term2), log_term3);
+      fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) + exp(log_term2 - log_ref) + exp(log_term3 - log_ref));
+      fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
     % endif
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
