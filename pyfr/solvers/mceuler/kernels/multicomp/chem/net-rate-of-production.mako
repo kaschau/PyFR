@@ -78,7 +78,7 @@
   fpdtype_t log_k_f = ${logRateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
-  fpdtype_t cTBC = rho * (${"+".join([f"({eff})*q[{n}]*{1.0/c['MW'][n]}" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])});
+  fpdtype_t cTBC = rho * (${"+".join([f"({eff/c['MW'][n]})*q[{n}]" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])});
   fpdtype_t log_cTBC = log(cTBC);
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
