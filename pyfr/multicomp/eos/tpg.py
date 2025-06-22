@@ -1,86 +1,8 @@
 from pyfr.multicomp.eos.base import BaseEOS
 import itertools as it
 import numpy as np
-from scipy.optimize import minimize
-from scipy.linalg import lstsq
-
-def fit_monotonic_polynomial(x, y, degree, coef_init=None):
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-
-    if degree % 2 == 0:
-        raise ValueError("Degree must be odd for monotonic polynomials")
-
-    if len(x) != len(y):
-        raise ValueError("x and y must have the same length")
-
-    n_coef = degree + 1
-    # Create Vandermonde matrix for polynomial fitting
-    A = np.vander(x, n_coef, increasing=True)
-
-    # Set up monotonicity constraints
-    # For monotonicity, we need the derivative to be non-negative everywhere
-    # The derivative is: c1 + 2*c2*x + 3*c3*x^2 + ...
-
-    # Reduce constraint points for speed (still effective for monotonicity)
-    n_constraint_points = min(20, max(10, len(x)))  # Much fewer points
-    x_constraint = np.linspace(x.min(), x.max(), n_constraint_points)
-
-    # Create constraint matrix for derivative >= 0
-    constraint_matrix = np.zeros((n_constraint_points, n_coef))
-
-    for i, xi in enumerate(x_constraint):
-        for j in range(1, n_coef):  # Skip constant term (j=0)
-            constraint_matrix[i, j] = j * (xi ** (j-1))
-
-    # Constraint: derivative >= small positive value (for strict monotonicity)
-    lower_bounds = np.full(n_constraint_points, 1e-6)
-
-    # Objective function: minimize sum of squared residuals
-    def objective(coef):
-        pred = np.dot(A, coef)
-        return np.sum((y - pred) ** 2)
-
-    # Gradient of objective function
-    def objective_grad(coef):
-        pred = np.dot(A, coef)
-        return 2 * np.dot(A.T, pred - y)
-
-    # Try smart initial guess based on data characteristics
-    if not coef_init:
-        poly = np.polynomial.Polynomial.fit(x, y, degree)
-        coef_unconstrained = list(poly.convert().coef)
-        coef_init = get_smart_initial_guess(x, y, degree, coef_unconstrained)
-
-    # Use faster optimization with looser tolerances
-    result = minimize(objective, coef_init, method='SLSQP',
-                     jac=objective_grad,
-                     constraints={'type': 'ineq',
-                                'fun': lambda coef: np.dot(constraint_matrix, coef) - lower_bounds,
-                                'jac': lambda coef: constraint_matrix},
-                     options={'maxiter': 50, 'ftol': 1e-6, 'disp': False})  # Much looser tolerances
-
-    if not result.success:
-        print(f"Warning: Optimization may not have converged: {result.message}")
-
-    return result.x.tolist()
 
 def evaluate_polynomial(x, coefficients):
-    """
-    Evaluate polynomial at given points.
-
-    Parameters:
-    -----------
-    x : array-like
-        Points at which to evaluate the polynomial
-    coefficients : array-like
-        Polynomial coefficients [c0, c1, c2, ..., c_n]
-
-    Returns:
-    --------
-    y : ndarray
-        Polynomial values at x points
-    """
     x = np.asarray(x, dtype=float)
     result = np.zeros_like(x, dtype=float)
 
@@ -89,81 +11,10 @@ def evaluate_polynomial(x, coefficients):
 
     return result
 
-
-def get_smart_initial_guess(x, y, degree, coef_unconstrained):
-    """Generate smart initial guess for constrained optimization"""
-
-    # Start with unconstrained solution
-    coef_init = coef_unconstrained.copy()
-
-    # Strategy 1: If unconstrained has negative derivative terms, set them to small positive
-    for i in range(1, len(coef_init)):
-        if coef_init[i] < 0:
-            coef_init[i] = 1e-6
-
-    # Strategy 2: For higher degrees, use numpy to get data trends quickly
-    if degree >= 3:
-        # Get overall trend using fast numpy polyfit
-        y_trend = np.polyfit(x, y, 1)[0]  # Overall slope
-
-        if y_trend > 0:
-            # Data is increasing, bias towards positive linear term
-            coef_init[1] = max(coef_init[1], 0.1 * y_trend)
-
-        # Damp higher-order terms that might cause oscillations
-        coef_init[2:] *= 0.1  # Vectorized operation
-
-    # Strategy 3: Ensure reasonable magnitude
-    y_scale = np.std(y)
-    x_scale = np.std(x)
-
-    for i in range(1, len(coef_init)):
-        # Scale coefficients to reasonable range
-        expected_scale = y_scale / (x_scale ** i)
-        if abs(coef_init[i]) > 10 * expected_scale:
-            coef_init[i] = np.sign(coef_init[i]) * expected_scale
-
-    return coef_init
-
-def check_monotonicity(coefficients, x_range, n_points=100):
-    """
-    Check if polynomial is monotonic over given range.
-
-    Parameters:
-    -----------
-    coefficients : array-like
-        Polynomial coefficients
-    x_range : tuple
-        (x_min, x_max) range to check
-    n_points : int
-        Number of points to check
-
-    Returns:
-    --------
-    is_monotonic : bool
-        True if polynomial is monotonic (derivative >= 0) over the range
-    """
-    x_test = np.linspace(x_range[0], x_range[1], n_points)
-
-    # Compute derivative coefficients
-    deriv_coefs = [i * coefficients[i] for i in range(1, len(coefficients))]
-
-    if len(deriv_coefs) == 0:
-        return True  # Constant function is monotonic
-
-    # Evaluate derivative
-    deriv_values = np.zeros_like(x_test)
-    for i, coef in enumerate(deriv_coefs):
-        deriv_values += coef * (x_test ** i)
-
-    # Check if derivative is non-negative (allowing small numerical errors)
-    return np.all(deriv_values >= -1e-10)
-
 def fit_adaptive_monotonic_polynomial(x, y, tolerance=0.01):
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
 
-    best_error = np.inf
     for degree in [0,1,2,3,4]:
         # Fit unconstrained
         poly = np.polynomial.Polynomial.fit(x, y, degree)
@@ -178,27 +29,6 @@ def fit_adaptive_monotonic_polynomial(x, y, tolerance=0.01):
 
         if rel_error < tolerance:
             return coeffs
-
-        # # Check if this degree is good enough
-        # if rel_error <= tolerance and check_monotonicity((x.min(), x.max()), coeffs):
-        #     return list(coeffs)
-        # elif degree < 1 and rel_error <= 0.05:
-        #     # Check for constant
-        #     return list(coeffs)
-        # elif degree < 1:
-        #     continue
-
-        # # Fit monotonic poly'l
-        # coeffs_mono = fit_monotonic_polynomial(x, y, degree, coeffs)
-        # y_fit = evaluate_polynomial(x, coeffs_mono)
-        # abs_error = np.max(np.abs(y_fit - y))
-        # rel_error = abs_error / np.max(np.abs(y)) if np.max(np.abs(y)) > 1e-12 else abs_error
-
-        # if rel_error < tolerance:
-        #     return coeffs_mono
-        # if rel_error < best_error:
-        #     best_error = rel_error
-        #     best_coeffs = coeffs_mono
 
     return coeffs
 
@@ -280,8 +110,7 @@ class tpgEOS(BaseEOS):
                     h_new += coef * Ts**(i+1) / (i+1)
 
                 # Find integration constant to match reference enthalpy
-                hmin = np.argmin(np.abs(h_ref))
-                a5 = h_ref[hmin] - h_new[hmin]
+                a5 = np.mean(h_ref - h_new)
                 coeffs.append(a5)
 
                 # entropy integration constant
@@ -296,8 +125,7 @@ class tpgEOS(BaseEOS):
                 for i in range(1, len(coeffs)-1):
                     s_new += coeffs[i] * Ts**i / i
                 # Find integration constant to match reference entropy
-                smin = np.argmin(np.abs(s_ref))
-                a6 = s_ref[smin] - s_new[smin]
+                a6 = np.mean(s_ref - s_new)
                 coeffs.append(a6)
 
                 # Store coefficients for this species
