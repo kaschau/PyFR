@@ -166,23 +166,21 @@ class tpgEOS(BaseEOS):
                 for i in range(len(coeffs) - 2):  # Exclude integration constants
                     h_species += coeffs[i] * T**(i+1) / (i+1)
                 h_species += coeffs[-2]  # Add enthalpy integration constant
-                h_species *= Ru / MW[n]
-                h += h_species * Y
             else:
                 # Strict mode: use temperature-dependent NASA polynomials
-                if T <= consts['T_cutoff'][n]:
-                    coeffs = consts['NASA7_Tlow'][n]
-                else:
-                    coeffs = consts['NASA7_Thigh'][n]
+                m = T <= consts['T_cutoff'][n]
+                h_species = np.empty(T.shape)
+                for idx, lh in zip([m, ~m], ['low','high']):
+                    coeffs = consts[f'NASA7_T{lh}'][n]
+                    # NASA polynomial enthalpy calculation
+                    h_species[idx] = (  T[idx]*(coeffs[0]
+                          + T[idx]*(coeffs[1] / 2.0
+                          + T[idx]*(coeffs[2] / 3.0
+                          + T[idx]*(coeffs[3] / 4.0
+                          + T[idx]*(coeffs[4] / 5.0))))) + coeffs[5])
 
-                # NASA polynomial enthalpy calculation
-                h_species = (  T*(coeffs[0]
-                      + T*(coeffs[1] / 2.0
-                      + T*(coeffs[2] / 3.0
-                      + T*(coeffs[3] / 4.0
-                      + T*(coeffs[4] / 5.0))))) + coeffs[5])
-                h_species *= Ru / MW[n]
-                h += h_species * Y
+            h_species *= Ru / MW[n]
+            h += h_species * Y
 
         # Compute density
         rho = p/(Rmix*T)
@@ -239,41 +237,38 @@ class tpgEOS(BaseEOS):
                     cp_species = 0.0
                     for i in range(len(coeffs) - 2):  # Exclude integration constants
                         cp_species += coeffs[i] * T**i
-                    cp_species *= Ru / MW[n]
-                    cp += cp_species * Y
 
                     # Enthalpy polynomial: integrated C_p
                     h_species = 0.0
                     for i in range(len(coeffs) - 2):
                         h_species += coeffs[i] * T**(i+1) / (i+1)
                     h_species += coeffs[-2]  # Add enthalpy integration constant
-                    h_species *= Ru / MW[n]
-                    h += h_species * Y
                 else:
                     # Strict mode: use temperature-dependent NASA polynomials
-                    if T <= consts['T_cutoff'][n]:
-                        coeffs = consts['NASA7_Tlow'][n]
-                    else:
-                        coeffs = consts['NASA7_Thigh'][n]
+                    m = T <= consts['T_cutoff'][n]
+                    cp_species = np.empty(T.shape)
+                    h_species = np.empty(T.shape)
+                    for idx, lh in zip([m, ~m], ['low','high']):
+                        coeffs = consts[f'NASA7_T{lh}'][n]
+                        # C_p calculation
+                        cp_species[idx] = (     coeffs[0]
+                                      + T[idx]*(coeffs[1]
+                                      + T[idx]*(coeffs[2]
+                                      + T[idx]*(coeffs[3]
+                                      + T[idx]*(coeffs[4] )))))
 
-                    # C_p calculation
-                    cp_species = (     coeffs[0]
-                           + T*(coeffs[1]
-                           + T*(coeffs[2]
-                           + T*(coeffs[3]
-                           + T*(coeffs[4] )))))
-                    cp_species *= Ru / MW[n]
-                    cp += cp_species * Y
+                        # Enthalpy calculation
+                        h_species[idx] = (  T[idx]*(coeffs[0]
+                                            + T[idx]*(coeffs[1] /2.0
+                                            + T[idx]*(coeffs[2] /3.0
+                                            + T[idx]*(coeffs[3] /4.0
+                                            + T[idx]*(coeffs[4] /5.0)))))
+                                            +    coeffs[5])
 
-                    # Enthalpy calculation
-                    h_species = (  T*(coeffs[0]
-                          + T*(coeffs[1] /2.0
-                          + T*(coeffs[2] /3.0
-                          + T*(coeffs[3] /4.0
-                          + T*(coeffs[4] /5.0)))))
-                          +    coeffs[5])
-                    h_species *= Ru / MW[n]
-                    h += h_species * Y
+                cp_species *= Ru / MW[n]
+                cp += cp_species * Y
+                h_species *= Ru / MW[n]
+                h += h_species * Y
             error = e - (h - Rmix * T)
             # Newtons Method
             T -= error / (-cp + Rmix)
