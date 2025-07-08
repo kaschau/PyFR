@@ -8,6 +8,13 @@
 <% nu_f = c['nu_f'] %>\
 <% nu_b = c['nu_b'] %>\
 <% fast_props = 'fast_coeff' in c %>\
+% if fast_props:
+<% fast_coeff = c['fast_coeff'] %>\
+% else:
+<% T_cutoff = c['T_cutoff'] %>\
+<% NASA7_Thigh = c['NASA7_Thigh'] %>\
+<% NASA7_Tlow = c['NASA7_Tlow'] %>\
+% endif\
 
 <%pyfr:macro name='finite_rate_auto' params='t, u, ploc, src'>
 
@@ -56,15 +63,16 @@
     {
       % if fast_props:
       {
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 0)};
+        fpdtype_t cps = ${pyfr.nasa_cps(fast_coeff[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }
       % else:
-      if (T < ${N7[n,0]}){
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 8)};
+      if (T < ${T_cutoff[n]})
+      {
+        fpdtype_t cps = ${pyfr.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }else{
-        fpdtype_t cps = ${pyfr.nasa_cps(N7[n,:], Ru, MW[n], 1)};
+        fpdtype_t cps = ${pyfr.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }
       % endif
@@ -89,15 +97,15 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
         % if fast_props:
-          fpdtype_t hi = ${pyfr.nasa_hi(N7[n,:], 0)};
+          fpdtype_t hi = ${pyfr.nasa_hi(fast_coeff[n])};
         % else:
           fpdtype_t hi;
-          if (T < ${N7[n,0]})
+          if (T < ${T_cutoff[n]})
           {
-            hi = ${pyfr.nasa_hi(N7[n,:], 8)};
+            hi = ${pyfr.nasa_hi(NASA7_Tlow[n])};
           }else
           {
-            hi = ${pyfr.nasa_hi(N7[n,:], 1)};
+            hi = ${pyfr.nasa_hi(NASA7_Thigh[n])};
           }
         % endif
         dTdt -= hi * tmpSrc[${n}];

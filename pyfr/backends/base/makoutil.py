@@ -307,9 +307,16 @@ def nasa_hs(context, coeffs, Ru, MW):
     poly_expr = f'T*({'+ T*('.join(str(c) for c in integrated_coeffs)+')'*len(integrated_coeffs)}'
     return f'({poly_expr} + {h_const * Ru/MW})'
 
-def nasa_hi(context, N7, m):
-    div = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    return f'({'+ T*('.join(str(c) for c in N7[m:m+5]/div)+')'*4 + f'+ {N7[m + 5]}*Tinv'})'
+def nasa_hi(context, coeffs):
+    poly_coeffs = coeffs[:-2]  # Exclude integration constants
+    h_const = coeffs[-2]  # Second to last is enthalpy integration constant
+    integrated_coeffs = []
+    for i, c in enumerate(poly_coeffs):
+        integrated_coeffs.append(c / (i + 1))
+
+    # Build nested polynomial expression
+    poly_expr = f'({'+ T*('.join(str(c) for c in integrated_coeffs)+')'*len(integrated_coeffs)}'
+    return f'({poly_expr} + {h_const}*Tinv)'
 
 def nasa_scs(context, coeffs):
     """
