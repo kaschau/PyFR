@@ -55,7 +55,7 @@ class BaseAdvectionMPIInters(BaseAdvectionIntersMixin, BaseInters):
         self._rhsrank = rhsrank
 
         # Name our interface so we can match kernels to MPI requests
-        self.name = 'p{rhsrank}'
+        self.name = f'p{rhsrank}'
 
         # MPI request tag counter
         self._mpi_tag_counter = it.count(self.BASE_MPI_TAG)
@@ -112,7 +112,9 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
 
     def __init__(self, be, lhs, elemap, cfgsect, cfg):
         super().__init__(be, lhs, elemap, cfg)
+
         self.cfgsect = cfgsect
+        self.name = cfgsect.removeprefix('soln-bcs-')
 
         # For BC interfaces, which only have an LHS state, we take the
         # permutation which results in an optimal memory access pattern

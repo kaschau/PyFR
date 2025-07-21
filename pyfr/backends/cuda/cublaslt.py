@@ -206,6 +206,8 @@ class CUDACUBLASLtKernels(CUDAKernelProvider):
         try:
             desc, dt = self._mul_cache[ckey]
         except KeyError:
+            ifac = self.backend.autotune_ifac
+
             # Create matrix layouts
             a_desc = CUBLASLtMatrixLayout(self, A, dtype)
             b_desc = CUBLASLtMatrixLayout(self, B, dtype)
@@ -248,7 +250,7 @@ class CUDACUBLASLtKernels(CUDAKernelProvider):
                 except CUBLASLtStatusNotSupported:
                     continue
 
-                if best_kern is None or dt < best_kern[-1]:
+                if best_kern is None or dt < ifac*best_kern[-1]:
                     best_kern = desc, dt
 
             # Restore the output matrix

@@ -59,6 +59,7 @@ class OpenCLGiMMiKKernels(OpenCLKernelProvider):
             # Clone the kernel so it gets its own set of arguments
             kern = kern.clone()
         except KeyError:
+            ifac = self.backend.autotune_ifac
             kname = f'gimmik_mm_{arr.shape[0]}x{arr.shape[1]}'
             local_mem_size = self.backend.cl.dev.local_mem_size
             best_kern = None
@@ -90,7 +91,7 @@ class OpenCLGiMMiKKernels(OpenCLKernelProvider):
                         nbench=self.nbench
                     )
 
-                    if best_kern is None or dt < best_kern[-1]:
+                    if best_kern is None or dt < ifac*best_kern[-1]:
                         best_kern = kern, gs, ls, dt
 
                     sdata = {'runtime': dt}
