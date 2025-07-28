@@ -341,7 +341,7 @@ class MonotonicPolynomialFitter:
         poly = nppoly.Polynomial.fit(x_scaled, y_scaled, self.result_degree)
         coef_scaled = poly.convert().coef
         mono, pos = self.is_monotonic(x_scaled, coef_scaled, is_scaled=True)
-        if mono and pos:
+        if (mono and pos) or self.result_degree < 2:
             # Unscale coefficients and return
             return self.unscale_coefficients(coef_scaled)
 
@@ -435,23 +435,24 @@ class tpgEOS(BaseEOS):
                 # Adaptive monotonic polynomial fitting
                 best_error = np.inf
                 for degree in range(5):
-                    fitter = MonotonicPolynomialFitter(degree, (0, None))
+                    fitter = MonotonicPolynomialFitter(degree, (0, Tmax))
                     coeffs = list(fitter.fit(Ts, cp_ref))
                     error = fitter.max_relative_error(Ts, cp_ref, coeffs)
-                    import matplotlib.pyplot as plt
-                    plt.plot(Ts, cp_ref, label="ref")
-                    cp_new = nppoly.polyval(Ts, coeffs)
-                    plt.plot(Ts, cp_new, '--', label="new")
-                    plt.title(f'c_p {consts['names'][n]}')
-                    plt.legend()
-                    plt.show()
-                    if error < 0.01:
+                    if error < 0.05:
                         best_coeffs = coeffs
                         break
                     elif error < best_error:
                         best_coeffs = coeffs
                         best_error = error
                 coeffs = best_coeffs
+
+                # import matplotlib.pyplot as plt
+                # plt.plot(Ts, cp_ref, label="ref")
+                # cp_new = nppoly.polyval(Ts, coeffs)
+                # plt.plot(Ts, cp_new, '--', label="new")
+                # plt.title(f'c_p {consts['names'][n]}')
+                # plt.legend()
+                # plt.show()
 
                 h_ref  = (  Ts*(N7[n, m + 0]
                           + Ts*(N7[n, m + 1] / 2.0
