@@ -37,8 +37,8 @@
       <% Rk = c['Ru']/c['MW'][n] %>\
       s += q[${n}] > 0.0 ? q[${n}] * (ss - ${Rk}*log(u[${n}])) : 0.0;
     }
+% endfor
 
     // Return the specific thermodynamic entropy (mass basis)
     s = (T > 0) ? s : ${-fpdtype_max};
-% endfor
 </%pyfr:macro>
