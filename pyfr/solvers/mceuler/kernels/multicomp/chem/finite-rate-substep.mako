@@ -60,40 +60,21 @@
     }
     % endfor
 
-    // Limit source term for species sub step
-    % for n in range(ns):
-    {
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-      ## g.t.zero
-      tmpSrc[${n}] = fmax(tmpSrc[${n}], -rho*q[${n}]*${1.0/tSub});
-      ## l.t one
-      tmpSrc[${n}] = fmin(tmpSrc[${n}], rho*(1.0-q[${n}])*${1.0/tSub});
-      % endif
-    }
-    % endfor
-
     // Take sub step in time for species
-    fpdtype_t Yact_sum = 0.0;
-    fpdtype_t Ybath_sum = 0.0;
+    fpdtype_t Y_sum = 0.0;
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
-        q[${n}] = q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub};
-        Yact_sum += q[${n}];
-      % else:
-        Ybath_sum += q[${n}];
+        q[${n}] = fmin(1.0, fmax(0.0, q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub}));
       % endif
+        Y_sum += q[${n}];
     }
     % endfor
-    // Normalize the active species (non-bath) and their sources
-    fpdtype_t Y_norminv = (1.0-Ybath_sum)/Yact_sum;
+    // Normalize
+    fpdtype_t Y_suminv = 1.0/Y_sum;
     % for n in range(ns):
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-      q[${n}] *= Y_norminv;
-      % endif
+      q[${n}] *= Y_suminv;
     % endfor
 
     // Take sub step in time for temperature
