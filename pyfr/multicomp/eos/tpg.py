@@ -141,7 +141,7 @@ class tpgEOS(BaseEOS):
         ns = consts['ns']
         ndims = len(pris) - (ns - 1) - 2
 
-        p, T = pris[0], pris[ndims + 1]
+        p, T = np.asarray(pris[0]), np.asarray(pris[ndims + 1])
 
         # Compute ns species
         Yns = 1.0 - sum(pris[ndims+2::])
