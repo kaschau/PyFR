@@ -112,7 +112,7 @@
       % endif
 
       // Accumulate source term
-      src[${n}] += tmpSrc[${n}]*tSub/${dt};
+      src[${n}] += tmpSrc[${n}]*tSub*${1.0/dt};
     }
     % endfor
     dTdt /= cp * rho;
