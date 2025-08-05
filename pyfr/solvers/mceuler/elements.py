@@ -161,7 +161,6 @@ class BaseMCFluidElements:
                 'nvars': self.nvars,
                 'c': consts,
                 'eos': self.mcfluid.eos,
-                'sub_steps': sub_steps,
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
 
@@ -180,7 +179,7 @@ class BaseMCFluidElements:
                                    False,
                                    True)
             else:
-                chem_tplargs['sub_steps'] = int(chem_tplargs['sub_steps'])
+                chem_tplargs['sub_steps'] = int(sub_steps)
                 self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-substep',
                                    'finite_rate_substep',
                                    chem_tplargs,

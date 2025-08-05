@@ -14,7 +14,7 @@
 <% T_cutoff = c['T_cutoff'] %>\
 <% NASA7_Thigh = c['NASA7_Thigh'] %>\
 <% NASA7_Tlow = c['NASA7_Tlow'] %>\
-% endif\
+% endif
 <% tSub = dt / float(sub_steps) %>\
 
 <%pyfr:macro name='finite_rate_substep' params='t, u, ploc, src'>
@@ -119,7 +119,7 @@
       % endif
 
       // Accumulate source term
-      src[${n}] += tmpSrc[${n}]*${tSub}/${dt};
+      src[${n}] += tmpSrc[${n}]*${tSub/dt};
     }
     % endfor
     dTdt /= cp * rho;

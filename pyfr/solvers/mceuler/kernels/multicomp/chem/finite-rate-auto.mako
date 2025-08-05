@@ -112,13 +112,16 @@
       % endif
 
       // Accumulate source term
-      src[${n}] += tmpSrc[${n}]*tSub*${1.0/dt};
+      src[${n}] += tmpSrc[${n}]*tSub;
     }
     % endfor
     dTdt /= cp * rho;
     T += dTdt * tSub;
     tChem += tSub;
   }
+  % for n in range(ns):
+    src[${n}] *= ${1.0/dt};
+  % endfor
 
 // Set non chemical terms to zero
 % for i in range(ndims):
