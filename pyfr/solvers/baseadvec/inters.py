@@ -110,10 +110,11 @@ class BaseAdvectionMPIInters(BaseAdvectionIntersMixin, BaseInters):
 class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
     type = None
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfg)
 
         self.cfgsect = cfgsect
+        self.bccomm = bccomm
         self.name = cfgsect.removeprefix('soln-bcs-')
 
         # For BC interfaces, which only have an LHS state, we take the
@@ -132,6 +133,10 @@ class BaseAdvectionBCInters(BaseAdvectionIntersMixin, BaseInters):
             self._entmin_lhs = self._view(lhs, 'get_entmin_bc_fpts_for_inter')
         else:
             self._entmin_lhs = None
+
+    @classmethod
+    def preparefn(cls, bciface, mesh, elemap):
+        pass
 
     def _eval_opts(self, opts, default=None):
         # Boundary conditions, much like initial conditions, can be

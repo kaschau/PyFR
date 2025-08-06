@@ -7,6 +7,7 @@ import numpy as np
 
 from pyfr.backends.base import NullKernel
 from pyfr.cache import memoize
+from pyfr.mpiutil import autofree, get_comm_rank_root, mpi
 from pyfr.shapes import BaseShape
 from pyfr.util import subclasses
 
@@ -73,7 +74,7 @@ class BaseSystem:
         # Load the interfaces
         self._int_inters = self._load_int_inters(mesh, elemap)
         self._mpi_inters = self._load_mpi_inters(mesh, elemap)
-        self._bc_inters = self._load_bc_inters(mesh, elemap)
+        self._bc_inters, self._bc_prefns = self._load_bc_inters(mesh, elemap)
         backend.commit()
 
     def commit(self):
@@ -154,21 +155,39 @@ class BaseSystem:
         return mpi_inters
 
     def _load_bc_inters(self, mesh, elemap):
+        comm, rank, root = get_comm_rank_root()
+
         bccls = self.bbcinterscls
         bcmap = {b.type: b for b in subclasses(bccls, just_leaf=True)}
+        bc_inters, bc_prefns = [], {}
 
-        bc_inters = []
-        for bname, interarr in mesh.bcon.items():
-            # Determine the config file section
+        # Iterate over all boundaries in the mesh
+        for c in mesh.codec:
+            if not c.startswith('bc/'):
+                continue
+
+            # Construct an MPI communicator for this boundary
+            bname = c.removeprefix('bc/')
+            localbc = bname in mesh.bcon
+            bccomm = autofree(comm.Split(1 if localbc else mpi.UNDEFINED))
+
+            # Get the class
             cfgsect = f'soln-bcs-{bname}'
-
-            # Instantiate
             bcclass = bcmap[self.cfg.get(cfgsect, 'type')]
-            bciface = bcclass(self.backend, interarr, elemap, cfgsect,
-                                self.cfg)
-            bc_inters.append(bciface)
 
-        return bc_inters
+            # If we have this boundary then create an instance
+            if localbc:
+                bciface = bcclass(self.backend, mesh.bcon[bname], elemap,
+                                  cfgsect, self.cfg, bccomm)
+                bc_inters.append(bciface)
+            else:
+                bciface = None
+
+            # Allow the boundary to return a preparation callback
+            if (pfn := bcclass.preparefn(bciface, mesh, elemap)):
+                bc_prefns[bname] = pfn
+
+        return bc_inters, bc_prefns
 
     def _gen_kernels(self, nregs, eles, iint, mpiint, bcint):
         self._kernels = kernels = defaultdict(list)
@@ -263,8 +282,8 @@ class BaseSystem:
     def _prepare_kernels(self, t, uinbank, foutbank):
         _, binders, bckerns = self._get_kernels(uinbank, foutbank)
 
-        for b in self._bc_inters:
-            b.prepare(self, t, bckerns[b.name])
+        for b, bfn in self._bc_prefns.items():
+            bfn(self, uinbank, t, bckerns[b])
 
         for b in binders:
             b(t=t)
@@ -338,9 +357,6 @@ class BaseSystem:
     def ele_scal_upts_cpy(self):
         return [e.get() for e in self.scal_upts_cpy]
 
-    def get_ele_entmin_int(self):
-        return [e.get() for e in self.eles_entmin_int]
-
     def _group(self, g, kerns, subs=[]):
         # Eliminate non-existent kernels
         kerns = [k for k in kerns if k is not None]
@@ -350,7 +366,3 @@ class BaseSystem:
         subs = [sub for sub in subs if len(sub) > 1]
 
         g.group(kerns, subs)
-
-    def set_ele_entmin_int(self, entmin_int):
-        for e, em in zip(self.eles_entmin_int, entmin_int):
-            e.set(em)
