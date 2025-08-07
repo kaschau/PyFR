@@ -121,8 +121,8 @@ class MCEulerBaseBCInters(TplargsMixin, BaseAdvectionBCInters):
 class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
     type = 'sup-in-fa'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
@@ -142,8 +142,8 @@ class MCEulerSubOutflowBCInters(MCEulerBaseBCInters):
     type = 'sub-out-fp'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['p'], lhs)
 
@@ -156,8 +156,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
     type = 'sub-in-mdot'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'mdot-per-area']
         bcvars += self.c['names']
@@ -170,8 +170,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
 class MCEulerCharRiemInvBCInters(MCEulerBaseBCInters):
     type = 'char-riem-inv'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(
             ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
