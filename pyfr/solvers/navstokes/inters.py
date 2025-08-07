@@ -241,8 +241,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         else:
             return self._newCS_3d(n)
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         kname = 'pyfr.solvers.navstokes.kernels.bccflux_nscbc'
         self._be.pointwise.register(kname)
