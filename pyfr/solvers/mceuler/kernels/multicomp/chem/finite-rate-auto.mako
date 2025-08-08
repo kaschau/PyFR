@@ -92,6 +92,7 @@
     // Take sub step in time for temperature
     fpdtype_t dTdt = 0.0;
     fpdtype_t Tinv = 1.0/T;
+    fpdtype_t dtRatio = tSub / ${dt};
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -112,16 +113,13 @@
       % endif
 
       // Accumulate source term
-      src[${n}] += tmpSrc[${n}]*tSub;
+      src[${n}] += tmpSrc[${n}] * dtRatio;
     }
     % endfor
     dTdt /= cp * rho;
     T += dTdt * tSub;
     tChem += tSub;
   }
-  % for n in range(ns):
-    src[${n}] *= ${1.0/dt};
-  % endfor
 
 // Set non chemical terms to zero
 % for i in range(ndims):
