@@ -32,7 +32,7 @@
   -(log_Kp + ${log_term})
 </%def>\
 
-<%pyfr:macro name='net_rate_of_production' params='q, T, rho, omega'>
+<%pyfr:macro name='net_rate_of_production' params='Y, T, rho, omega'>
 
   % for n in range(ns):
     omega[${n}] = 0.0;  // omega must start at zero
@@ -40,15 +40,15 @@
   // Concentrations (log space only)
   fpdtype_t log_cs[${ns}];
   % for n in range(ns):
-    log_cs[${n}] = log(fmax(0.0, rho*q[${n}]*${1.0/c['MW'][n]}));
+    log_cs[${n}] = log(fmax(0.0, rho*Y[${n}]*${1.0/c['MW'][n]}));
   % endfor
 
   // Gibbs energy (kept in log space)
   fpdtype_t gbs[${ns}];
   fpdtype_t logT = log(T);
   fpdtype_t Tinv = 1.0/T;
-  fpdtype_t log_prefRuT = log(${101325.0/c['Ru']}*Tinv);
-  fpdtype_t log_prefRuTinv = log(${c['Ru']/101325.0}*T);
+  fpdtype_t log_prefRuT = ${math.log(101325.0/c['Ru'])} + log(Tinv);
+  fpdtype_t log_prefRuTinv = ${math.log(c['Ru']/101325.0)} + logT;
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
@@ -78,7 +78,7 @@
   fpdtype_t log_k_f = ${logRateConst(A_f[i], m_f[i], Ea_f[i])};
   % if sum(c['aij'][i]) > 0.0:
   // Three body reaction
-  fpdtype_t cTBC = rho * (${"+".join([f"({eff/c['MW'][n]})*q[{n}]" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])});
+  fpdtype_t cTBC = rho * (${"+".join([f"({eff/c['MW'][n]})*Y[{n}]" for n,eff in enumerate(c['aij'][i]) if eff != 0.0])});
   fpdtype_t log_cTBC = log(cTBC);
   % endif
   % if c['r_type'][i] == 'three-body-Arrhenius':
