@@ -60,23 +60,6 @@
     }
     % endfor
 
-    // Take sub step in time for species
-    fpdtype_t Y_sum = 0.0;
-    % for n in range(ns):
-    {
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-        q[${n}] = fmin(1.0, fmax(0.0, q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub}));
-      % endif
-        Y_sum += q[${n}];
-    }
-    % endfor
-    // Normalize
-    fpdtype_t Y_suminv = 1.0/Y_sum;
-    % for n in range(ns):
-      q[${n}] *= Y_suminv;
-    % endfor
-
     // Take sub step in time for temperature
     fpdtype_t dTdt = 0.0;
     fpdtype_t Tinv = 1.0/T;
@@ -105,6 +88,23 @@
     % endfor
     dTdt /= cp * rho;
     T += dTdt * ${tSub};
+
+    // Take sub step in time for species
+    fpdtype_t Y_sum = 0.0;
+    % for n in range(ns):
+    {
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+        q[${n}] = fmin(1.0, fmax(0.0, q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub}));
+      % endif
+        Y_sum += q[${n}];
+    }
+    % endfor
+    // Normalize
+    fpdtype_t Y_suminv = 1.0/Y_sum;
+    % for n in range(ns):
+      q[${n}] *= Y_suminv;
+    % endfor
   }
 
 // Set non chemical terms to zero

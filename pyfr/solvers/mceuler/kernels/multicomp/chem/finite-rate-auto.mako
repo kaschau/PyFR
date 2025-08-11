@@ -57,7 +57,6 @@
     }
     % endfor
 
-    // Take the sub step
     // Compute cp
     fpdtype_t cp = 0.0;
     % for n in range(ns):
@@ -83,17 +82,7 @@
     // Convert ratio to actual time step
     fpdtype_t tSub = tSubRatio * ${dt};
 
-    // Take sub step in time for species
-    % for n in range(ns):
-    {
-      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
-      % if max(abs(nu_sum)) > 0.0:
-        q[${n}] = q[${n}] + tmpSrc[${n}] * rhoinv * tSub;
-      % endif
-    }
-    % endfor
-
-    // Take sub step in time for temperature
+    // Take the sub-step
     fpdtype_t dTdt = 0.0;
     fpdtype_t Tinv = 1.0/T;
     % for n in range(ns):
@@ -115,12 +104,21 @@
         dTdt -= hi * tmpSrc[${n}];
       % endif
 
+      // Take sub step in time for species
+      <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
+      % if max(abs(nu_sum)) > 0.0:
+        q[${n}] += tmpSrc[${n}] * rhoinv * tSub;
+      % endif
+
       // Accumulate source term
       src[${n}] += tmpSrc[${n}] * tSubRatio;
     }
     % endfor
+
+    // Take sub step in time for temperature
     dTdt /= cp * rho;
     T += dTdt * tSub;
+
     tProgress += tSubRatio;
   }
 
