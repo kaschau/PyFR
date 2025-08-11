@@ -34,13 +34,13 @@
     src[${n}] = 0.0;
   % endfor
 
-  fpdtype_t tChem = 0.0;
-  for (int iter = 0; iter < ${max_subs} && tChem < ${dt}; iter++){
+  fpdtype_t tProgress = 0.0;  // Dimensionless progress [0-1]
+  for (int iter = 0; iter < ${max_subs} && tProgress < 1.0; iter++){
 
     ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'tmpSrc')};
 
-    // Find largest possible sub step
-    fpdtype_t tSub = ${dt} - tChem;
+    // Find largest possible sub step ratio (dimensionless)
+    fpdtype_t tSubRatio = 1.0 - tProgress;
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -49,8 +49,9 @@
       // HACK underflows in tmpSrc fail the sign check with ffast-math
       // resulting in tSub=inf and such. Need better solution.
       if (abs(tmpSrc[${n}]) > ${fpdtype_eps}){
-        tSub = (tmpSrc[${n}] < 0.0) ? fmin(tSub, -rho*q[${n}]/tmpSrc[${n}])
-                                    : fmin(tSub, rho*(1.0-q[${n}])/tmpSrc[${n}]);
+        fpdtype_t dtSubMax = (tmpSrc[${n}] < 0.0) ? -rho*q[${n}]/tmpSrc[${n}]
+                                                  : rho*(1.0-q[${n}])/tmpSrc[${n}];
+        tSubRatio = fmin(tSubRatio, dtSubMax * ${1.0/dt});
       }
       % endif
     }
@@ -79,6 +80,9 @@
     }
     % endfor
 
+    // Convert ratio to actual time step
+    fpdtype_t tSub = tSubRatio * ${dt};
+
     // Take sub step in time for species
     % for n in range(ns):
     {
@@ -92,7 +96,6 @@
     // Take sub step in time for temperature
     fpdtype_t dTdt = 0.0;
     fpdtype_t Tinv = 1.0/T;
-    fpdtype_t dtRatio = tSub / ${dt};
     % for n in range(ns):
     {
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
@@ -113,12 +116,12 @@
       % endif
 
       // Accumulate source term
-      src[${n}] += tmpSrc[${n}] * dtRatio;
+      src[${n}] += tmpSrc[${n}] * tSubRatio;
     }
     % endfor
     dTdt /= cp * rho;
     T += dTdt * tSub;
-    tChem += tSub;
+    tProgress += tSubRatio;
   }
 
 // Set non chemical terms to zero
