@@ -32,103 +32,100 @@
   -(log_Kp + ${log_term})
 </%def>\
 
-<%def name="troeThreeParam(alpha, Tsss, Ts)">
-  <%
-  alpha = float(alpha)
-  Tsss = float(Tsss)
-  Ts = float(Ts)
-  %>
-  % if alpha == 0.0:
-  // Special case: α = 0, F_cent = exp(-T/T***)
-  fpdtype_t log10Fcent = -T*${0.4342944819032518/Tsss}; // ln to log10
-  % elif alpha == 1.0:
-  // Special case: α = 1, F_cent = exp(-T/T*)
-  fpdtype_t log10Fcent = -T*${0.4342944819032518/Ts}; // ln to log10
-  % elif alpha > 1.0:
-  // Alpha > 1: F_cent = α*exp(-T/T*) - (α-1)*exp(-T/T***)
-  fpdtype_t log_term1 = ${math.log(alpha)} - T*${1.0/Ts};
-  fpdtype_t log_term2 = ${math.log(alpha - 1.0)} - T*${1.0/Tsss};
-  // Use log-difference with fmax reference selection
-  fpdtype_t log_ref = fmax(log_term1, log_term2);
-  fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) - exp(log_term2 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
-  % elif alpha > 0.0:
-  // 0 < alpha < 1: F_cent = (1-α)*exp(-T/T***) + α*exp(-T/T*)
-  fpdtype_t log_term1 = ${math.log(1.0 - alpha)} - T*${1.0/Tsss};
-  fpdtype_t log_term2 = ${math.log(alpha)} - T*${1.0/Ts};
-  // Use log-sum-exp with fmax reference selection
-  fpdtype_t log_ref = fmax(log_term1, log_term2);
-  fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) + exp(log_term2 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+<%def name="logSumExp2(log_a, log_b, is_diff)">
+  {
+    // Two-term log-sum-exp or log-diff-exp
+    fpdtype_t log_ref = fmax(${log_a}, ${log_b});
+  % if is_diff:
+    log_result = log_ref + log(exp(${log_a} - log_ref) - exp(${log_b} - log_ref));
   % else:
-  // Negative alpha: F_cent = (1-α)*exp(-T/T***) - |α|*exp(-T/T*)
-  fpdtype_t log_term1 = ${math.log(1.0 - alpha)} - T*${1.0/Tsss};
-  fpdtype_t log_term2 = ${math.log(-alpha)} - T*${1.0/Ts};
-  // Use log-difference: log(a - b) = log_ref + log(exp(log_a - log_ref) - exp(log_b - log_ref))
-  fpdtype_t log_ref = fmax(log_term1, log_term2);
-  fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) - exp(log_term2 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    log_result = log_ref + log(exp(${log_a} - log_ref) + exp(${log_b} - log_ref));
   % endif
+  }
 </%def>\
 
-<%def name="troeFourParam(alpha, Tsss, Ts, Tss)">
+<%def name="logSumExp3(log_a, log_b, log_c)">
+  {
+    // Three-term log-sum-exp
+    fpdtype_t log_ref = fmax(fmax(${log_a}, ${log_b}), ${log_c});
+    log_result = log_ref + log(exp(${log_a} - log_ref) + exp(${log_b} - log_ref) + exp(${log_c} - log_ref));
+  }
+</%def>\
+
+<%def name="computeLog10Fcent(alpha, Tsss, Ts, Tss=0.0)">
   <%
   alpha = float(alpha)
   Tsss = float(Tsss)
   Ts = float(Ts)
   Tss = float(Tss)
+  ln_to_log10 = 1.0 / math.log(10.0)  # Convert natural log to log10
+  is_three_param = (Tss == 0.0)
   %>
   % if alpha == 0.0:
-  // Special case: α = 0, F_cent = exp(-T/T***) + exp(-T**/T)
-  fpdtype_t log_term1 = -T*${1.0/Tsss};
-  fpdtype_t log_term3 = -${Tss}*Tinv;
-  fpdtype_t log_ref = fmax(log_term1, log_term3);
-  fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) + exp(log_term3 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    % if is_three_param:
+      // α = 0, 3-param: F_cent = exp(-T/T***)
+      fpdtype_t log10Fcent = -T*${ln_to_log10/Tsss};
+    % else:
+      // α = 0, 4-param: F_cent = exp(-T/T***) + exp(-T**/T)
+      fpdtype_t log_result;
+      ${logSumExp2(f"-T*{1.0/Tsss}", f"-{Tss}*Tinv", False)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % endif
   % elif alpha == 1.0:
-  // Special case: α = 1, F_cent = exp(-T/T*) + exp(-T**/T)
-  fpdtype_t log_term2 = -T*${1.0/Ts};
-  fpdtype_t log_term3 = -${Tss}*Tinv;
-  fpdtype_t log_ref = fmax(log_term2, log_term3);
-  fpdtype_t log_sum = log_ref + log(exp(log_term2 - log_ref) + exp(log_term3 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    % if is_three_param:
+      // α = 1, 3-param: F_cent = exp(-T/T*)
+      fpdtype_t log10Fcent = -T*${ln_to_log10/Ts};
+    % else:
+      // α = 1, 4-param: F_cent = exp(-T/T*) + exp(-T**/T)
+      fpdtype_t log_result;
+      ${logSumExp2(f"-T*{1.0/Ts}", f"-{Tss}*Tinv", False)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % endif
   % elif alpha > 1.0:
-  // Alpha > 1: F_cent = α*exp(-T/T*) - |1-α|*exp(-T/T***) + exp(-T**/T)
-  fpdtype_t log_term1 = ${math.log(alpha)} - T*${1.0/Ts};
-  fpdtype_t log_term2 = ${math.log(alpha - 1.0)} - T*${1.0/Tsss};
-  fpdtype_t log_term3 = -${Tss}*Tinv;
-  // F_cent = term1 + term3 - term2 = (term1 + term3) - term2
-  // First compute log(term1 + term3) using log-sum-exp
-  fpdtype_t log_pos_ref = fmax(log_term1, log_term3);
-  fpdtype_t log_pos_sum = log_pos_ref + log(exp(log_term1 - log_pos_ref) + exp(log_term3 - log_pos_ref));
-  // Then compute log(pos_sum - term2) using log-difference
-  fpdtype_t log_ref = fmax(log_pos_sum, log_term2);
-  fpdtype_t log_sum = log_ref + log(exp(log_pos_sum - log_ref) - exp(log_term2 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    % if is_three_param:
+      // α > 1, 3-param: F_cent = α*exp(-T/T*) - (α-1)*exp(-T/T***)
+      fpdtype_t log_result;
+      ${logSumExp2(f"{math.log(alpha)} - T*{1.0/Ts}", f"{math.log(alpha - 1.0)} - T*{1.0/Tsss}", True)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % else:
+      // α > 1, 4-param: F_cent = α*exp(-T/T*) - (α-1)*exp(-T/T***) + exp(-T**/T)
+      // Compute (α*exp(-T/T*) + exp(-T**/T)) - (α-1)*exp(-T/T***)
+      fpdtype_t log_result;
+      ${logSumExp2(f"{math.log(alpha)} - T*{1.0/Ts}", f"-{Tss}*Tinv", False)}
+      fpdtype_t log_pos_sum = log_result;
+      ${logSumExp2("log_pos_sum", f"{math.log(alpha - 1.0)} - T*{1.0/Tsss}", True)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % endif
   % elif alpha > 0.0:
-  // 0 < alpha < 1: F_cent = (1-α)*exp(-T/T***) + α*exp(-T/T*) + exp(-T**/T)
-  // Choose reference to avoid single precision overflow (exp arg > 88)
-  fpdtype_t log_term1 = ${math.log(1.0 - alpha)} - T*${1.0/Tsss};
-  fpdtype_t log_term2 = ${math.log(alpha)} - T*${1.0/Ts};
-  fpdtype_t log_term3 = -${Tss}*Tinv;
-  fpdtype_t log_ref = fmax(fmax(log_term1, log_term2), log_term3);
-  fpdtype_t log_sum = log_ref + log(exp(log_term1 - log_ref) + exp(log_term2 - log_ref) + exp(log_term3 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    % if is_three_param:
+      // 0 < α < 1, 3-param: F_cent = (1-α)*exp(-T/T***) + α*exp(-T/T*)
+      fpdtype_t log_result;
+      ${logSumExp2(f"{math.log(1.0 - alpha)} - T*{1.0/Tsss}", f"{math.log(alpha)} - T*{1.0/Ts}", False)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % else:
+      // 0 < α < 1, 4-param: F_cent = (1-α)*exp(-T/T***) + α*exp(-T/T*) + exp(-T**/T)
+      fpdtype_t log_result;
+      ${logSumExp3(f"{math.log(1.0 - alpha)} - T*{1.0/Tsss}", f"{math.log(alpha)} - T*{1.0/Ts}", f"-{Tss}*Tinv")}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % endif
   % else:
-  // Negative alpha: F_cent = (1-α)*exp(-T/T***) - |α|*exp(-T/T*) + exp(-T**/T)
-  fpdtype_t log_term1 = ${math.log(1.0 - alpha)} - T*${1.0/Tsss};
-  fpdtype_t log_term2 = ${math.log(-alpha)} - T*${1.0/Ts};  // |α| = -α since α < 0
-  fpdtype_t log_term3 = -${Tss}*Tinv;
-  // F_cent = term1 + term3 - term2 = (term1 + term3) - term2
-  // First compute log(term1 + term3) using log-sum-exp
-  fpdtype_t log_pos_ref = fmax(log_term1, log_term3);
-  fpdtype_t log_pos_sum = log_pos_ref + log(exp(log_term1 - log_pos_ref) + exp(log_term3 - log_pos_ref));
-  // Then compute log(pos_sum - term2) using log-difference
-  fpdtype_t log_ref = fmax(log_pos_sum, log_term2);
-  fpdtype_t log_sum = log_ref + log(exp(log_pos_sum - log_ref) - exp(log_term2 - log_ref));
-  fpdtype_t log10Fcent = log_sum * 0.4342944819032518; // ln to log10
+    % if is_three_param:
+      // α < 0, 3-param: F_cent = (1-α)*exp(-T/T***) - |α|*exp(-T/T*)
+      fpdtype_t log_result;
+      ${logSumExp2(f"{math.log(1.0 - alpha)} - T*{1.0/Tsss}", f"{math.log(-alpha)} - T*{1.0/Ts}", True)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % else:
+      // α < 0, 4-param: F_cent = (1-α)*exp(-T/T***) - |α|*exp(-T/T*) + exp(-T**/T)
+      // Compute ((1-α)*exp(-T/T***) + exp(-T**/T)) - |α|*exp(-T/T*)
+      fpdtype_t log_result;
+      ${logSumExp2(f"{math.log(1.0 - alpha)} - T*{1.0/Tsss}", f"-{Tss}*Tinv", False)}
+      fpdtype_t log_pos_sum = log_result;
+      ${logSumExp2("log_pos_sum", f"{math.log(-alpha)} - T*{1.0/Ts}", True)}
+      fpdtype_t log10Fcent = log_result * ${ln_to_log10};
+    % endif
   % endif
 </%def>\
+
 
 <%pyfr:macro name='net_rate_of_production' params='Y, T, rho, omega'>
 
@@ -191,18 +188,14 @@
     <% Tsss = c['fall_coeffs'][i][1]%>\
     <% Ts = c['fall_coeffs'][i][2]%>\
     <% Tss = c['fall_coeffs'][i][3]%>\
-    % if Tss == 0.0: #Three Parameter Troe form
-      ${troeThreeParam(alpha, Tsss, Ts)}
-    % else: # Four Parameter Troe form
-      ${troeFourParam(alpha, Tsss, Ts, Tss)}
-    % endif
+    ${computeLog10Fcent(alpha, Tsss, Ts, Tss)}
     fpdtype_t C = -0.4 - 0.67*log10Fcent;
     fpdtype_t N = 0.75 - 1.27*log10Fcent;
     fpdtype_t log_Pr = log_cTBC + ${logRateConst(A_o[i]/A_f[i], m_o[i]-m_f[i], Ea_o[i]-Ea_f[i])};
-    fpdtype_t log10_Pr = log_Pr * 0.4342944819032518; // log_Pr / ln(10)
+    fpdtype_t log10_Pr = log_Pr * ${1.0 / math.log(10.0)}; // Convert ln to log10
     fpdtype_t A = log10_Pr + C;
     fpdtype_t f1 = A/(N - 0.14*A);
-    fpdtype_t log_F_pdr = log10Fcent/(1.0+f1*f1) * 2.302585092994046; // ln(10)
+    fpdtype_t log_F_pdr = log10Fcent/(1.0+f1*f1) * ${math.log(10.0)}; // Convert log10 to ln
     fpdtype_t log_pmod = log_Pr - log(1.0 + exp(log_Pr)) + log_F_pdr;
     log_k_f += log_pmod;
   % elif c['r_type'][i] == 'SRI':
