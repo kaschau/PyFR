@@ -1,5 +1,4 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-prims'/>
 
 <% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
 
