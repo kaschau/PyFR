@@ -327,6 +327,18 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
             tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
+            
+            # Compute inverse of correction function matrix G for face flux points
+            # G_ij represents correction function j evaluated at flux point i
+            G = np.zeros((nfacefpts, nfacefpts))
+            for i, fpt_i in enumerate(facefpts):
+                for j, fpt_j in enumerate(facefpts):
+                    # m11[i,j] is the correction function from flux point j at flux point i
+                    G[i, j] = basis.m11[fpt_i, fpt_j]
+            
+            # Compute inverse of G matrix
+            G_inv = np.linalg.inv(G)
+            tplargs_efp['G_inv'] = G_inv
 
             method = '_get_scal_upts_for_inter_ele'
             scal_upts = self._scal_upts_view(lhs_efp, method)
