@@ -1,5 +1,4 @@
 from functools import cached_property, wraps
-from itertools import chain
 
 import numpy as np
 

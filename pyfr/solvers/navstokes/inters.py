@@ -387,8 +387,8 @@ class NSCBCSubOutFpBCInters(NavierStokesCharacteristicBoundaryCondition):
     type = 'sub-out-nscbc-fp'
     normal = 'outward'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         for shape, fidx, lhs_idx in self.ef_pairs:
             # Generate lhs for element-face pair
@@ -403,8 +403,8 @@ class NSCBCSubInFrvBCInters(NavierStokesCharacteristicBoundaryCondition):
     type = 'sub-in-nscbc-frv'
     normal = 'inward'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
         for shape, fidx, lhs_idx in self.ef_pairs:
             # Generate lhs for element-face pair
             lhs_efp = [lhs[i] for i in lhs_idx]
