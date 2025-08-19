@@ -305,13 +305,17 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             nfacefpts = basis.nfacefpts[fidx]
             ndims = self.ndims
             facefpts = basis.facefpts[fidx]
+            nintfpts = nfpts - nfacefpts
+            intfpts = [i for i in range(nfpts) if i not in facefpts]
 
             tplargs_efp = self._tplargs_efp[shape][fidx]
 
             tplargs_efp['nupts'] = nupts
             tplargs_efp['nfpts'] = nfpts
             tplargs_efp['nfacefpts'] = nfacefpts
+            tplargs_efp['nintfacefpts'] = nintfpts
             tplargs_efp['facefpts'] = facefpts
+            tplargs_efp['intfpts'] = intfpts
             norms = basis.norm_fpts[facefpts]
             tplargs_efp['magnl'] = np.linalg.norm(norms, axis=-1)
             norms = norms/tplargs_efp['magnl'][:, None]
@@ -328,14 +332,25 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 else:
                     tplargs_efp['t1s'][i], tplargs_efp['t2s'][i] = self.newCS(norm)
 
-            tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
-            tplargs_efp['m12'] = basis.m12[facefpts]
+            tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)
+            tplargs_efp['m12'] = basis.m12
 
-            # Compute inverse of correction function matrix G for ALL flux points
-            # m11[i,j] is the correction function from flux point j evaluated at flux point i
-            # We use the full m11 matrix to consider corrections from all flux points
-            G_inv = np.linalg.inv(basis.m11)
-            tplargs_efp['G_inv'] = G_inv
+            # Compute inverse of correction function matrix G for face flux points
+            # GB_ij represents correction function i evaluated at flux point j
+            # m11[i,j] is the correction function from flux point i at flux point j
+            GB = np.zeros((nfacefpts, nfacefpts))
+            for i, fpt_i in enumerate(facefpts):
+                for j, fpt_j in enumerate(facefpts):
+                    GB[i, j] = basis.m11[fpt_i, fpt_j]
+            GI = np.zeros((nintfpts, nfacefpts))
+            for i, fpt_i in enumerate(intfpts):
+                for j, fpt_j in enumerate(facefpts):
+                    GI[i, j] = basis.m11[fpt_i, fpt_j]
+
+            # Compute inverse of G matrix
+            GB_inv = np.linalg.inv(GB)
+            tplargs_efp['GB_inv'] = GB_inv
+            tplargs_efp['GI'] = GI
 
             method = '_get_scal_upts_for_inter_ele'
             scal_upts = self._scal_upts_view(lhs_efp, method)
