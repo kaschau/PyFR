@@ -5,8 +5,8 @@
 
 <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
 
-## <% check = True %>
-<% check = False %>
+<% check = True %>
+## <% check = False %>
 
 <% sq2 = 2**0.5 %>
 <% invsq2 = 2**-0.5 %>
@@ -98,9 +98,9 @@
               u_fpts='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
               gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
               gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
-              normnl_ffpt='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
+              normnl_fpts='in fpdtype_t[${str(nfpts)}][${str(ndims)}]'
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
-              jacs_ffpt='in fpdtype_t[${str(nfacefpts)}]'>
+              jacs_fpts='in fpdtype_t[${str(nfpts)}]'>
 
 % if check:
 printf("\n*************ELEMENT************\n");
@@ -189,8 +189,8 @@ if ndims == 3:
 % endif
 
   ## Get face normals at flux point
-  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
-  fpdtype_t jac = jacs_ffpt[${f}];
+  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
+  fpdtype_t jac = jacs_fpts[${fpt_idx}];
 
   ## Check
 % if check:
@@ -383,7 +383,7 @@ if ndims == 3:
   ${pyfr.expand('WU_dot_dE','dEdE','N','ul','p','v')}
   ${pyfr.expand('WU_dot_dE','dGdN','S','ul','p','v')}
 
-  ## Store N^D (before BC application) 
+  ## Store N^D (before BC application)
   % for var in range(nvars):
     N_D[${f}][${var}] = N[${var}];
   % endfor
@@ -442,8 +442,8 @@ fpdtype_t G_inv_dN[${nfacefpts}][${nvars}];
 % for f, fpt_idx in enumerate(facefpts):
 {
   ## Get face normals at flux point (needed for WU^{-1} transformation)
-  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpt[{f}][{i}]' for i in range(ndims)])}};
-  
+  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
+
   ## Get solution at flux point for transformation
   fpdtype_t ul[${nvars}];
   % for var in range(nvars):

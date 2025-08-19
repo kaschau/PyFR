@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 
+from pyfr.backends.base import NullKernel
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
                                         BaseAdvectionDiffusionMPIInters)
@@ -262,14 +263,17 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._scal_fpts = defaultdict(dict)
         self._grad_upts = defaultdict(dict)
         self._vect_fpts = defaultdict(dict)
-        self._normnl_facefpts = defaultdict(dict)
+        self._normnl_fpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
-        self._jacs_facefpts = defaultdict(dict)
+        self._jacs_fpts = defaultdict(dict)
 
         # lhs length
         self._dim_lhs = defaultdict(dict)
 
-        self.kernels['comm_flux'] = lambda: self.gen_nscbc_kerns()
+        # Register NSCBC kernel under a different name so it can be scheduled after other BCs
+        self.kernels['nscbc_flux'] = lambda: self.gen_nscbc_kerns()
+        # Provide empty comm_flux to avoid errors in the regular BC processing
+        self.kernels['comm_flux'] = lambda: NullKernel()
 
         # Create required element-face pairs
         self.ef_pairs = []
@@ -325,19 +329,12 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     tplargs_efp['t1s'][i], tplargs_efp['t2s'][i] = self.newCS(norm)
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)[facefpts]
-            tplargs_efp['m11'] = basis.m11[facefpts, facefpts]
             tplargs_efp['m12'] = basis.m12[facefpts]
-            
-            # Compute inverse of correction function matrix G for face flux points
-            # G_ij represents correction function j evaluated at flux point i
-            G = np.zeros((nfacefpts, nfacefpts))
-            for i, fpt_i in enumerate(facefpts):
-                for j, fpt_j in enumerate(facefpts):
-                    # m11[i,j] is the correction function from flux point j at flux point i
-                    G[i, j] = basis.m11[fpt_i, fpt_j]
-            
-            # Compute inverse of G matrix
-            G_inv = np.linalg.inv(G)
+
+            # Compute inverse of correction function matrix G for ALL flux points
+            # m11[i,j] is the correction function from flux point j evaluated at flux point i
+            # We use the full m11 matrix to consider corrections from all flux points
+            G_inv = np.linalg.inv(basis.m11)
             tplargs_efp['G_inv'] = G_inv
 
             method = '_get_scal_upts_for_inter_ele'
@@ -356,21 +353,22 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             vect_fpts = self._vect_fpts_view(lhs_efp, method)
             self._vect_fpts[shape][fidx] = vect_fpts
 
-            ## Modify normals depending on bc type
+            ## Get normals at all flux points (not just boundary face)
+            ## We need a custom method to get normals for all flux points in element
             if self.normal == 'inward':
-                method = '_get_inward_normnls_facefpts'
+                method = '_get_inward_normnls_fpts'
             else:
-                method = '_get_normnls_facefpts'
-            normnl_facefpts = self._ewise_const_mat(lhs_efp, method)
-            self._normnl_facefpts[shape][fidx] = normnl_facefpts
+                method = '_get_normnls_fpts'
+            normnl_fpts = self._ewise_const_mat(lhs_efp, method)
+            self._normnl_fpts[shape][fidx] = normnl_fpts
 
             method = '_get_smats_upts'
             smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
-            method = '_get_jacs_facefpts'
-            jacs_facefpts = self._ewise_const_mat(lhs_efp, method)
-            self._jacs_facefpts[shape][fidx] = jacs_facefpts
+            method = '_get_jacs_fpts'
+            jacs_fpts = self._ewise_const_mat(lhs_efp, method)
+            self._jacs_fpts[shape][fidx] = jacs_fpts
 
     def gen_nscbc_kerns(self):
         kerns = []
@@ -386,9 +384,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     u_fpts=self._scal_fpts[shape][fidx],
                     gradu_upts=self._grad_upts[shape][fidx],
                     gradu_fpts=self._vect_fpts[shape][fidx],
-                    normnl_ffpt=self._normnl_facefpts[shape][fidx],
+                    normnl_fpts=self._normnl_fpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
-                    jacs_ffpt=self._jacs_facefpts[shape][fidx],
+                    jacs_fpts=self._jacs_fpts[shape][fidx],
                     **self._external_vals_efp[shape][fidx]))
 
         return self._be.unordered_meta_kernel(kerns)

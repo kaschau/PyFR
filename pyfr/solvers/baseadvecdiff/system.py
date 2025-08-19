@@ -167,8 +167,12 @@ class BaseAdvectionDiffusionSystem(BaseAdvectionSystem):
                          'mpiint/vect_fpts_unpack')
             g3.add(l, deps=ldeps)
 
+        # Execute NSCBC boundary kernels after all interface fluxes are complete
+        # These need interior, BC, and MPI flux values to be fully updated
+        g3.add_all(k['bcint/nscbc_flux'], deps=k['mpiint/comm_flux'])
+
         # Compute the transformed divergence of the corrected flux
-        g3.add_all(k['eles/tdivtconf'], deps=k['mpiint/comm_flux'])
+        g3.add_all(k['eles/tdivtconf'], deps=k['mpiint/comm_flux'] + k['bcint/nscbc_flux'])
 
         # Obtain the physical divergence of the corrected flux
         for l in k['eles/negdivconf']:
