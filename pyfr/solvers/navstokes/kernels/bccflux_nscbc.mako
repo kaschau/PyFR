@@ -409,12 +409,12 @@ if ndims == 3:
 ## Step 1: Compute G^{-1} * (N* - N^D) for each variable
 fpdtype_t GB_inv_dN[${nfacefpts}][${nvars}];
 % for var in range(nvars):
-  ## correction at flux point
-  % for j in range(nfacefpts):
-    GB_inv_dN[${j}][${var}] = 0.0;
-    ## From correction function
-    % for i in range(nfacefpts):
-      GB_inv_dN[${j}][${var}] += ${GB_inv[i,j]} * (N_star[${i}][${var}] - N_D[${i}][${var}]);
+  ## Evaluated at point
+  % for i in range(nfacefpts):
+    GB_inv_dN[${i}][${var}] = 0.0;
+    ## Correction function
+    % for j in range(nfacefpts):
+      GB_inv_dN[${i}][${var}] += ${GB_inv[i,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]);
     % endfor
   % endfor
 % endfor
@@ -422,12 +422,12 @@ fpdtype_t GB_inv_dN[${nfacefpts}][${nvars}];
 ## Step 1: Compute G^{I} * (u_fpt - tfl_n) for each variable
 fpdtype_t GI_dFnl[${nfacefpts}][${nvars}];
 % for var in range(nvars):
-  ## correction at flux point
-  % for j in range(nfacefpts):
-    GI_dFnl[${j}][${var}] = 0.0;
-    ## From correction function
-    % for i, fpt_i in enumerate(intfpts):
-      GI_dFnl[${j}][${var}] += ${GI[i,j]} * (u_fpts[${fpt_i}][${var}] - tfl_n[${fpt_i}][${var}]);
+  ## Evaluated at point
+  % for i in range(nfacefpts):
+    GI_dFnl[${i}][${var}] = 0.0;
+    ## Correction function
+    % for j, fpt_j in enumerate(intfpts):
+      GI_dFnl[${i}][${var}] += ${GI[i,j]} * (u_fpts[${fpt_j}][${var}] - tfl_n[${fpt_j}][${var}]);
     % endfor
   % endfor
 % endfor

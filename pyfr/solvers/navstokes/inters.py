@@ -336,15 +336,15 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['m12'] = basis.m12
 
             # Compute inverse of correction function matrix G for face flux points
-            # GB_ij represents correction function i evaluated at flux point j
-            # m11[i,j] is the correction function from flux point i at flux point j
+            # GB_ij represents correction function j evaluated at flux point i
+            # m11[i,j] is the correction function from flux point j at flux point i
             GB = np.zeros((nfacefpts, nfacefpts))
             for i, fpt_i in enumerate(facefpts):
                 for j, fpt_j in enumerate(facefpts):
                     GB[i, j] = basis.m11[fpt_i, fpt_j]
-            GI = np.zeros((nintfpts, nfacefpts))
-            for i, fpt_i in enumerate(intfpts):
-                for j, fpt_j in enumerate(facefpts):
+            GI = np.zeros((nfacefpts, nintfpts))
+            for i, fpt_i in enumerate(facefpts):
+                for j, fpt_j in enumerate(intfpts):
                     GI[i, j] = basis.m11[fpt_i, fpt_j]
 
             # Compute inverse of G matrix
