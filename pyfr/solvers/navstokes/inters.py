@@ -1,7 +1,5 @@
 import numpy as np
-import copy
 
-from pyfr.backends.base import NullKernel
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
                                         BaseAdvectionDiffusionMPIInters)
@@ -88,20 +86,20 @@ class NavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
         self._tplargs['bccfluxstate'] = self.cflux_state
 
         self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bcconu')
-        self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux')
-
         self.kernels['con_u'] = lambda: self._be.kernel(
             'bcconu', tplargs=self._tplargs, dims=[self.ninterfpts],
             extrns=self._external_args, ulin=self._scal_lhs,
             ulout=self._comm_lhs, nlin=self._pnorm_lhs,
             **self._external_vals
         )
-        self.kernels['comm_flux'] = lambda: self._be.kernel(
-            'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            extrns=self._external_args, ul=self._scal_lhs,
-            gradul=self._vect_lhs, nl=self._pnorm_lhs,
-            artviscl=self._artvisc_lhs, **self._external_vals
-        )
+        if 'nscbc' not in self.type:
+            self._be.pointwise.register('pyfr.solvers.navstokes.kernels.bccflux')
+            self.kernels['comm_flux'] = lambda: self._be.kernel(
+                'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
+                extrns=self._external_args, ul=self._scal_lhs,
+                gradul=self._vect_lhs, nl=self._pnorm_lhs,
+                artviscl=self._artvisc_lhs, **self._external_vals
+            )
 
         if self._ef_enabled:
             self._be.pointwise.register(
@@ -272,8 +270,6 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
 
         # Register NSCBC kernel under a different name so it can be scheduled after other BCs
         self.kernels['nscbc_flux'] = lambda: self.gen_nscbc_kerns()
-        # Provide empty comm_flux to avoid errors in the regular BC processing
-        self.kernels['comm_flux'] = lambda: NullKernel()
 
         # Create required element-face pairs
         self.ef_pairs = []

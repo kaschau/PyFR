@@ -405,36 +405,62 @@ if ndims == 3:
 
 ## Second pass: Solve the coupled system for common normal flux
 ## F_fp^perp = WU^{-1} * [C^D + G^{-1} * (N* - N^D)]_fp
+% if check:
+  printf("\n COMPUTE CORRECTRIONS \n");
+% endif
 
 ## Step 1: Compute G^{-1} * (N* - N^D) for each variable
 fpdtype_t GB_inv_dN[${nfacefpts}][${nvars}];
-% for var in range(nvars):
-  ## Evaluated at point
-  % for i in range(nfacefpts):
-    GB_inv_dN[${i}][${var}] = 0.0;
+## Evaluated at point
+% for f, fpt_idx in enumerate(facefpts):
+% if check:
+  printf("\n Face Flux point %d\n", ${fpt_idx});
+% endif
+  % for var in range(nvars):
+    GB_inv_dN[${f}][${var}] = 0.0;
     ## Correction function
     % for j in range(nfacefpts):
-      GB_inv_dN[${i}][${var}] += ${GB_inv[i,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]);
+      GB_inv_dN[${f}][${var}] += ${GB_inv[f,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]);
     % endfor
+    % if check:
+      printf("**GB_inv_dN ${var} = %.14e \n", GB_inv_dN[${f}][${var}]);
+    % endif
   % endfor
 % endfor
 
-## Step 1: Compute G^{I} * (u_fpt - tfl_n) for each variable
+## Step 1: Compute G^{I} * (u_fpts - tfl_n) for each variable
 fpdtype_t GI_dFnl[${nfacefpts}][${nvars}];
-% for var in range(nvars):
-  ## Evaluated at point
-  % for i in range(nfacefpts):
-    GI_dFnl[${i}][${var}] = 0.0;
+## Evaluated at point
+% for f, fpt_idx in enumerate(facefpts):
+% if check:
+  printf("\n Face Flux point %d\n", ${fpt_idx});
+% endif
+  % for var in range(nvars):
+    GI_dFnl[${f}][${var}] = 0.0;
     ## Correction function
     % for j, fpt_j in enumerate(intfpts):
-      GI_dFnl[${i}][${var}] += ${GI[i,j]} * (u_fpts[${fpt_j}][${var}] - tfl_n[${fpt_j}][${var}]);
+      GI_dFnl[${f}][${var}] += ${GI[f,j]} * (u_fpts[${fpt_j}][${var}] - tfl_n[${fpt_j}][${var}]);
+      % if check:
+        printf("u_fpts==${fpt_j},${var} = %.14e \n", u_fpts[${fpt_j}][${var}]);
+        printf("tfl_n==${fpt_j},${var} = %.14e \n", tfl_n[${fpt_j}][${var}]);
+      % endif
     % endfor
+    % if check:
+      printf("**GI_dFnl ${var} = %.14e \n", GI_dFnl[${f}][${var}]);
+    % endif
   % endfor
 % endfor
 
 ## Step 2: For each flux point, compute the common normal flux
+% if check:
+  printf("\n PASS 2\n");
+% endif
+
 % for f, fpt_idx in enumerate(facefpts):
 {
+% if check:
+  printf("\n Face Flux point %d\n", ${fpt_idx});
+% endif
   ## Get face normals at flux point (needed for WU^{-1} transformation)
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
 
@@ -451,18 +477,25 @@ fpdtype_t GI_dFnl[${nfacefpts}][${nvars}];
   fpdtype_t C_common[${nvars}];
   % for var in range(nvars):
     C_common[${var}] = C_D[${f}][${var}] + GB_inv_dN[${f}][${var}];
+    % if check:
+      printf("C_common ${var}  = %.14e \n", C_common[${var}]);
+    % endif
   % endfor
 
   ## Transform back to conservative variables: F_common = WU^{-1} * N_common
   fpdtype_t F_common[${nvars}];
   ${pyfr.expand('WUinv_dot_N','C_common','F_common','ul','p','v')};
+  ## Subtract effect of other flux point corrections
+  % for var in range(nvars):
+    F_common[${var}] -= GI_dFnl[${f}][${var}];
+    % if check:
+      printf("F_common ${var} = %.14e \n", F_common[${var}]);
+    % endif
+  % endfor
 
   ## Store the common normal flux in u_fpts (this is the output)
   % for var in range(nvars):
-    u_fpts[${fpt_idx}][${var}] = F_common[${var}] - GI_dFnl[${f}][${var}];
-    % if check:
-      printf("F_common[${fpt_idx}][${var}] = %.14e \n", F_common[${var}]);
-    % endif
+    u_fpts[${fpt_idx}][${var}] = F_common[${var}];
   % endfor
 }
 % endfor
