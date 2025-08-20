@@ -98,9 +98,9 @@
               u_fpts='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
               gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
               gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
-              normnl_fpts='in fpdtype_t[${str(nfpts)}][${str(ndims)}]'
+              normnl_ffpts='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
-              jacs_fpts='in fpdtype_t[${str(nfpts)}]'>
+              jacs_ffpts='in fpdtype_t[${str(nfacefpts)}]'>
 
 % if check:
 printf("\n*************ELEMENT************\n");
@@ -195,8 +195,8 @@ if ndims == 3:
 % endif
 
   ## Get face normals at flux point
-  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
-  fpdtype_t jac = jacs_fpts[${fpt_idx}];
+  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_ffpts[{f}][{i}]' for i in range(ndims)])}};
+  fpdtype_t jac = jacs_ffpts[${f}];
 
   ## Check
 % if check:

@@ -430,26 +430,27 @@ class BaseElements:
         rmap = (0,)
         return (self._vect_fpts.mid,), rmap, cmap, (1,)
 
-    def _get_normnls_fpts(self, eidx, fidx):
-        pnorms = self._pnorm_fpts[:, eidx]
+    def _get_normnls_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        pnorms = self._pnorm_fpts[fpts_idx, eidx]
         mag_nl = np.linalg.norm(pnorms, axis=1)
         norm_nl = pnorms/mag_nl[:,np.newaxis]
         return norm_nl
 
-    def _get_inward_normnls_fpts(self, eidx, fidx):
-        pnorms = self._pnorm_fpts[:, eidx]
+    def _get_inward_normnls_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        pnorms = self._pnorm_fpts[fpts_idx, eidx]
         mag_nl = np.linalg.norm(pnorms, axis=1)
         norm_nl = -pnorms/mag_nl[:,np.newaxis]
         return norm_nl
 
-    def _get_jacs_fpts(self, eidx, fidx):
-        jacs = 1.0 / self.rcpdjac_at_np('fpts')[:, eidx]
+    def _get_jacs_facefpts(self, eidx, fidx):
+        fpts_idx = self.basis.facefpts[fidx]
+        jacs = 1.0 / self.rcpdjac_at_np('fpts')[fpts_idx, eidx]
         return jacs
 
     def _get_smats_upts(self, eidx, _):
         smats = self.smat_at_np('upts')[:, :, :, eidx].swapaxes(0, 1)
-        # rcpdjac = self.rcpdjac_at_np('fpts')[fpts_idx, eidx]
-        # smats *= rcpdjac[:, np.newaxis, np.newaxis]
         smats = np.reshape(smats, (smats.shape[0],-1))
         return smats
 

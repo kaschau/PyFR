@@ -261,9 +261,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._scal_fpts = defaultdict(dict)
         self._grad_upts = defaultdict(dict)
         self._vect_fpts = defaultdict(dict)
-        self._normnl_fpts = defaultdict(dict)
+        self._normnl_ffpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
-        self._jacs_fpts = defaultdict(dict)
+        self._jacs_ffpts = defaultdict(dict)
 
         # lhs length
         self._dim_lhs = defaultdict(dict)
@@ -367,19 +367,19 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             ## Get normals at all flux points (not just boundary face)
             ## We need a custom method to get normals for all flux points in element
             if self.normal == 'inward':
-                method = '_get_inward_normnls_fpts'
+                method = '_get_inward_normnls_facefpts'
             else:
-                method = '_get_normnls_fpts'
-            normnl_fpts = self._ewise_const_mat(lhs_efp, method)
-            self._normnl_fpts[shape][fidx] = normnl_fpts
+                method = '_get_normnls_facefpts'
+            normnl_ffpts = self._ewise_const_mat(lhs_efp, method)
+            self._normnl_ffpts[shape][fidx] = normnl_ffpts
 
             method = '_get_smats_upts'
             smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
-            method = '_get_jacs_fpts'
-            jacs_fpts = self._ewise_const_mat(lhs_efp, method)
-            self._jacs_fpts[shape][fidx] = jacs_fpts
+            method = '_get_jacs_facefpts'
+            jacs_ffpts = self._ewise_const_mat(lhs_efp, method)
+            self._jacs_ffpts[shape][fidx] = jacs_ffpts
 
     def gen_nscbc_kerns(self):
         kerns = []
@@ -395,9 +395,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     u_fpts=self._scal_fpts[shape][fidx],
                     gradu_upts=self._grad_upts[shape][fidx],
                     gradu_fpts=self._vect_fpts[shape][fidx],
-                    normnl_fpts=self._normnl_fpts[shape][fidx],
+                    normnl_ffpts=self._normnl_ffpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
-                    jacs_fpts=self._jacs_fpts[shape][fidx],
+                    jacs_ffpts=self._jacs_ffpts[shape][fidx],
                     **self._external_vals_efp[shape][fidx]))
 
         return self._be.unordered_meta_kernel(kerns)
