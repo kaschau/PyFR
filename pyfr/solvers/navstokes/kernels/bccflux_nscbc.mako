@@ -146,7 +146,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % endif
 
 ## Step 2: Compute transformed, discontinuous, normal flux at all flux points
-fpdtype_t tfl_n[${nfpts}][${nvars}];
+fpdtype_t tf_TD[${nfpts}][${nvars}];
 % for f in range(nfpts):
 {
 % if check:
@@ -157,7 +157,7 @@ fpdtype_t tfl_n[${nfpts}][${nvars}];
   % for var in range(nvars):
   % for comp in range(ndims):
     % if abs(m2[f,comp,upt]) > 0.0:
-    tfl_n[${f}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
+    tf_TD[${f}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
     % endif
   % endfor
   % endfor
@@ -166,17 +166,14 @@ fpdtype_t tfl_n[${nfpts}][${nvars}];
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("tfl_n ${var} = %.14e \n", tfl_n[${f}][${var}]);
+    printf("tf_TD ${var} = %.14e \n", tf_TD[${f}][${var}]);
   % endfor
 % endif
 }
 % endfor
 
 ## At this point, we have everything we need from the interior flux points
-## Step 3: Compute discontinuous, normal, flux gradient and geometric source term at face flux points
-fpdtype_t N_D[${nfacefpts}][${nvars}];
-fpdtype_t N_star[${nfacefpts}][${nvars}];
-fpdtype_t C_D[${nfacefpts}][${nvars}];
+## Step 3: A = GB_inv * d \Delta tF_TD / dE
 % for f, fpt_idx in enumerate(facefpts):
 {
   int fidx = ${f};
@@ -196,6 +193,15 @@ if ndims == 3:
 % if check:
   printf("\n Face Flux point %d\n", ${fpt_idx});
 % endif
+
+  ## Compute R = GB_inv * GI * (F^\perp - F^D)
+  fpdtype_t R[${nvars}] = {0};
+  % for var in range(nvars):
+  % for j, intfpt_idx in enumerate(intfpts):
+    R[${var}] += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}]);
+  % endfor
+  % endfor
+
 
   ## Get face normals at flux point
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
@@ -360,213 +366,59 @@ if ndims == 3:
   ${pyfr.expand('WU_dot_dE','dGdN','S','ul','p','v')}
 
   ## Store N^D (before BC application)
+  fpdtype_t dN[${nvars}];
   % for var in range(nvars):
-    N_D[${f}][${var}] = N[${var}];
+    dN[${var}] = -N[${var}];
   % endfor
-
-  ## Compute and store C^D = WU·(tfl_n)
-  fpdtype_t tfl_n_temp[${nvars}];
-  % for var in range(nvars):
-    tfl_n_temp[${var}] = tfl_n[${fpt_idx}][${var}];
-  % endfor
-  fpdtype_t C_D_temp[${nvars}];
-  ${pyfr.expand('WU_dot_dE','tfl_n_temp','C_D_temp','ul','p','v')}
-  % for var in range(nvars):
-    C_D[${f}][${var}] = C_D_temp[${var}];
-  % endfor
-
-  ## Check
-% if check:
-  % for var in range(nvars):
-    printf("source ${var} %.14e \n", source[${var}]);
-  % endfor
-  % for var in range(nvars):
-    printf("N_D[${f}][${var}] = %.14e \n", N_D[${f}][${var}]);
-    printf("C_D[${f}][${var}] = %.14e \n", C_D[${f}][${var}]);
-  % endfor
-% endif
 
   ## Step 5: Compute wave amplitudes for unknown waves (applies BC to get N*)
   ${pyfr.expand('compute_wave_amp', 'ul', 'p', 'v', 'jac', 'N', 'S', 'norm_nl')};
 
-  ## Store N* (after BC application)
+  ## Add N=N* to compute dN
   % for var in range(nvars):
-    N_star[${f}][${var}] = N[${var}];
+    dN[${var}] += N[${var}];
   % endfor
 
   ## Check
 % if check:
   % for var in range(nvars):
-    printf("N_star[${f}][${var}] = %.14e \n", N_star[${f}][${var}]);
+    printf("N_star var=${var} = %.14e \n", N[${var}]);
   % endfor
 % endif
-}
-% endfor
 
-## Compute interior correction source terms
-## F_fp^perp = WU^{-1} * [C^D + G^{-1} * (N* - N^D)]_fp
+  ## Convert back to physical space to compute ddtF_TdE = \partial \Delta tF_T / \partial E
+  fpdtype_t ddtF_TdE[${nvars}];
+  ${pyfr.expand('WU_dot_dE','dN','ddtF_TdE','ul','p','v')}
+
 % if check:
-  printf("\n COMPUTE CORRECTRIONS \n");
+  % for var in range(nvars):
+    printf("ddtF_TdE var=${var} = %.14e \n", ddtF_TdE[${var}]);
+  % endfor
 % endif
 
-## Step 1: Compute GB^{-1} * (N* - N^D) for each variable
-fpdtype_t GB_inv_dN[${nfacefpts}][${nvars}];
-## Evaluated at point
-% for f, fpt_idx in enumerate(facefpts):
+  ## Compute A = GB_inv * ddtF_TdE
+  fpdtype_t A[${nvars}] = {0};
+  % for j in range(nfacefpts):
+    A[${nvars}] += ${GB_inv[f,j]} * ddtF_TdE[${var}];
+  % endfor
+
 % if check:
-  printf("\n Computing GB_inv*(N*-N^D) for Face Flux point %d\n", ${fpt_idx});
-% endif
   % for var in range(nvars):
-    GB_inv_dN[${f}][${var}] = 0.0;
-    ## Sum over all face flux points for matrix multiplication
-    % for j in range(nfacefpts):
-      GB_inv_dN[${f}][${var}] += ${GB_inv[f,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]);
-      % if check and abs(GB_inv[f,j]) > 1e-10:
-        printf("  j=${j}: GB_inv=%.14e, dN=%.14e, contrib=%.14e\n",
-               ${GB_inv[f,j]}, N_star[${j}][${var}] - N_D[${j}][${var}],
-               ${GB_inv[f,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]));
-      % endif
-    % endfor
-    % if check:
-      printf("**GB_inv_dN f=${f} var=${var} = %.14e\n", GB_inv_dN[${f}][${var}]);
-    % endif
+    printf("A var=${var} = %.14e \n", A[${var}]);
   % endfor
-% endfor
-
-## Step 2: Compute WU * GI * (F^\perp - F^D) for interior flux points
-## This is the contribution from all interior flux point corrections
-fpdtype_t WU_GI_dFnl[${nfacefpts}][${nvars}];
-% for f, fpt_idx in enumerate(facefpts):
-{
-% if check:
-  printf("\n Computing R for Face Flux point %d\n", ${fpt_idx});
-% endif
-  ## Get face normals and solution at this face flux point for WU transformation
-  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
-  fpdtype_t ul[${nvars}];
-  % for var in range(nvars):
-    ul[${var}] = u_fpts[${fpt_idx}][${var}];
-  % endfor
-  fpdtype_t fl[${ndims}][${nvars}];
-  fpdtype_t p, v[${ndims}];
-  ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'p', 'v')};
-
-  ## First compute GI * (F^\perp - F^D) in conservative variables
-  fpdtype_t GI_dF_cons[${nvars}] = {0};
-  % for var in range(nvars):
-    ## Sum over interior flux points
-    % for j, fpt_j in enumerate(intfpts):
-      ## u_fpts at interior points contains F^\perp (common flux)
-      ## tfl_n contains F^D (discontinuous flux)
-      GI_dF_cons[${var}] += ${GI[f,j]} * (u_fpts[${fpt_j}][${var}] - tfl_n[${fpt_j}][${var}]);
-      % if check:
-        printf("Interior fpt=${fpt_j} var=${var}: F_perp=%.14e, F_D=%.14e, diff=%.14e\n",
-               u_fpts[${fpt_j}][${var}], tfl_n[${fpt_j}][${var}],
-               u_fpts[${fpt_j}][${var}] - tfl_n[${fpt_j}][${var}]);
-      % endif
-    % endfor
-    % if check:
-      printf("GI_dF_cons var=${var} = %.14e\n", GI_dF_cons[${var}]);
-    % endif
-  % endfor
-
-  ## Transform to characteristic variables: R = WU * GI * (F^\perp - F^D)
-  fpdtype_t R_temp[${nvars}];
-  ${pyfr.expand('WU_dot_dE','GI_dF_cons','R_temp','ul','p','v')}
-
-  ## Store the result
-  % for var in range(nvars):
-    WU_GI_dFnl[${f}][${var}] = R_temp[${var}];
-  % endfor
-
-  % if check:
-    % for var in range(nvars):
-      printf("**WU_GI_dFnl fpt=${fpt_idx} var=${var} = %.14e\n", WU_GI_dFnl[${f}][${var}]);
-    % endfor
-  % endif
-}
-% endfor
-
-## Step 2: For each flux point, compute the common normal flux
-% if check:
-  printf("\n PASS 2\n");
 % endif
 
-% for f, fpt_idx in enumerate(facefpts):
-{
-% if check:
-  printf("\n Face Flux point %d\n", ${fpt_idx});
-% endif
-  ## Get face normals at flux point (needed for WU^{-1} transformation)
-  fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
-
-  ## Get solution at flux point for transformation
-  fpdtype_t ul[${nvars}];
-  % for var in range(nvars):
-    ul[${var}] = u_fpts[${fpt_idx}][${var}];
-  % endfor
-  fpdtype_t fl[${ndims}][${nvars}];
-  fpdtype_t p, v[${ndims}];
-  ${pyfr.expand('inviscid_flux', 'ul', 'fl', 'p', 'v')};
-
-  ## Compute characteristic amplitudes for this flux point
-  ## The formulation is: F^\perp = WU^{-1} * [C^D + GB^{-1} * (N* - N^D - WU*R)]
-  ## Where R = sum_interior (F^\perp - F^D) * GI
-  ## We need to compute GB^{-1} * (N* - N^D - WU*R)
-  ## First compute the argument to GB^{-1}
-  fpdtype_t dN_minus_R[${nvars}];
-  % for var in range(nvars):
-    ## This is just for this face flux point f
-    dN_minus_R[${var}] = (N_star[${f}][${var}] - N_D[${f}][${var}]) - WU_GI_dFnl[${f}][${var}];
-    % if check:
-      printf("dN_minus_R ${var} = (N*-N^D) - R = (%.14e - %.14e) - %.14e = %.14e\n",
-             N_star[${f}][${var}], N_D[${f}][${var}], WU_GI_dFnl[${f}][${var}], dN_minus_R[${var}]);
-    % endif
-  % endfor
-
-  ## Now apply GB^{-1} to get the correction term
-  fpdtype_t C_temp[${nvars}];
-  % for var in range(nvars):
-    C_temp[${var}] = 0.0;
-    ## Apply GB^{-1} matrix multiplication
-    % for j in range(nfacefpts):
-      % if j == f:
-        ## Contribution from this flux point
-        C_temp[${var}] += ${GB_inv[f,j]} * dN_minus_R[${var}];
-      % else:
-        ## Contribution from other face flux points (only N* - N^D part, no R term)
-        C_temp[${var}] += ${GB_inv[f,j]} * (N_star[${j}][${var}] - N_D[${j}][${var}]);
-      % endif
-    % endfor
-    % if check:
-      printf("C_temp ${var} = GB_inv * arg = %.14e\n", C_temp[${var}]);
-    % endif
-  % endfor
-
-  ## Add C^D to get full characteristic space expression [C^D + GB^{-1} * (N* - N^D - WU*R)]
-  fpdtype_t C_common[${nvars}];
-  % for var in range(nvars):
-    C_common[${var}] = C_D[${f}][${var}] + C_temp[${var}];
-    % if check:
-      printf("C_common ${var} = C^D + correction = %.14e + %.14e = %.14e\n",
-             C_D[${f}][${var}], C_temp[${var}], C_common[${var}]);
-    % endif
-  % endfor
-
-  ## Transform entire expression to conservative variables: F^\perp = WU^{-1} * [C^D + GB^{-1} * (N* - N^D - WU*R)]
-  fpdtype_t F_common[${nvars}];
-  ${pyfr.expand('WUinv_dot_N','C_common','F_common','ul','p','v')}
-
-  % if check:
-    % for var in range(nvars):
-      printf("F_common ${var} = %.14e\n", F_common[${var}]);
-    % endfor
-  % endif
 
   ## Store the common normal flux in u_fpts (this is the output)
   % for var in range(nvars):
-    u_fpts[${fpt_idx}][${var}] = F_common[${var}];
+    u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A[${var}] + R[${var}];
   % endfor
+
+% if check:
+  % for var in range(nvars):
+    printf("F_common var=${var} = %.14e \n", u_fpts[${fpt_idx}][${var}]);
+  % endfor
+% endif
 }
 % endfor
 

@@ -346,7 +346,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             # Compute inverse of G matrix
             GB_inv = np.linalg.inv(GB)
             tplargs_efp['GB_inv'] = GB_inv
-            tplargs_efp['GI'] = GI
+            tplargs_efp['GB_inv_GI'] = GB_inv @ GI
 
             method = '_get_scal_upts_for_inter_ele'
             scal_upts = self._scal_upts_view(lhs_efp, method)
