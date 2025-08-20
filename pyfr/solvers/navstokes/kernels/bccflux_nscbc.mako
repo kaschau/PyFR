@@ -445,19 +445,17 @@ if ndims == 3:
       % endif
     % endfor
 
-  ## Step 7: Solve for normal transformed common flux
-
   % for var in range(nvars):
     ## we have dudt (~\del \dot ~f) at our flux point
     ddtF_TdE[${f}][${var}] = ${'+'.join([f'dtFdE[{comp}][{var}]' for comp in range(ndims)])};
     % if check:
         printf("dtFidE_* var=${var} %.14e \n", ddtF_TdE[${f}][${var}]);
     % endif
-    ## subtract our flux gradient on the face (from interior values)
+    ## subtract our flux gradient on the face (from discontinuous value)
     ddtF_TdE[${f}][${var}] -= ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])};
 
     % if check:
-        printf("dtFdE_T[0] %.14e \n", ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])});
+        printf("dtFidE %.14e \n", ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])});
     % endif
   % endfor
 }
@@ -481,7 +479,7 @@ if ndims == 3:
     % endif
 
     ## Compute R = GB_inv * GI * \Delta f_interior
-    fpdtype_t R = {0};
+    fpdtype_t R = 0;
     % for j, intfpt_idx in enumerate(intfpts):
       R += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}]);
     % endfor
