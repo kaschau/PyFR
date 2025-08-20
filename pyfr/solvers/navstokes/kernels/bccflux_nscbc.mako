@@ -172,7 +172,7 @@ fpdtype_t tf_TD[${nfpts}][${nvars}] = {{0}};
 % endfor
 % endif
 
-## Step 3:
+## Step 3: Compute NSCBC boundary corrections at face flux points
 fpdtype_t ddtF_TdE[${nfacefpts}][${nvars}];
 % for f, fpt_idx in enumerate(facefpts):
 {

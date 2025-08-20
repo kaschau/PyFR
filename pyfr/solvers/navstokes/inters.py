@@ -329,7 +329,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     tplargs_efp['t1s'][i], tplargs_efp['t2s'][i] = self.newCS(norm)
 
             tplargs_efp['m2'] = basis.m2.reshape(nfpts,ndims,nupts)
-            tplargs_efp['m12'] = basis.m12
+            tplargs_efp['m12'] = basis.m12[facefpts]
 
             # Compute inverse of correction function matrix G for face flux points
             # GB_ij represents correction function j evaluated at flux point i
