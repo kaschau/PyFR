@@ -149,9 +149,6 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 fpdtype_t tf_TD[${nfpts}][${nvars}];
 % for f in range(nfpts):
 {
-% if check:
-  printf("\n Flux point %d\n", ${f});
-% endif
   ## Compute normal transformed flux
   % for upt in range(nupts):
   % for var in range(nvars):
@@ -162,18 +159,21 @@ fpdtype_t tf_TD[${nfpts}][${nvars}];
   % endfor
   % endfor
   % endfor
-
-  ## Check
-% if check:
-  % for var in range(nvars):
-    printf("tf_TD ${var} = %.14e \n", tf_TD[${f}][${var}]);
-  % endfor
-% endif
 }
 % endfor
 
-## At this point, we have everything we need from the interior flux points
-## Step 3: A = GB_inv * d \Delta tF_TD / dE
+## Check
+% if check:
+% for f in range(nfpts):
+  printf("\n Total Flux point %d\n", ${f});
+  % for var in range(nvars):
+    printf("tf_TD ${var} = %.14e \n", tf_TD[${f}][${var}]);
+  % endfor
+% endfor
+% endif
+
+## Step 3:
+fpdtype_t ddtF_TdE[${nfacefpts}][${nvars}];
 % for f, fpt_idx in enumerate(facefpts):
 {
   int fidx = ${f};
@@ -193,15 +193,6 @@ if ndims == 3:
 % if check:
   printf("\n Face Flux point %d\n", ${fpt_idx});
 % endif
-
-  ## Compute R = GB_inv * GI * (F^\perp - F^D)
-  fpdtype_t R[${nvars}] = {0};
-  % for var in range(nvars):
-  % for j, intfpt_idx in enumerate(intfpts):
-    R[${var}] += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}]);
-  % endfor
-  % endfor
-
 
   ## Get face normals at flux point
   fpdtype_t norm_nl[${ndims}] = {${", ".join([f'normnl_fpts[{fpt_idx}][{i}]' for i in range(ndims)])}};
@@ -365,19 +356,8 @@ if ndims == 3:
   ${pyfr.expand('WU_dot_dE','dEdE','N','ul','p','v')}
   ${pyfr.expand('WU_dot_dE','dGdN','S','ul','p','v')}
 
-  ## Store N^D (before BC application)
-  fpdtype_t dN[${nvars}];
-  % for var in range(nvars):
-    dN[${var}] = -N[${var}];
-  % endfor
-
   ## Step 5: Compute wave amplitudes for unknown waves (applies BC to get N*)
   ${pyfr.expand('compute_wave_amp', 'ul', 'p', 'v', 'jac', 'N', 'S', 'norm_nl')};
-
-  ## Add N=N* to compute dN
-  % for var in range(nvars):
-    dN[${var}] += N[${var}];
-  % endfor
 
   ## Check
 % if check:
@@ -386,39 +366,146 @@ if ndims == 3:
   % endfor
 % endif
 
-  ## Convert back to physical space to compute ddtF_TdE = \partial \Delta tF_T / \partial E
-  fpdtype_t ddtF_TdE[${nvars}];
-  ${pyfr.expand('WU_dot_dE','dN','ddtF_TdE','ul','p','v')}
+  ## Step 6: Compute dtFdE_T* values normal to face
+  fpdtype_t dtFdE_Ts[${nvars}];
+  {
+    ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts','ul','p','v')};
+    % for var in range(nvars):
+      dtFdE_Ts[${var}] += source[${var}];
+    % endfor
+  }
 
+  ## Now solve for derivatives in the primary CS
+  fpdtype_t dtFdE[${ndims}][${nvars}] = {{0}};
+    % for var in range(nvars):
+      % if ndims == 2:
+        {
+          fpdtype_t dFstar = dtFdE_Ts[${var}];
+          fpdtype_t dFdN = dtFdE_full[0][1][${var}];
+          fpdtype_t dGdE = dtFdE_full[1][0][${var}];
+          fpdtype_t dGdN_T = dtFdE_T[1][${var}];
+          dtFdE[0][${var}] = -((dFstar - (dFdN + dGdE)*${nE*nN})*${t1N*t1N}-${nN*nN}*(-((dFdN+dGdE)*${t1E*t1N})+dGdN_T))/${nN*nN*t1E*t1E-nE*nE*t1N*t1N};
+          dtFdE[1][${var}] = (${-t1E}*(dFstar*${t1E} + (dFdN+dGdE)*${nE*(-nN*t1E+nE*t1N)})+${nE*nE}*dGdN_T)/${-nN*nN*t1E*t1E+nE*nE*t1N*t1N};
+        }
+      % else:
+        {
+          fpdtype_t dFstar = dtFdE_Ts[${var}];
+          fpdtype_t dFdN = dtFdE_full[0][1][${var}];
+          fpdtype_t dFdC = dtFdE_full[0][2][${var}];
+          fpdtype_t dGdE = dtFdE_full[1][0][${var}];
+          fpdtype_t dGdC = dtFdE_full[1][2][${var}];
+          fpdtype_t dHdE = dtFdE_full[2][0][${var}];
+          fpdtype_t dHdN = dtFdE_full[2][1][${var}];
+          fpdtype_t dGdN_T = dtFdE_T[1][${var}];
+          fpdtype_t dHdC_T = dtFdE_T[2][${var}];
+
+          fpdtype_t facn  = ${nE*nN}  *(dGdE+dFdN) + ${nE*nC}  *(dHdE+dFdC) + ${nC*nN}  *(dGdC + dHdN);
+          fpdtype_t fact1 = ${t1E*t1N}*(dGdE+dFdN) + ${t1E*t1C}*(dHdE+dFdC) + ${t1C*t1N}*(dGdC + dHdN);
+          fpdtype_t fact2 = ${t2E*t2N}*(dGdE+dFdN) + ${t2E*t2C}*(dHdE+dFdC) + ${t2C*t2N}*(dGdC + dHdN);
+
+          dtFdE[0][${var}] = (-fact2*${nN*nN*t1C*t1C} +
+                               fact2*${nC*nC*t1N*t1N} +
+                               fact1*${nN*nN*t2C*t2C} +
+                               dFstar*${t1N*t1N*t2C*t2C} -
+                               facn  *${t1N*t1N*t2C*t2C} -
+                               fact1 *${nC*nC*t2N*t2N} -
+                               dFstar*${t1C*t1C*t2N*t2N} +
+                               facn  *${t1C*t1C*t2N*t2N} +
+                              ${-nN*nN*t2C*t2C + nC*nC*t2N*t2N}*dGdN_T + ${nN*nN*t1C*t1C - nC*nC*t1N*t1N}*dHdC_T)/
+                              ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                                nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
+                                nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
+
+          dtFdE[1][${var}] = (fact2*${nE*nE*t1C*t1C} -
+                              fact2*${nC*nC*t1E*t1E} -
+                              fact1*${nE*nE*t2C*t2C} -
+                              dFstar*${t1E*t1E*t2C*t2C} +
+                              facn  *${t1E*t1E*t2C*t2C} +
+                              fact1 *${nC*nC*t2E*t2E} +
+                              dFstar*${t1C*t1C*t2E*t2E} -
+                              facn  *${t1C*t1C*t2E*t2E} +
+                             ${nE*nE*t2C*t2C - nC*nC*t2E*t2E}*dGdN_T + ${-nE*nE*t1C*t1C + nC*nC*t1E*t1E}*dHdC_T)/
+                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
+                               nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
+
+          dtFdE[2][${var}] = (fact2*${nN*nN*t1E*t1E} -
+                              fact2*${nE*nE*t1N*t1N} -
+                              fact1*${nN*nN*t2E*t2E} -
+                              dFstar*${t1N*t1N*t2E*t2E} +
+                              facn  *${t1N*t1N*t2E*t2E} +
+                              fact1 *${nE*nE*t2N*t2N} +
+                              dFstar*${t1E*t1E*t2N*t2N} -
+                              facn  *${t1E*t1E*t2N*t2N} +
+                             ${nN*nN*t2E*t2E - nE*nE*t2N*t2N}*dGdN_T + ${-nN*nN*t1E*t1E + nE*nE*t1N*t1N}*dHdC_T) /
+                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
+                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
+                               nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
+          }
+      % endif
+    % endfor
+
+  ## Step 7: Solve for normal transformed common flux
+
+  % for var in range(nvars):
+    ## we have dudt (~\del \dot ~f) at our flux point
+    ddtF_TdE[${f}][${var}] = ${'+'.join([f'dtFdE[{comp}][{var}]' for comp in range(ndims)])};
+    % if check:
+        printf("dtFidE_* var=${var} %.14e \n", ddtF_TdE[${f}][${var}]);
+    % endif
+    ## subtract our flux gradient on the face (from interior values)
+    ddtF_TdE[${f}][${var}] -= ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])};
+
+    % if check:
+        printf("dtFdE_T[0] %.14e \n", ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])});
+    % endif
+  % endfor
+}
+% endfor
+
+## PASS 2
 % if check:
-  % for var in range(nvars):
-    printf("ddtF_TdE var=${var} = %.14e \n", ddtF_TdE[${var}]);
-  % endfor
+    printf("\n PASS 2 \n");
 % endif
+% for f,fpt_idx in enumerate(facefpts):
+{
+  % if check:
+    printf("\n Flux point %d\n", ${fpt_idx});
+  % endif
 
-  ## Compute A = GB_inv * ddtF_TdE
-  fpdtype_t A[${nvars}] = {0};
-  % for j in range(nfacefpts):
-    A[${nvars}] += ${GB_inv[f,j]} * ddtF_TdE[${var}];
-  % endfor
-
-% if check:
+  ## Compute R = GB_inv * GI * (F^\perp - F^D)
   % for var in range(nvars):
-    printf("A var=${var} = %.14e \n", A[${var}]);
-  % endfor
-% endif
+  {
+    % if check:
+        printf("\n VAR ${var} \n");
+    % endif
 
+    ## Compute R = GB_inv * GI * \Delta f_interior
+    fpdtype_t R = {0};
+    % for j, intfpt_idx in enumerate(intfpts):
+      R += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}]);
+    % endfor
+    % if check:
+      printf("R = %.14e \n", R);
+    % endif
+    ## Compute A = GB_inv * d \nabla f
+    fpdtype_t A = 0.0;
+    % for j in range(nfacefpts):
+      A += ${GB_inv[f,j]} * ddtF_TdE[${f}][${var}];
+    % endfor
+    % if check:
+      printf("A = %.14e \n", A);
+    % endif
 
-  ## Store the common normal flux in u_fpts (this is the output)
-  % for var in range(nvars):
-    u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A[${var}] + R[${var}];
-  % endfor
+    ## Store the common normal flux in u_fpts (this is the output)
+    u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A + R;
 
-% if check:
-  % for var in range(nvars):
-    printf("F_common var=${var} = %.14e \n", u_fpts[${fpt_idx}][${var}]);
+    ## Check
+    % if check:
+        printf("final flux =  %.14e \n", u_fpts[${fpt_idx}][${var}]);
+    % endif
+  }
   % endfor
-% endif
 }
 % endfor
 
