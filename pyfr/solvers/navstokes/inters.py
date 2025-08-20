@@ -395,9 +395,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     u_fpts=self._scal_fpts[shape][fidx],
                     gradu_upts=self._grad_upts[shape][fidx],
                     gradu_fpts=self._vect_fpts[shape][fidx],
-                    normnl_ffpts=self._normnl_ffpts[shape][fidx],
+                    normnl_ffpts=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
-                    jacs_ffpts=self._jacs_ffpts[shape][fidx],
+                    jacs_ffpts=self._jacs_facefpts[shape][fidx],
                     **self._external_vals_efp[shape][fidx]))
 
         return self._be.unordered_meta_kernel(kerns)
