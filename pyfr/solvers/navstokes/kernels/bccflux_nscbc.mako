@@ -5,8 +5,8 @@
 
 <%include file='pyfr.solvers.navstokes.kernels.bcs.${bctype}'/>
 
-<% check = True %>
-## <% check = False %>
+## <% check = True %>
+<% check = False %>
 
 <% sq2 = 2**0.5 %>
 <% invsq2 = 2**-0.5 %>
@@ -146,7 +146,7 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 % endif
 
 ## Step 2: Compute transformed, discontinuous, normal flux at all flux points
-fpdtype_t tf_TD[${nfpts}][${nvars}];
+fpdtype_t tf_TD[${nfpts}][${nvars}] = {{0}};
 % for f in range(nfpts):
 {
   ## Compute normal transformed flux
@@ -491,7 +491,7 @@ if ndims == 3:
     ## Compute A = GB_inv * d \nabla f
     fpdtype_t A = 0.0;
     % for j in range(nfacefpts):
-      A += ${GB_inv[f,j]} * ddtF_TdE[${f}][${var}];
+      A += ${GB_inv[f,j]} * ddtF_TdE[${j}][${var}];
     % endfor
     % if check:
       printf("A = %.14e \n", A);
