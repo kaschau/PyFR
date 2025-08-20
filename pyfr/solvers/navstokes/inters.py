@@ -261,9 +261,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._scal_fpts = defaultdict(dict)
         self._grad_upts = defaultdict(dict)
         self._vect_fpts = defaultdict(dict)
-        self._normnl_ffpts = defaultdict(dict)
+        self._normnl_facefpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
-        self._jacs_ffpts = defaultdict(dict)
+        self._jacs_facefpts = defaultdict(dict)
 
         # lhs length
         self._dim_lhs = defaultdict(dict)
@@ -370,16 +370,16 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                 method = '_get_inward_normnls_facefpts'
             else:
                 method = '_get_normnls_facefpts'
-            normnl_ffpts = self._ewise_const_mat(lhs_efp, method)
-            self._normnl_ffpts[shape][fidx] = normnl_ffpts
+            normnl_facefpts = self._ewise_const_mat(lhs_efp, method)
+            self._normnl_facefpts[shape][fidx] = normnl_facefpts
 
             method = '_get_smats_upts'
             smats_upts = self._ewise_const_mat(lhs_efp, method)
             self._smats_upts[shape][fidx] = smats_upts
 
             method = '_get_jacs_facefpts'
-            jacs_ffpts = self._ewise_const_mat(lhs_efp, method)
-            self._jacs_ffpts[shape][fidx] = jacs_ffpts
+            jacs_facefpts = self._ewise_const_mat(lhs_efp, method)
+            self._jacs_facefpts[shape][fidx] = jacs_facefpts
 
     def gen_nscbc_kerns(self):
         kerns = []
