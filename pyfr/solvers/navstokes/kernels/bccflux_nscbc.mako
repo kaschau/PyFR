@@ -498,7 +498,7 @@ if ndims == 3:
     % endif
 
     ## Store the common normal flux in u_fpts (this is the output)
-    u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A + R;
+    u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A - R;
 
     ## Check
     % if check:
