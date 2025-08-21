@@ -147,14 +147,14 @@ fpdtype_t tF_upts[${nupts}][${ndims}][${nvars}] = {{{0}}};
 
 ## Step 2: Compute transformed, discontinuous, normal flux at all flux points
 fpdtype_t tf_TD[${nfpts}][${nvars}] = {{0}};
-% for f in range(nfpts):
+% for fpt_idx in fptidx:
 {
   ## Compute normal transformed flux
   % for upt in range(nupts):
   % for var in range(nvars):
   % for comp in range(ndims):
-    % if abs(m2[f,comp,upt]) > 0.0:
-    tf_TD[${f}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[f,comp,upt]};
+    % if abs(m2[fpt_idx,comp,upt]) > 0.0:
+    tf_TD[${fpt_idx}][${var}] += tF_upts[${upt}][${comp}][${var}]*${m2[fpt_idx,comp,upt]};
     % endif
   % endfor
   % endfor

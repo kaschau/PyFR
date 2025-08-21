@@ -302,7 +302,8 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             ndims = self.ndims
             facefpts = basis.facefpts[fidx]
             nintfpts = nfpts - nfacefpts
-            intfpts = [i for i in range(nfpts) if i not in facefpts]
+            fptidx = [i for j in basis.facefpts for i in j]
+            intfpts = [i for i in fptidx if i not in facefpts]
 
             tplargs_efp = self._tplargs_efp[shape][fidx]
 
@@ -311,6 +312,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['nfacefpts'] = nfacefpts
             tplargs_efp['nintfacefpts'] = nintfpts
             tplargs_efp['facefpts'] = facefpts
+            tplargs_efp['fptidx'] = fptidx
             tplargs_efp['intfpts'] = intfpts
             norms = basis.norm_fpts[facefpts]
             tplargs_efp['magnl'] = np.linalg.norm(norms, axis=-1)
