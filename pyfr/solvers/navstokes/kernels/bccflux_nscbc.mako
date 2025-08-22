@@ -369,94 +369,21 @@ if ndims == 3:
   ## Step 6: Compute dtFdE_T* values normal to face
   fpdtype_t dtFdE_Ts[${nvars}];
   {
-    ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts','ul','p','v')};
-    % for var in range(nvars):
-      dtFdE_Ts[${var}] += source[${var}];
-    % endfor
+  ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts','ul','p','v')};
   }
-
-  ## Now solve for derivatives in the primary CS
-  fpdtype_t dtFdE[${ndims}][${nvars}] = {{0}};
-    % for var in range(nvars):
-      % if ndims == 2:
-        {
-          fpdtype_t dFstar = dtFdE_Ts[${var}];
-          fpdtype_t dFdN = dtFdE_full[0][1][${var}];
-          fpdtype_t dGdE = dtFdE_full[1][0][${var}];
-          fpdtype_t dGdN_T = dtFdE_T[1][${var}];
-          dtFdE[0][${var}] = -((dFstar - (dFdN + dGdE)*${nE*nN})*${t1N*t1N}-${nN*nN}*(-((dFdN+dGdE)*${t1E*t1N})+dGdN_T))/${nN*nN*t1E*t1E-nE*nE*t1N*t1N};
-          dtFdE[1][${var}] = (${-t1E}*(dFstar*${t1E} + (dFdN+dGdE)*${nE*(-nN*t1E+nE*t1N)})+${nE*nE}*dGdN_T)/${-nN*nN*t1E*t1E+nE*nE*t1N*t1N};
-        }
-      % else:
-        {
-          fpdtype_t dFstar = dtFdE_Ts[${var}];
-          fpdtype_t dFdN = dtFdE_full[0][1][${var}];
-          fpdtype_t dFdC = dtFdE_full[0][2][${var}];
-          fpdtype_t dGdE = dtFdE_full[1][0][${var}];
-          fpdtype_t dGdC = dtFdE_full[1][2][${var}];
-          fpdtype_t dHdE = dtFdE_full[2][0][${var}];
-          fpdtype_t dHdN = dtFdE_full[2][1][${var}];
-          fpdtype_t dGdN_T = dtFdE_T[1][${var}];
-          fpdtype_t dHdC_T = dtFdE_T[2][${var}];
-
-          fpdtype_t facn  = ${nE*nN}  *(dGdE+dFdN) + ${nE*nC}  *(dHdE+dFdC) + ${nC*nN}  *(dGdC + dHdN);
-          fpdtype_t fact1 = ${t1E*t1N}*(dGdE+dFdN) + ${t1E*t1C}*(dHdE+dFdC) + ${t1C*t1N}*(dGdC + dHdN);
-          fpdtype_t fact2 = ${t2E*t2N}*(dGdE+dFdN) + ${t2E*t2C}*(dHdE+dFdC) + ${t2C*t2N}*(dGdC + dHdN);
-
-          dtFdE[0][${var}] = (-fact2*${nN*nN*t1C*t1C} +
-                               fact2*${nC*nC*t1N*t1N} +
-                               fact1*${nN*nN*t2C*t2C} +
-                               dFstar*${t1N*t1N*t2C*t2C} -
-                               facn  *${t1N*t1N*t2C*t2C} -
-                               fact1 *${nC*nC*t2N*t2N} -
-                               dFstar*${t1C*t1C*t2N*t2N} +
-                               facn  *${t1C*t1C*t2N*t2N} +
-                              ${-nN*nN*t2C*t2C + nC*nC*t2N*t2N}*dGdN_T + ${nN*nN*t1C*t1C - nC*nC*t1N*t1N}*dHdC_T)/
-                              ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
-                                nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
-                                nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
-
-          dtFdE[1][${var}] = (fact2*${nE*nE*t1C*t1C} -
-                              fact2*${nC*nC*t1E*t1E} -
-                              fact1*${nE*nE*t2C*t2C} -
-                              dFstar*${t1E*t1E*t2C*t2C} +
-                              facn  *${t1E*t1E*t2C*t2C} +
-                              fact1 *${nC*nC*t2E*t2E} +
-                              dFstar*${t1C*t1C*t2E*t2E} -
-                              facn  *${t1C*t1C*t2E*t2E} +
-                             ${nE*nE*t2C*t2C - nC*nC*t2E*t2E}*dGdN_T + ${-nE*nE*t1C*t1C + nC*nC*t1E*t1E}*dHdC_T)/
-                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
-                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
-                               nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
-
-          dtFdE[2][${var}] = (fact2*${nN*nN*t1E*t1E} -
-                              fact2*${nE*nE*t1N*t1N} -
-                              fact1*${nN*nN*t2E*t2E} -
-                              dFstar*${t1N*t1N*t2E*t2E} +
-                              facn  *${t1N*t1N*t2E*t2E} +
-                              fact1 *${nE*nE*t2N*t2N} +
-                              dFstar*${t1E*t1E*t2N*t2N} -
-                              facn  *${t1E*t1E*t2N*t2N} +
-                             ${nN*nN*t2E*t2E - nE*nE*t2N*t2N}*dGdN_T + ${-nN*nN*t1E*t1E + nE*nE*t1N*t1N}*dHdC_T) /
-                             ${nN*nN*(-t1E*t1E*t2C*t2C + t1C*t1C*t2E*t2E) + \
-                               nE*nE*( t1N*t1N*t2C*t2C - t1C*t1C*t2N*t2N) + \
-                               nC*nC*(-t1N*t1N*t2E*t2E + t1E*t1E*t2N*t2N)};
-          }
-      % endif
-    % endfor
-
   % for var in range(nvars):
-    ## we have dudt (~\del \dot ~f) at our flux point
-    ddtF_TdE[${f}][${var}] = ${'+'.join([f'dtFdE[{comp}][{var}]' for comp in range(ndims)])};
-    % if check:
-        printf("dtFidE_* var=${var} %.14e \n", ddtF_TdE[${f}][${var}]);
-    % endif
-    ## subtract our flux gradient on the face (from discontinuous value)
-    ddtF_TdE[${f}][${var}] -= ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])};
+  {
+    dtFdE_Ts[${var}] += source[${var}];
+
+    ## Compute divergence difference directly using invariance property
+    ## ∇·F* - ∇·F = Δ(∂F_n/∂n) since only normal component changes
+    ## Divergence difference is simply the change in normal derivative
+    ddtF_TdE[${f}][${var}] = dtFdE_Ts[${var}] - dtFdE_T[0][${var}];
 
     % if check:
-        printf("dtFidE %.14e \n", ${'+'.join([f'dtFdE_full[{comp}][{comp}][{var}]' for comp in range(ndims)])});
+        printf("ddtF_TdE var=${var} %.14e \n", ddtF_TdE[${f}][${var}]);
     % endif
+  }
   % endfor
 }
 % endfor
