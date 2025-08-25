@@ -314,9 +314,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['facefpts'] = facefpts
             tplargs_efp['fptidx'] = fptidx
             tplargs_efp['intfpts'] = intfpts
+            tplargs_efp['magnl'] = np.linalg.norm(basis.norm_fpts, axis=-1)
             norms = basis.norm_fpts[facefpts]
-            tplargs_efp['magnl'] = np.linalg.norm(norms, axis=-1)
-            norms = norms/tplargs_efp['magnl'][:, None]
+            norms = norms/np.linalg.norm(norms, axis=-1)[:, None]
             if self.normal == 'inward':
                 norms *= -1.0
             tplargs_efp['bnorms'] = norms
