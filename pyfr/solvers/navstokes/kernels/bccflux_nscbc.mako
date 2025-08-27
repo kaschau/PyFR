@@ -410,7 +410,10 @@ if ndims == 3:
     fpdtype_t R = 0;
     % for j, intfpt_idx in enumerate(intfpts):
       % if abs(GB_inv_GI[f,j]) > 0.0:
-      R += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}])*${1.0/magnl[intfpt_idx]};
+      R += ${GB_inv_GI[f,j]}*(u_fpts[${intfpt_idx}][${var}] - tf_TD[${intfpt_idx}][${var}]);
+      % if check:
+      printf("R after ${intfpt_idx} %.14e\n", R);
+      % endif
       % endif
     % endfor
     % if check:
@@ -421,6 +424,9 @@ if ndims == 3:
     % for j,fpt_jdx in enumerate(facefpts):
       % if abs(GB_inv[f,j]) > 0.0:
       A += ${GB_inv[f,j]} * ddtF_TdE[${j}][${var}];
+      % if check:
+      printf("A after ${fpt_jdx} %.14e\n", A);
+      % endif
       % endif
     % endfor
     % if check:
@@ -429,6 +435,9 @@ if ndims == 3:
 
     ## Store the common normal flux in u_fpts (this is the output)
     u_fpts[${fpt_idx}][${var}] = tf_TD[${fpt_idx}][${var}] + A - R;
+    ## % if var == 2:
+    ##   u_fpts[${fpt_idx}][${var}] = 0.0;
+    ## % endif
 
     ## Check
     % if check:

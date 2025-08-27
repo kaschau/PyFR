@@ -314,9 +314,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             tplargs_efp['facefpts'] = facefpts
             tplargs_efp['fptidx'] = fptidx
             tplargs_efp['intfpts'] = intfpts
-            tplargs_efp['magnl'] = np.linalg.norm(basis.norm_fpts, axis=-1)
-            norms = basis.norm_fpts[facefpts]
-            norms = norms/np.linalg.norm(norms, axis=-1)[:, None]
+            magnl = np.linalg.norm(basis.norm_fpts, axis=-1)
+            tplargs_efp['magnl'] = magnl
+            norms = basis.norm_fpts[facefpts]/magnl[facefpts, None]
             if self.normal == 'inward':
                 norms *= -1.0
             tplargs_efp['bnorms'] = norms
@@ -343,7 +343,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             GI = np.zeros((nfacefpts, nintfpts))
             for i, fpt_i in enumerate(facefpts):
                 for j, fpt_j in enumerate(intfpts):
-                    GI[i, j] = basis.m11[fpt_i, fpt_j]
+                    # Divide out the normal from contributing interior fpts
+                    ## HACK: need to verify
+                    GI[i, j] = basis.m11[fpt_i, fpt_j]/magnl[fpt_j]
 
             # Compute inverse of G matrix
             GB_inv = np.linalg.inv(GB)
