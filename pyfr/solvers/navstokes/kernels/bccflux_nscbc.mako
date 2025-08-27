@@ -368,9 +368,8 @@ if ndims == 3:
 
   ## Step 6: Compute dtFdE_T* values normal to face
   fpdtype_t dtFdE_Ts[${nvars}];
-  {
   ${pyfr.expand('WUinv_dot_N','N','dtFdE_Ts','ul','p','v')};
-  }
+
   % for var in range(nvars):
   {
     dtFdE_Ts[${var}] += source[${var}];

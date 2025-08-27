@@ -13,7 +13,7 @@
   fpdtype_t pR = jac*${c['K_p']}*(${c['p']} - p);
 
   ## Only need incoming wave
-  N[${nvars-1}] = -${sq2}/c*invrho*pR + jac*N[${nvars-2}] + (1.0 - alpha)*jac*(S[${nvars-2}] + S[${nvars-1}]);
+  N[${nvars-1}] = -${sq2}/c*invrho*pR + (1.0 - alpha)*(S[${nvars-1}] + S[${nvars-2}]);
 
 </%pyfr:macro>
 
