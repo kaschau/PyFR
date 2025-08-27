@@ -260,7 +260,7 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
         self._scal_upts = defaultdict(dict)
         self._scal_fpts = defaultdict(dict)
         self._grad_upts = defaultdict(dict)
-        self._vect_fpts = defaultdict(dict)
+        # self._vect_fpts = defaultdict(dict)
         self._normnl_facefpts = defaultdict(dict)
         self._smats_upts = defaultdict(dict)
         self._jacs_facefpts = defaultdict(dict)
@@ -362,9 +362,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
             grad_upts = self._grad_upts_view(lhs_efp, method)
             self._grad_upts[shape][fidx] = grad_upts
 
-            method = '_get_vect_fpts_for_inter_ele'
-            vect_fpts = self._vect_fpts_view(lhs_efp, method)
-            self._vect_fpts[shape][fidx] = vect_fpts
+            # method = '_get_vect_fpts_for_inter_ele'
+            # vect_fpts = self._vect_fpts_view(lhs_efp, method)
+            # self._vect_fpts[shape][fidx] = vect_fpts
 
             ## Get normals at all flux points (not just boundary face)
             ## We need a custom method to get normals for all flux points in element
@@ -395,8 +395,9 @@ class NavierStokesCharacteristicBoundaryCondition(NavierStokesBaseBCInters):
                     extrns=self._external_args_efp[shape][fidx],
                     u_upts=self._scal_upts[shape][fidx],
                     u_fpts=self._scal_fpts[shape][fidx],
-                    gradu_upts=self._grad_upts[shape][fidx],
-                    gradu_fpts=self._vect_fpts[shape][fidx],
+                    # TODO:
+                    # gradu_upts=self._grad_upts[shape][fidx],
+                    # gradu_fpts=self._vect_fpts[shape][fidx],
                     normnl_ffpts=self._normnl_facefpts[shape][fidx],
                     smats_upts=self._smats_upts[shape][fidx],
                     jacs_ffpts=self._jacs_facefpts[shape][fidx],

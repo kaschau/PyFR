@@ -96,11 +96,13 @@
 <%pyfr:kernel name='bccflux_nscbc' ndim='1'
               u_upts='in view fpdtype_t[${str(nupts)}][${str(nvars)}]'
               u_fpts='inout view fpdtype_t[${str(nfpts)}][${str(nvars)}]'
-              gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
-              gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
               normnl_ffpts='in fpdtype_t[${str(nfacefpts)}][${str(ndims)}]'
               smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
               jacs_ffpts='in fpdtype_t[${str(nfacefpts)}]'>
+
+              ## TODO:
+              ## gradu_upts='in view fpdtype_t[${str(ndims*nupts)}][${str(nvars)}]'
+              ## gradu_fpts='in view fpdtype_t[${str(ndims*nfpts)}][${str(nvars)}]'
 
 % if check:
 printf("\n*************ELEMENT************\n");
