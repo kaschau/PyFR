@@ -25,9 +25,9 @@
   % endif
 
   fpdtype_t veloR = nx*uR + ny*vR;
-  N[0] = -rhoR + rho*invc*veloR;
-  N[1] = uR*ny - vR*nx;
-  N[2] = ${-sq2}*veloR;
+  N[0] = rho*invc*(veloR - ${sq2}*S[3]) - (rhoR + S[0]);
+  N[1] = uR*ny - vR*nx - S[1];
+  N[2] = S[3] - S[2] - ${sq2}*veloR;
 
 % elif ndims == 3:
 
@@ -39,10 +39,10 @@
   % endif
 
   fpdtype_t veloR = nx*uR + ny*vR + nz*wR;
-  N[0] =  invc*nx*rho*veloR - (nx*rhoR + nz*vR - ny*wR);
-  N[1] =  invc*ny*rho*veloR - (ny*rhoR - nz*uR + nx*wR);
-  N[2] =  invc*nz*rho*veloR - (nz*rhoR + ny*uR - nx*vR);
-  N[3] =  ${-sq2}*veloR;
+  N[0] =  invc*nx*rho*(veloR - ${sq2}*S[4]) - (nx*rhoR + nz*vR - ny*wR + S[0]);
+  N[1] =  invc*ny*rho*(veloR - ${sq2}*S[4]) - (ny*rhoR - nz*uR + nx*wR + S[1]);
+  N[2] =  invc*nz*rho*(veloR - ${sq2}*S[4]) - (nz*rhoR + ny*uR - nx*vR + S[2]);
+  N[3] =  S[4] - S[3] - ${sq2}*veloR;
 
 % endif
 </%pyfr:macro>
