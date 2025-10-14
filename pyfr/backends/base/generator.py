@@ -67,11 +67,12 @@ class Arg:
 
 
 class BaseKernelGenerator:
-    def __init__(self, name, ndim, args, body, fpdtype, ixdtype):
+    def __init__(self, name, ndim, args, body, fpdtype, ixdtype, ikp=False):
         self.name = name
         self.ndim = ndim
         self.fpdtype = fpdtype
         self.ixdtype = ixdtype
+        self.ikp = ikp  # Enable IKP transformation
 
         # Parse and sort our argument list
         sargs = sorted((k, Arg(k, v, body)) for k, v in args.items())

@@ -86,11 +86,29 @@ def _locals(body):
     # Extract the variable names
     lvars = [re.match(r'\s*(\w+)', v)[1] for v in decls]
 
-    # Prune invalid names
-    return [lv for lv in lvars if lv != 'if']
+    # Reserved C/C++ keywords and PyFR types that should not be renamed
+    reserved = {'void', 'int', 'char', 'float', 'double', 'long', 'short',
+                'unsigned', 'signed', 'const', 'static', 'typedef', 'struct',
+                'size_t', 'fpdtype_t', 'ixdtype_t', 'if'}
+
+    # Prune invalid names and reserved keywords
+    return [lv for lv in lvars if lv not in reserved]
 
 
 Macro = namedtuple('Macro', ['params', 'externs', 'argsig', 'caller', 'id'])
+
+
+def _transform_ikp_body(body):
+    """
+    Transform IKP kernel body: wrap everything in IKP_LOOP markers
+    For now, keep GEMM operations inside the element loop (can optimize with batching later)
+    """
+    # Simply wrap the entire body in IKP_LOOP markers
+    # The PYFR_IKP_MARKER comments are kept for documentation but don't affect transformation
+    return f'''
+// IKP_LOOP_BEGIN
+{body}
+// IKP_LOOP_END'''
 
 
 def mfilttag(source):
@@ -232,12 +250,20 @@ def kernel(context, name, ndim, **kwargs):
     except Exception as e:
         raise ExceptionGroup(f'In kernel: {name}', [e]) from None
 
+    # Detect IKP (inner-kernel parallelism) marker
+    ikp = 'PYFR_IKP_MARKER' in body
+
+    if ikp:
+        # Transform IKP body: wrap entire body in IKP_LOOP markers
+        # This enables cache-blocking by processing BLK_SZ elements together
+        body = _transform_ikp_body(body)
+
     # Get the generator class and data types
     kerngen = context['_kernel_generator']
     fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
 
     # Instantiate
-    kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype)
+    kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
 
     # Save the argument/type list for later use
     context['_kernel_argspecs'][name] = kern.argspec()
