@@ -266,20 +266,12 @@ def kernel(context, name, ndim, **kwargs):
     except Exception as e:
         raise ExceptionGroup(f'In kernel: {name}', [e]) from None
 
-    # Detect IKP (inner-kernel parallelism) marker
-    ikp = 'PYFR_IKP_MARKER' in body
-
-    if ikp:
-        # Transform IKP body: wrap entire body in IKP_LOOP markers
-        # This enables cache-blocking by processing BLK_SZ elements together
-        body = _transform_ikp_body(body)
-
     # Get the generator class and data types
     kerngen = context['_kernel_generator']
     fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
 
-    # Instantiate
-    kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
+    # Instantiate (non-IKP kernel)
+    kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype)
 
     # Save the argument/type list for later use
     context['_kernel_argspecs'][name] = kern.argspec()
