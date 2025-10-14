@@ -39,17 +39,26 @@ class OpenMPKernelGenerator(IKPKernelGeneratorMixin, BaseKernelGenerator):
         """
         return f'    {dtype} {name}[{size}][BLK_SZ];'
 
-    def _ikp_transform_array_ref(self, arr_name, body):
+    def _ikp_transform_array_ref(self, var_name, body):
         """
-        Transform local array references for OpenMP IKP.
+        Transform local variable references for OpenMP IKP.
 
-        arr[i] -> arr[i][X_IDX] (column-major layout for libxsmm)
+        Arrays: arr[i] -> arr[i][X_IDX] (column-major layout for libxsmm)
+        Scalars: scalar -> scalar[X_IDX] (elevated to array[BLK_SZ])
 
         This layout matches libxsmm's expected transposed format where
         BLK_SZ elements are stored contiguously for each array index.
         """
-        arr_pattern = rf'\b{arr_name}\[([^\]]+)\]'
-        return re.sub(arr_pattern, rf'{arr_name}[\1][X_IDX]', body)
+        # First try array pattern (has brackets)
+        arr_pattern = rf'\b{var_name}\[([^\]]+)\]'
+        if re.search(arr_pattern, body):
+            # It's an array reference - transform arr[i] -> arr[i][X_IDX]
+            return re.sub(arr_pattern, rf'{var_name}[\1][X_IDX]', body)
+        else:
+            # It's a scalar reference - transform scalar -> scalar[X_IDX]
+            # But be careful not to transform the declaration itself
+            scalar_pattern = rf'\b{var_name}\b(?!\s*\[)'
+            return re.sub(scalar_pattern, rf'{var_name}[X_IDX]', body)
 
     def _ikp_transform_kernel_args(self, body):
         """
@@ -73,36 +82,47 @@ class OpenMPKernelGenerator(IKPKernelGeneratorMixin, BaseKernelGenerator):
         """
         Wrap IKP body in standard _xi/_xj loop structure for parallel execution.
 
-        Splits body into prep/gemm/proc phases and structures them correctly:
-        1. Prep (extract data) - INSIDE element loops
-        2. GEMM (libxsmm) - OUTSIDE loops (batched over all elements)
-        3. Proc (process results) - INSIDE element loops
+        Splits body into alternating prep/interruption sections:
+        - Prep sections (per-element code) - INSIDE element loops
+        - Interruption sections (batched ops) - OUTSIDE loops
+        Handles N interruptions automatically.
         """
         # Remove IKP_LOOP markers
         body = re.sub(r'// IKP_LOOP_BEGIN\n', '', body)
         body = re.sub(r'// IKP_LOOP_END', '', body)
 
-        # Split body into prep and proc sections at the prep_end boundary
-        # Pattern: everything before the gemv block opening brace
-        prep_match = re.search(r'(.*?)\s*\{\s*// PYFR_IKP_MARKER:', body, flags=re.DOTALL)
-        prep_body = prep_match.group(1) if prep_match else body
+        # Split body on interruption markers
+        # Pattern: PYFR_IKP_INTERRUPTION_START ... PYFR_IKP_INTERRUPTION_END
+        sections = []
+        remaining = body
 
-        # Extract GEMM section (from IKP_MARKER to gemm_end)
-        gemm_match = re.search(
-            r'(// PYFR_IKP_MARKER:.*?// PYFR_IKP_PHASE_BOUNDARY: gemm_end\n)',
-            body, flags=re.DOTALL
-        )
-        gemm_section = gemm_match.group(1) if gemm_match else ''
+        while True:
+            # Find next interruption
+            match = re.search(
+                r'(.*?)// PYFR_IKP_INTERRUPTION_START\n(.*?)// PYFR_IKP_INTERRUPTION_END',
+                remaining, flags=re.DOTALL
+            )
 
-        # Proc section: everything after gemm_end, skip closing brace
-        proc_match = re.search(
-            r'// PYFR_IKP_PHASE_BOUNDARY: gemm_end\n\s*\}\s*(.*)',
-            body, flags=re.DOTALL
-        )
-        proc_body = proc_match.group(1) if proc_match else ''
+            if not match:
+                # No more interruptions, rest is final proc section
+                if remaining.strip():
+                    sections.append(('prep', remaining))
+                break
 
-        # Create loop wrappers - prep and proc need different _xi handling
-        def make_prep_loop(content):
+            # Extract prep section before interruption
+            prep_section = match.group(1)
+            if prep_section.strip():
+                sections.append(('prep', prep_section))
+
+            # Extract interruption section
+            interruption_section = match.group(2)
+            sections.append(('interruption', interruption_section))
+
+            # Continue with remainder
+            remaining = remaining[match.end():]
+
+        # Create loop wrapper functions
+        def make_loop(content, is_first):
             if nelem_expr == 'BLK_SZ':
                 # Core path: full block
                 return f'''
@@ -115,39 +135,38 @@ class OpenMPKernelGenerator(IKPKernelGeneratorMixin, BaseKernelGenerator):
                     }}
                 }}'''
             else:
-                # Clean path: partial block - declare _xi here
-                return f'''
+                # Clean path: partial block
+                if is_first:
+                    # First loop declares _xi
+                    return f'''
                 int _xi = 0;
                 #pragma omp simd
                 for (int _xj = 0; _xj < _nx % BLK_SZ; _xj++)
                 {{
                     {content}
                 }}'''
-
-        def make_proc_loop(content):
-            if nelem_expr == 'BLK_SZ':
-                # Core path: full block
-                return f'''
-                for (int _xi = 0; _xi < BLK_SZ; _xi += SOA_SZ)
-                {{
-                    #pragma omp simd
-                    for (int _xj = 0; _xj < SOA_SZ; _xj++)
-                    {{
-                        {content}
-                    }}
-                }}'''
-            else:
-                # Clean path: reuse _xi from prep loop
-                return f'''
+                else:
+                    # Subsequent loops reuse _xi
+                    return f'''
                 #pragma omp simd
                 for (int _xj = 0; _xj < _nx % BLK_SZ; _xj++)
                 {{
                     {content}
                 }}'''
 
-        # Assemble: prep loop -> gemm -> proc loop
-        # Note: GEMM goes between the two loops, NOT nested inside
-        return make_prep_loop(prep_body) + '\n' + gemm_section + '\n' + make_proc_loop(proc_body)
+        # Assemble sections: prep loops and interruptions alternate
+        # prep -> interruption -> prep -> interruption -> ... -> prep
+        result = []
+        first_prep = True
+        for section_type, content in sections:
+            if section_type == 'prep':
+                result.append(make_loop(content, first_prep))
+                first_prep = False
+            else:  # interruption
+                # Interruptions go OUTSIDE loops, just append directly
+                result.append(content)
+
+        return '\n'.join(result)
 
     # ========== IKP Transformation Pipeline ==========
 
@@ -155,33 +174,82 @@ class OpenMPKernelGenerator(IKPKernelGeneratorMixin, BaseKernelGenerator):
         """
         Override to hoist declarations for IKP mode.
 
-        Calls base class for standard dereferencing, then hoists IKP arrays.
+        Calls base class for standard dereferencing, then performs smart
+        variable analysis to only elevate variables that cross interruptions.
         """
         # Standard dereferencing (base class)
         body, preamble = super()._render_body_preamble(body)
 
         if self.ikp:
-            # Find declarations using mixin methods
-            const_arrays, local_arrays = self._ikp_find_declarations(body)
+            # Split body into sections
+            sections = self._ikp_split_into_sections(body)
 
-            # Track local array names for reference transformation
-            self._ikp_local_arrays = [name for _, name, _ in local_arrays]
+            # Analyze which variables are used in which sections
+            variables = self._ikp_analyze_variable_usage(sections)
 
-            # Transform declarations
+            # Determine which variables need elevation (used in multiple sections)
+            vars_to_elevate = {}
+            vars_to_keep = {}
+
+            for var_name, var_info in variables.items():
+                # A variable needs elevation if it's used in:
+                # 1. Multiple sections (prep OR interruption)
+                # 2. OR if it's used in any interruption (interruptions are outside loops)
+
+                sections_used = var_info['used_in']
+                interruption_sections = [idx for idx in sections_used
+                                        if idx < len(sections) and sections[idx][0] == 'interruption']
+
+                # If used in an interruption, it MUST be elevated
+                # (interruptions are outside loops, so variables must persist)
+                if interruption_sections or len(sections_used) > 1:
+                    vars_to_elevate[var_name] = var_info
+                else:
+                    vars_to_keep[var_name] = var_info
+
+            # Track which arrays/scalars need transformation
+            self._ikp_local_arrays = [name for name, info in vars_to_elevate.items()
+                                     if info['type'] in ('array', 'scalar')]
+
+            # Transform declarations for elevated variables
             declarations = []
 
-            # Transform constant arrays (shared across elements)
-            for dtype, name, dims, initializer in const_arrays:
-                decl = self._ikp_transform_const_decl(dtype, name, dims, initializer)
-                declarations.append(decl)
+            for var_name, var_info in vars_to_elevate.items():
+                dtype = var_info['decl_info'][0]
 
-            # Transform local arrays (per-element storage)
-            for dtype, name, size in local_arrays:
-                decl = self._ikp_transform_local_decl(dtype, name, size)
-                declarations.append(decl)
+                if var_info['type'] == 'const_array':
+                    dims = var_info['decl_info'][1]
+                    initializer = var_info['decl_info'][2]
+                    decl = self._ikp_transform_const_decl(dtype, var_name, dims, initializer)
+                    declarations.append(decl)
 
-            # Remove declarations from body (they're now in preamble)
-            body = self._ikp_remove_declarations(body)
+                elif var_info['type'] == 'array':
+                    size = var_info['decl_info'][1]
+                    decl = self._ikp_transform_local_decl(dtype, var_name, size)
+                    declarations.append(decl)
+
+                elif var_info['type'] == 'scalar':
+                    # Elevate scalar to array[BLK_SZ]
+                    decl = f'    {dtype} {var_name}[BLK_SZ];'
+                    declarations.append(decl)
+
+            # Remove elevated variable declarations from body
+            for var_name, var_info in vars_to_elevate.items():
+                # Remove array declarations
+                body = re.sub(r'\s*fpdtype_t\s+' + re.escape(var_name) + r'\[[^\]]+\];', '', body)
+
+                # Handle scalar declarations specially to preserve assignments
+                if var_info['type'] == 'scalar':
+                    # For scalars with initializers, preserve the assignment part
+                    # Transform: fpdtype_t testScalar = expr; -> testScalar = expr;
+                    scalar_decl_pattern = r'(\s*)fpdtype_t\s+' + re.escape(var_name) + r'\s*=\s*([^;]+);'
+                    body = re.sub(scalar_decl_pattern, r'\1' + var_name + r' = \2;', body)
+                    # Also remove simple declarations without initializers
+                    body = re.sub(r'\s*fpdtype_t\s+' + re.escape(var_name) + r'\s*;', '', body)
+
+                # Remove const array declarations
+                body = re.sub(r'\s*const\s+fpdtype_t\s+' + re.escape(var_name) + r'\[[^\]]+\](?:\[[^\]]+\])*\s*=\s*\{[^}]*\}\s*;',
+                             '', body, flags=re.DOTALL)
 
             # Add transformed declarations to preamble
             if declarations:

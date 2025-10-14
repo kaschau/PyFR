@@ -30,6 +30,111 @@ class IKPKernelGeneratorMixin:
     # Regex patterns for declaration matching (common to all backends)
     _CONST_ARRAY_PATTERN = r'\s*const\s+(fpdtype_t)\s+(\w+)(\[[^\]]+\](?:\[[^\]]+\])*)\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\})\s*;'
     _LOCAL_ARRAY_PATTERN = r'\s*(fpdtype_t)\s+(\w+)\[([^\]]+)\];'
+    _LOCAL_SCALAR_PATTERN = r'\s*(fpdtype_t)\s+(\w+)\s*(?:=\s*[^;]+)?;'
+
+    def _ikp_split_into_sections(self, body):
+        """
+        Split IKP body into alternating prep/interruption sections.
+
+        Returns:
+            list of (section_type, content) tuples
+            section_type is 'prep' or 'interruption'
+        """
+        sections = []
+        remaining = body
+
+        while True:
+            # Find next interruption
+            match = re.search(
+                r'(.*?)// PYFR_IKP_INTERRUPTION_START\n(.*?)// PYFR_IKP_INTERRUPTION_END',
+                remaining, flags=re.DOTALL
+            )
+
+            if not match:
+                # No more interruptions, rest is final prep/proc section
+                if remaining.strip():
+                    sections.append(('prep', remaining))
+                break
+
+            # Extract prep section before interruption
+            prep_section = match.group(1)
+            if prep_section.strip():
+                sections.append(('prep', prep_section))
+
+            # Extract interruption section
+            interruption_section = match.group(2)
+            sections.append(('interruption', interruption_section))
+
+            # Continue with remainder
+            remaining = remaining[match.end():]
+
+        return sections
+
+    def _ikp_analyze_variable_usage(self, sections):
+        """
+        Analyze which variables are used in which sections.
+
+        Returns:
+            dict: {var_name: {'type': 'array'/'scalar'/'const_array',
+                              'declared_in': section_index,
+                              'used_in': set of section_indices,
+                              'decl_info': (dtype, size/dims, initializer)}}
+        """
+        variables = {}
+
+        for idx, (section_type, content) in enumerate(sections):
+            # Skip interruptions - they don't have local declarations
+            if section_type == 'interruption':
+                continue
+
+            # Find constant array declarations
+            for match in re.finditer(self._CONST_ARRAY_PATTERN, content, re.DOTALL):
+                dtype, name, dims, initializer = match.groups()
+                if name not in variables:
+                    variables[name] = {
+                        'type': 'const_array',
+                        'declared_in': idx,
+                        'used_in': set(),
+                        'decl_info': (dtype, dims, initializer)
+                    }
+
+            # Find local array declarations
+            for match in re.finditer(self._LOCAL_ARRAY_PATTERN, content):
+                dtype, name, size = match.groups()
+                if name not in variables:
+                    variables[name] = {
+                        'type': 'array',
+                        'declared_in': idx,
+                        'used_in': set(),
+                        'decl_info': (dtype, size, None)
+                    }
+
+            # Find local scalar declarations (but filter out arrays)
+            # Remove array declarations first to avoid false matches
+            content_no_arrays = re.sub(self._LOCAL_ARRAY_PATTERN, '', content)
+            content_no_arrays = re.sub(self._CONST_ARRAY_PATTERN, '', content_no_arrays, flags=re.DOTALL)
+
+            for match in re.finditer(self._LOCAL_SCALAR_PATTERN, content_no_arrays):
+                dtype, name = match.groups()
+                # Skip common C keywords and types
+                if name in {'void', 'int', 'char', 'float', 'double', 'if', 'for', 'while', 'return'}:
+                    continue
+                if name not in variables:
+                    variables[name] = {
+                        'type': 'scalar',
+                        'declared_in': idx,
+                        'used_in': set(),
+                        'decl_info': (dtype, None, None)
+                    }
+
+        # Now find usages of each variable across all sections
+        for var_name in variables.keys():
+            for idx, (section_type, content) in enumerate(sections):
+                # Check if variable is used in this section (look for var_name as a word)
+                if re.search(r'\b' + re.escape(var_name) + r'\b', content):
+                    variables[var_name]['used_in'].add(idx)
+
+        return variables
 
     def _ikp_find_declarations(self, body):
         """

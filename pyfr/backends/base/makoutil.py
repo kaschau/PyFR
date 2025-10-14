@@ -232,6 +232,22 @@ def expand(context, name, /, *args, **kwargs):
     return f'{{\n{body}\n}}'
 
 
+def ikpexpand(context, name, /, *args, **kwargs):
+    """
+    Expand an IKP macro (cache-block interruption).
+
+    Like expand() but wraps the returned body with clear boundary markers.
+    The generator will later split on these markers.
+    """
+    # Use regular expand() to do the actual macro expansion
+    body = expand(context, name, *args, **kwargs)
+
+    # Wrap body with boundary markers so generator can identify interruptions
+    return f'''// PYFR_IKP_INTERRUPTION_START
+{body}
+// PYFR_IKP_INTERRUPTION_END'''
+
+
 @supports_caller
 def kernel(context, name, ndim, **kwargs):
     extrns = context['_extrns']
@@ -252,6 +268,53 @@ def kernel(context, name, ndim, **kwargs):
 
     # Detect IKP (inner-kernel parallelism) marker
     ikp = 'PYFR_IKP_MARKER' in body
+
+    if ikp:
+        # Transform IKP body: wrap entire body in IKP_LOOP markers
+        # This enables cache-blocking by processing BLK_SZ elements together
+        body = _transform_ikp_body(body)
+
+    # Get the generator class and data types
+    kerngen = context['_kernel_generator']
+    fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
+
+    # Instantiate
+    kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
+
+    # Save the argument/type list for later use
+    context['_kernel_argspecs'][name] = kern.argspec()
+
+    # Render and return the complete kernel
+    return kern.render()
+
+
+@supports_caller
+def ikpkernel(context, name, ndim, **kwargs):
+    """
+    Define an IKP kernel with cache-block interruptions.
+
+    Like kernel() but detects PYFR_IKP_INTERRUPTION markers for automatic
+    splitting into prep/interruption/proc phases.
+    """
+    # Do the same work as kernel(), but with our own body capture
+    extrns = context['_extrns']
+
+    # Validate the argument list
+    if any(arg in extrns for arg in kwargs):
+        raise ValueError('Duplicate argument in {0}: {1} {2}'
+                         .format(name, list(kwargs), list(extrns)))
+
+    # Merge local and external arguments
+    kwargs = dict(kwargs, **extrns)
+
+    # Capture the kernel body
+    try:
+        body = capture(context, context['caller'].body)
+    except Exception as e:
+        raise ExceptionGroup(f'In kernel: {name}', [e]) from None
+
+    # Detect IKP by looking for interruption markers
+    ikp = 'PYFR_IKP_INTERRUPTION' in body
 
     if ikp:
         # Transform IKP body: wrap entire body in IKP_LOOP markers
