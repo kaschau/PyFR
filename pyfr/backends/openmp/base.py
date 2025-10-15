@@ -15,6 +15,9 @@ class OpenMPBackend(BaseBackend):
     def __init__(self, cfg):
         super().__init__(cfg)
 
+        # IKP kernel storage (prevents garbage collection of JIT kernels)
+        self._ikp_kernels = []
+
         # Take the default alignment requirement to be 64-bytes
         self.alignb = cfg.getint('backend-openmp', 'alignb', 64)
         if self.alignb < 32 or (self.alignb & (self.alignb - 1)):

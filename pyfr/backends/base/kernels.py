@@ -68,6 +68,9 @@ class BasePointwiseKernelProvider(BaseKernelProvider):
         # Copy the provided argument list
         tplargs = dict(tplargs)
 
+        # Backend instance (for IKP helpers to access backend services)
+        tplargs['_backend'] = self.backend
+
         # Backend-specfic generator classes
         tplargs['_kernel_generator'] = self.kernel_generator_cls
 
