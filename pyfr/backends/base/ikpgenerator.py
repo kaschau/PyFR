@@ -65,6 +65,7 @@ class IKPKernelGeneratorMixin:
                 continue
 
             # Check for NO LOOP marker
+            # HACK
             stype = 'noloop' if '// NO LOOP' in content else 'looped'
             sections.append((stype, content))
 
