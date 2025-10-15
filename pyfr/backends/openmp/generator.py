@@ -35,48 +35,30 @@ class OpenMPKernelGenerator(IKPKernelGeneratorMixin, BaseKernelGenerator):
         """
         Transform local array declaration for OpenMP IKP.
 
-        arr[N] -> arr[N][BLK_SZ] (column-major for libxsmm compatibility)
+        arr[N] -> arr[N*BLK_SZ] (flat array like split version)
         """
-        return f'    {dtype} {name}[{size}][BLK_SZ];'
+        return f'    {dtype} {name}[BLK_SZ*{size}];'
 
     def _ikp_transform_array_ref(self, var_name, body):
         """
         Transform local variable references for OpenMP IKP.
 
-        Arrays: arr[i] -> arr[i][X_IDX] (column-major layout for libxsmm)
+        Arrays: arr[i] -> arr[i*BLK_SZ + X_IDX] (flat indexing like split)
         Scalars: scalar -> scalar[X_IDX] (elevated to array[BLK_SZ])
 
-        This layout matches libxsmm's expected transposed format where
-        BLK_SZ elements are stored contiguously for each array index.
+        Using flat indexing matches the split version and helps the compiler
+        recognize the access pattern for better vectorization.
         """
         # First try array pattern (has brackets)
         arr_pattern = rf'\b{var_name}\[([^\]]+)\]'
         if re.search(arr_pattern, body):
-            # It's an array reference - transform arr[i] -> arr[i][X_IDX]
-            return re.sub(arr_pattern, rf'{var_name}[\1][X_IDX]', body)
+            # It's an array reference - transform arr[i] -> arr[i*BLK_SZ + X_IDX]
+            return re.sub(arr_pattern, rf'{var_name}[(\1)*BLK_SZ + X_IDX]', body)
         else:
             # It's a scalar reference - transform scalar -> scalar[X_IDX]
             # But be careful not to transform the declaration itself
             scalar_pattern = rf'\b{var_name}\b(?!\s*\[)'
             return re.sub(scalar_pattern, rf'{var_name}[X_IDX]', body)
-
-    def _ikp_transform_kernel_args(self, body):
-        """
-        Transform kernel argument references for OpenMP IKP.
-
-        No transformation needed - X_IDX and X_IDX_AOSOA already refer to
-        the correct element index for parallel execution.
-        """
-        # No changes needed - keep using X_IDX and X_IDX_AOSOA as-is
-        return body
-
-    def _ikp_elem_idx_macro(self):
-        """
-        Return ELEM_IDX macro definition for OpenMP.
-
-        Not needed anymore - we use X_IDX directly.
-        """
-        return ''
 
     def _ikp_wrap_body(self, body, nelem_expr):
         """
