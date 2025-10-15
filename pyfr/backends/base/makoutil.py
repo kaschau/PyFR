@@ -98,19 +98,6 @@ def _locals(body):
 Macro = namedtuple('Macro', ['params', 'externs', 'argsig', 'caller', 'id'])
 
 
-def _transform_ikp_body(body):
-    """
-    Transform IKP kernel body: wrap everything in IKP_LOOP markers
-    For now, keep GEMM operations inside the element loop (can optimize with batching later)
-    """
-    # Simply wrap the entire body in IKP_LOOP markers
-    # The PYFR_IKP_MARKER comments are kept for documentation but don't affect transformation
-    return f'''
-// IKP_LOOP_BEGIN
-{body}
-// IKP_LOOP_END'''
-
-
 def mfilttag(source):
     apattern = r'(\w+)=[\'"]([^\'"]*)[\'"]'
 
@@ -305,19 +292,12 @@ def ikpkernel(context, name, ndim, **kwargs):
     except Exception as e:
         raise ExceptionGroup(f'In kernel: {name}', [e]) from None
 
-    # Detect IKP by looking for interruption markers
-    ikp = 'PYFR_IKP_INTERRUPTION' in body
-
-    if ikp:
-        # Transform IKP body: wrap entire body in IKP_LOOP markers
-        # This enables cache-blocking by processing BLK_SZ elements together
-        body = _transform_ikp_body(body)
-
     # Get the generator class and data types
     kerngen = context['_kernel_generator']
     fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
 
     # Instantiate
+    ikp = 'PYFR_IKP_INTERRUPTION' in body
     kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
 
     # Save the argument/type list for later use
