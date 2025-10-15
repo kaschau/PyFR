@@ -1,15 +1,20 @@
-"""
-Base IKP (Inner-Kernel Parallelism) generator support.
-
-IKP enables backend-specific optimizations for heavy pointwise operations:
-- OpenMP: Cache-blocking with sequential element loops + libxsmm batched calls
-- GPU: Thread cooperation with shared memory + WMMA/tensor cores
-
-This module provides common pattern matching and tracking for IKP transformations.
-Backend-specific classes implement the actual transformation logic.
-"""
-
 import re
+
+
+class IKPLocalVar:
+    def __init__(self, dtype, name, dimstr):
+        self.dtype = dtype
+        self.name = name
+        self.cdimstr = dimstr
+
+        # Parse dimensions from string like "[3][4]"
+        dimsptn = r'(?<=\[)\d+(?=\])'
+        self.cdims = [int(d) for d in re.findall(dimsptn, dimstr)]
+        self.ncdim = len(self.cdims)
+
+        # Classify variable type
+        self.isscalar = self.ncdim == 0
+        self.isarray = self.ncdim > 0
 
 
 class IKPKernelGeneratorMixin:
@@ -28,9 +33,10 @@ class IKPKernelGeneratorMixin:
     """
 
     # Regex patterns for declaration matching (common to all backends)
-    _CONST_ARRAY_PATTERN = r'\s*const\s+(fpdtype_t)\s+(\w+)(\[[^\]]+\](?:\[[^\]]+\])*)\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\})\s*;'
-    _LOCAL_ARRAY_PATTERN = r'\s*(fpdtype_t)\s+(\w+)\[([^\]]+)\];'
-    _LOCAL_SCALAR_PATTERN = r'\s*(fpdtype_t)\s+(\w+)\s*(?:=\s*[^;]+)?;'
+    # Match any type: int name[5]; fpdtype_t arr[3][4]; double mat[2][3][4]; etc.
+    _LOCAL_ARRAY_PATTERN = r'\s*([A-Za-z_]\w*)\s+(\w+)((?:\[\d+\])+)\s*(?:=\s*\{[^}]*\})?\s*;'
+    # Match any type: int i; fpdtype_t x = expr; size_t n;
+    _LOCAL_SCALAR_PATTERN = r'\s*([A-Za-z_]\w*)\s+(\w+)\s*(?:=\s*[^;]+)?;'
 
     def _ikp_split_into_sections(self, body):
         """
@@ -75,10 +81,9 @@ class IKPKernelGeneratorMixin:
         Analyze which variables are used in which sections.
 
         Returns:
-            dict: {var_name: {'type': 'array'/'scalar'/'const_array',
+            dict: {var_name: {'localvar': IKPLocalVar instance,
                               'declared_in': section_index,
-                              'used_in': set of section_indices,
-                              'decl_info': (dtype, size/dims, initializer)}}
+                              'used_in': set of section_indices}}
         """
         variables = {}
 
@@ -87,44 +92,26 @@ class IKPKernelGeneratorMixin:
             if section_type == 'interruption':
                 continue
 
-            # Find constant array declarations
-            for match in re.finditer(self._CONST_ARRAY_PATTERN, content, re.DOTALL):
-                dtype, name, dims, initializer = match.groups()
-                if name not in variables:
-                    variables[name] = {
-                        'type': 'const_array',
-                        'declared_in': idx,
-                        'used_in': set(),
-                        'decl_info': (dtype, dims, initializer)
-                    }
-
-            # Find local array declarations
+            # Find local array declarations (1D or 2D)
             for match in re.finditer(self._LOCAL_ARRAY_PATTERN, content):
-                dtype, name, size = match.groups()
+                dtype, name, dimstr = match.groups()
                 if name not in variables:
                     variables[name] = {
-                        'type': 'array',
+                        'localvar': IKPLocalVar(dtype, name, dimstr),
                         'declared_in': idx,
-                        'used_in': set(),
-                        'decl_info': (dtype, size, None)
+                        'used_in': set()
                     }
 
             # Find local scalar declarations (but filter out arrays)
-            # Remove array declarations first to avoid false matches
             content_no_arrays = re.sub(self._LOCAL_ARRAY_PATTERN, '', content)
-            content_no_arrays = re.sub(self._CONST_ARRAY_PATTERN, '', content_no_arrays, flags=re.DOTALL)
 
             for match in re.finditer(self._LOCAL_SCALAR_PATTERN, content_no_arrays):
                 dtype, name = match.groups()
-                # Skip common C keywords and types
-                if name in {'void', 'int', 'char', 'float', 'double', 'if', 'for', 'while', 'return'}:
-                    continue
                 if name not in variables:
                     variables[name] = {
-                        'type': 'scalar',
+                        'localvar': IKPLocalVar(dtype, name, ''),  # Empty dimstr for scalars
                         'declared_in': idx,
-                        'used_in': set(),
-                        'decl_info': (dtype, None, None)
+                        'used_in': set()
                     }
 
         # Now find usages of each variable across all sections
@@ -136,70 +123,23 @@ class IKPKernelGeneratorMixin:
 
         return variables
 
-    def _ikp_find_declarations(self, body):
-        """
-        Find constant and local array declarations in kernel body.
-
-        Returns:
-            tuple: (const_arrays, local_arrays)
-                const_arrays: list of (dtype, name, dims, initializer)
-                local_arrays: list of (dtype, name, size)
-        """
-        const_arrays = []
-        local_arrays = []
-
-        # Find constant array declarations
-        for match in re.finditer(self._CONST_ARRAY_PATTERN, body, re.DOTALL):
-            dtype, name, dims, initializer = match.groups()
-            const_arrays.append((dtype, name, dims, initializer))
-
-        # Find local array declarations
-        for match in re.finditer(self._LOCAL_ARRAY_PATTERN, body):
-            dtype, name, size = match.groups()
-            local_arrays.append((dtype, name, size))
-
-        return const_arrays, local_arrays
-
-    def _ikp_remove_declarations(self, body):
-        """
-        Remove constant and local array declarations from body.
-
-        These will be hoisted to preamble with backend-specific transformations.
-        """
-        # Remove constant arrays
-        body = re.sub(self._CONST_ARRAY_PATTERN, '', body, flags=re.DOTALL)
-
-        # Remove local arrays
-        body = re.sub(self._LOCAL_ARRAY_PATTERN, '', body)
-
-        return body
-
     # Backend-specific methods (must be implemented by subclasses)
 
-    def _ikp_transform_const_decl(self, dtype, name, dims, initializer):
-        """
-        Transform constant array declaration for IKP.
-
-        OpenMP: Keep as-is (shared across elements)
-        GPU: Might need __constant__ qualifier
-        """
-        raise NotImplementedError("Backend must implement _ikp_transform_const_decl")
-
-    def _ikp_transform_local_decl(self, dtype, name, size):
+    def _ikp_transform_local_decl(self, localvar):
         """
         Transform local array declaration for IKP.
 
-        OpenMP: arr[N] -> arr[BLK_SZ][N] (stack allocation)
-        GPU: arr[N] -> __shared__ arr[BLOCK_DIM][N] (shared memory)
+        OpenMP: arr[N] -> arr[BLK_SZ*N] (flat stack allocation)
+        GPU: arr[N] -> __shared__ arr[BLOCK_DIM*N] (flat shared memory)
         """
         raise NotImplementedError("Backend must implement _ikp_transform_local_decl")
 
-    def _ikp_transform_array_ref(self, arr_name, body):
+    def _ikp_transform_array_ref(self, localvar, body):
         """
         Transform array references in IKP sections.
 
-        OpenMP: arr[i] -> arr[ELEM_IDX][i]
-        GPU: arr[i] -> arr[threadIdx.x][i]
+        OpenMP: arr[i] -> arr[i*BLK_SZ + X_IDX] (flat indexing)
+        GPU: arr[i] -> arr[i*BLOCK_DIM + threadIdx.x] (flat indexing)
         """
         raise NotImplementedError("Backend must implement _ikp_transform_array_ref")
 
@@ -211,15 +151,6 @@ class IKPKernelGeneratorMixin:
         GPU: Similar but might use threadIdx.x directly
         """
         raise NotImplementedError("Backend must implement _ikp_transform_kernel_args")
-
-    def _ikp_elem_idx_macro(self):
-        """
-        Return the ELEM_IDX macro definition for this backend.
-
-        OpenMP: #define ELEM_IDX _elem
-        GPU: #define ELEM_IDX threadIdx.x
-        """
-        raise NotImplementedError("Backend must implement _ikp_elem_idx_macro")
 
     def _ikp_wrap_body(self, body, nelem_expr):
         """
