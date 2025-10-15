@@ -230,9 +230,11 @@ def ikpexpand(context, name, /, *args, **kwargs):
     body = expand(context, name, *args, **kwargs)
 
     # Wrap body with boundary markers so generator can identify interruptions
-    return f'''// PYFR_IKP_INTERRUPTION_START
+    return f'''**IKP_SECTION_END
+    **IKP_SECTION_START
 {body}
-// PYFR_IKP_INTERRUPTION_END'''
+**IKP_SECTION_END
+**IKP_SECTION_START'''
 
 
 @supports_caller
@@ -272,7 +274,7 @@ def ikpkernel(context, name, ndim, **kwargs):
     """
     Define an IKP kernel with cache-block interruptions.
 
-    Like kernel() but detects PYFR_IKP_INTERRUPTION markers for automatic
+    Like kernel() but detects IKP_SECTION markers for automatic
     splitting into prep/interruption/proc phases.
     """
     # Do the same work as kernel(), but with our own body capture
@@ -292,12 +294,16 @@ def ikpkernel(context, name, ndim, **kwargs):
     except Exception as e:
         raise ExceptionGroup(f'In kernel: {name}', [e]) from None
 
+    body = f'''**IKP_SECTION_START
+    {body}
+    **IKP_SECTION_END'''
+
     # Get the generator class and data types
     kerngen = context['_kernel_generator']
     fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
 
     # Instantiate
-    ikp = 'PYFR_IKP_INTERRUPTION' in body
+    ikp = '**IKP_SECTION' in body
     kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
 
     # Save the argument/type list for later use

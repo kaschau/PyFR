@@ -13,70 +13,70 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
     for OpenMP's cache-blocking strategy.
     """
 
-    def _ikp_transform_local_decl(self, localvar):
+    def _decl_hoists(self, hvars):
         """
-        Transform local array declaration for OpenMP IKP.
+        Generate C declarations for all hoisted variables.
 
-        Strategy: Only flatten the first dimension (element parallelism)
-        - 1D: arr[N] -> arr[BLK_SZ*N]
-        - 2D: arr[M][N] -> arr[BLK_SZ*M][N]
-        - 3D: arr[M][N][P] -> arr[BLK_SZ*M][N][P]
-        - etc.
+        Strategy: Flatten first dimension for block-level parallelism
+        - Scalar: x -> x[BLK_SZ]
+        - 1D array: arr[N] -> arr[BLK_SZ*N]
+        - 2D array: arr[M][N] -> arr[BLK_SZ*M][N]
+        - ND array: arr[...] -> arr[BLK_SZ*first_dim][remaining dims]
+
+        Returns:
+            list: C declaration strings
         """
-        if localvar.ncdim == 0:
-            raise ValueError(f'Scalars should not call _ikp_transform_local_decl')
+        decls = []
+        for hvar in hvars:
+            if hvar.isscalar:
+                decls.append(f'    {hvar.dtype} {hvar.name}[BLK_SZ];')
+            else:
+                ldim = hvar.cdims[0]
+                tdims = ''.join(f'[{d}]' for d in hvar.cdims[1:])
+                decls.append(f'    {hvar.dtype} {hvar.name}[BLK_SZ*{ldim}]{tdims};')
 
-        # Flatten first dimension, keep rest intact
-        first_dim = localvar.cdims[0]
-        rest_dims = ''.join(f'[{d}]' for d in localvar.cdims[1:])
+        return decls
 
-        return f'    {localvar.dtype} {localvar.name}[BLK_SZ*{first_dim}]{rest_dims};'
-
-    def _ikp_transform_array_ref(self, localvar, body):
+    def _deref_hoists(self, hvars, body):
         """
-        Transform local variable references for OpenMP IKP.
+        Transform references to all hoisted variables in body.
 
         Strategy: Only transform the first index (element parallelism)
         - Scalars: x -> x[X_IDX]
         - 1D: arr[i] -> arr[i*BLK_SZ + X_IDX]
         - 2D: arr[i][j] -> arr[i*BLK_SZ + X_IDX][j]
         - 3D: arr[i][j][k] -> arr[i*BLK_SZ + X_IDX][j][k]
-        - etc.
+
+        Returns:
+            str: Body with transformed references
         """
-        var_name = localvar.name
+        for hvar in hvars:
+            if hvar.isscalar:
+                pattern = rf'\b{hvar.name}\b(?!\s*\[)'
+                body = re.sub(pattern, rf'{hvar.name}[X_IDX]', body)
+            else:
+                # Build pattern that matches all dimensions: arr[i][j][k]...
+                pattern = rf'\b{hvar.name}' + r'\[([^\]]+)\]' * hvar.ncdim
 
-        if localvar.isscalar:
-            # Transform scalar -> scalar[X_IDX]
-            scalar_pattern = rf'\b{var_name}\b(?!\s*\[)'
-            return re.sub(scalar_pattern, rf'{var_name}[X_IDX]', body)
-        else:
-            # For arrays: transform first index only
-            # Build pattern that matches all dimensions: arr[i][j][k]...
-            # Capture groups: (i), (j), (k), ...
-            bracket_pattern = r'\[([^\]]+)\]'
-            pattern = rf'\b{var_name}' + bracket_pattern * localvar.ncdim
+                # Build replacement: arr[(i)*BLK_SZ + X_IDX][j][k]...
+                replacement = rf'{hvar.name}[(\1)*BLK_SZ + X_IDX]'
+                for i in range(2, hvar.ncdim + 1):
+                    replacement += rf'[\{i}]'
 
-            # Build replacement: arr[(i)*BLK_SZ + X_IDX][j][k]...
-            # First index gets transformed, rest stay the same
-            replacement = rf'{var_name}[(\1)*BLK_SZ + X_IDX]'
-            for i in range(2, localvar.ncdim + 1):
-                replacement += rf'[\{i}]'
+                body = re.sub(pattern, replacement, body)
 
-            return re.sub(pattern, replacement, body)
+        return body
 
     def _ikp_wrap_body(self, body, nelem_expr):
         """
-        Wrap IKP body in standard _xi/_xj loop structure for parallel execution.
+        Wrap IKP body in _xi/_xj loop structure for parallel execution.
 
-        Splits body into alternating prep/interruption sections:
-        - Prep sections (per-element code) - INSIDE element loops
-        - Interruption sections (batched ops) - OUTSIDE loops
-        Handles N interruptions automatically.
+        Sections marked 'looped' get per-element loops.
+        Sections marked 'noloop' are placed outside loops (batched operations).
         """
-        # Split body on interruption markers using common method
-        sections = self._ikp_split_into_sections(body)
+        sections = self._split_ikp_sections(body)
 
-        # Create loop wrapper functions
+        # Create loop wrapper function
         def make_loop(content, is_first):
             if nelem_expr == 'BLK_SZ':
                 # Core path: full block
@@ -109,74 +109,21 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
                     {content}
                 }}'''
 
-        # Assemble sections: prep loops and interruptions alternate
-        # prep -> interruption -> prep -> interruption -> ... -> prep
+        # Assemble sections: wrap looped sections, append noloop sections directly
         result = []
-        first_prep = True
-        for section_type, content in sections:
-            if section_type == 'prep':
-                result.append(make_loop(content, first_prep))
-                first_prep = False
-            else:  # interruption
-                # Interruptions go OUTSIDE loops, just append directly
+        first_loop = True
+        for stype, content in sections:
+            if stype == 'looped':
+                result.append(make_loop(content, first_loop))
+                first_loop = False
+            else:  # noloop
                 result.append(content)
 
         return '\n'.join(result)
 
-    def _ikp_determine_elevation(self, variables, sections):
+    def _remove_hoisted_decls(self, body, hvars):
         """
-        Determine which variables need to be elevated to block scope.
-
-        Variables are elevated if they:
-        - Are used in multiple prep sections (cross interruption boundaries)
-        - Are used within an interruption section
-
-        Returns:
-            dict: Variables that need elevation {var_name: var_info}
-        """
-        vars_to_elevate = {}
-
-        for var_name, var_info in variables.items():
-            sections_used = var_info['used_in']
-            interruption_sections = [idx for idx in sections_used
-                                    if idx < len(sections) and sections[idx][0] == 'interruption']
-
-            # If used in an interruption, it MUST be elevated
-            # (interruptions are outside loops, so variables must persist)
-            if interruption_sections or len(sections_used) > 1:
-                vars_to_elevate[var_name] = var_info
-
-        return vars_to_elevate
-
-    def _ikp_generate_elevated_declarations(self, vars_to_elevate):
-        """
-        Generate block-level declarations for elevated variables.
-
-        - Arrays: arr[N] -> arr[BLK_SZ*N] (first dimension flattened)
-        - Scalars: x -> x[BLK_SZ]
-
-        Returns:
-            list: Declaration strings ready for preamble
-        """
-        declarations = []
-
-        for var_name, var_info in vars_to_elevate.items():
-            localvar = var_info['localvar']
-
-            if localvar.isarray:
-                # Transform array: arr[N] -> arr[BLK_SZ*N] or arr[M][N] -> arr[BLK_SZ*M][N]
-                decl = self._ikp_transform_local_decl(localvar)
-                declarations.append(decl)
-            else:
-                # Elevate scalar to array[BLK_SZ]
-                decl = f'    {localvar.dtype} {var_name}[BLK_SZ];'
-                declarations.append(decl)
-
-        return declarations
-
-    def _ikp_remove_local_declarations(self, body, vars_to_elevate):
-        """
-        Remove local variable declarations from body that have been elevated.
+        Remove hoisted variable declarations from body.
 
         - Arrays: Remove entire declaration
         - Scalars: Convert "int x = expr;" to "x = expr;" or remove if no initializer
@@ -184,38 +131,17 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         Returns:
             str: Body with declarations removed
         """
-        for var_name, var_info in vars_to_elevate.items():
-            localvar = var_info['localvar']
-            dtype_escaped = re.escape(localvar.dtype)
-            name_escaped = re.escape(var_name)
-
-            if localvar.isarray:
-                # Remove array declarations (any type, any dimensions, with optional initializer)
-                # Matches: int arr[5]; fpdtype_t mat[3][4][2] = {...}; etc.
-                pattern = rf'\s*{dtype_escaped}\s+{name_escaped}(?:\[\d+\])+\s*(?:=\s*\{{[^}}]*\}})?\s*;'
+        for hvar in hvars:
+            if hvar.isarray:
+                # Remove array declarations (any dimensions, optional initializer)
+                pattern = rf'\s*{hvar.dtype}\s+{hvar.name}(?:\[\d+\])+\s*(?:=\s*\{{[^}}]*\}})?\s*;'
                 body = re.sub(pattern, '', body)
             else:
-                # Handle scalar declarations specially to preserve assignments
-                # Transform: int x = expr; -> x = expr;
-                scalar_decl_pattern = rf'(\s*){dtype_escaped}\s+{name_escaped}\s*=\s*([^;]+);'
-                body = re.sub(scalar_decl_pattern, rf'\1{var_name} = \2;', body)
-                # Also remove simple declarations without initializers
-                body = re.sub(rf'\s*{dtype_escaped}\s+{name_escaped}\s*;', '', body)
-
-        return body
-
-    def _ikp_transform_variable_references(self, body, elevated_vars):
-        """
-        Transform references to elevated variables for block-level access.
-
-        - Scalars: x -> x[X_IDX]
-        - Arrays: arr[i] -> arr[i*BLK_SZ + X_IDX]
-
-        Returns:
-            str: Body with transformed variable references
-        """
-        for localvar in elevated_vars.values():
-            body = self._ikp_transform_array_ref(localvar, body)
+                # Preserve initializer: int x = expr; -> x = expr;
+                pattern = rf'(\s*){hvar.dtype}\s+{hvar.name}\s*=\s*([^;]+);'
+                body = re.sub(pattern, rf'\1{hvar.name} = \2;', body)
+                # Remove declarations without initializers
+                body = re.sub(rf'\s*{hvar.dtype}\s+{hvar.name}\s*;', '', body)
 
         return body
 
@@ -233,29 +159,22 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         Returns:
             tuple: (transformed_body, transformed_preamble)
         """
-        # Split body into sections and analyze variable usage
-        sections = self._ikp_split_into_sections(body)
-        variables = self._ikp_analyze_variable_usage(sections)
+        # Split body into sections and find variables needing hoisting
+        secs = self._split_ikp_sections(body)
+        hvars = self._find_hvars(secs)
 
-        # Determine which variables need elevation
-        vars_to_elevate = self._ikp_determine_elevation(variables, sections)
-
-        # Track elevated variables for reference transformation
-        self._ikp_local_vars = {name: info['localvar']
-                                for name, info in vars_to_elevate.items()}
-
-        # Generate block-level declarations
-        declarations = self._ikp_generate_elevated_declarations(vars_to_elevate)
+        # Generate preamble level declarations
+        predecl = self._decl_hoists(hvars)
 
         # Remove original declarations from body
-        body = self._ikp_remove_local_declarations(body, vars_to_elevate)
+        body = self._remove_hoisted_decls(body, hvars)
 
         # Transform variable references
-        body = self._ikp_transform_variable_references(body, self._ikp_local_vars)
+        body = self._deref_hoists(hvars, body)
 
         # Add declarations to preamble
-        if declarations:
-            preamble = '\n'.join(declarations) + '\n' + preamble
+        if predecl:
+            preamble = '\n'.join(predecl) + '\n' + preamble
 
         return body, preamble
 

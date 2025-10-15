@@ -17,6 +17,7 @@
   exec_ptr, blkptr = ikputil.create_gemv_kernel(A)
 %>
   ## GEMV: c = A @ b (batched libxsmm call on all BLK_SZ elements)
+  // NO LOOP
 
   typedef void (*xsmm_func_t)(void*, const fpdtype_t*, fpdtype_t*);
   xsmm_func_t xsmm_exec = (xsmm_func_t)(size_t)${exec_ptr};

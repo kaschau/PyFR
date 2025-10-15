@@ -1,7 +1,8 @@
 import re
 
 
-class IKPLocalVar:
+class HoistVar:
+    """Represents a local variable that needs hoisting to block scope."""
     def __init__(self, dtype, name, dimstr):
         self.dtype = dtype
         self.name = name
@@ -36,92 +37,76 @@ class IKPKernelGeneratorMixin:
     # Match any type: int name[5]; fpdtype_t arr[3][4]; double mat[2][3][4]; etc.
     _LOCAL_ARRAY_PATTERN = r'\s*([A-Za-z_]\w*)\s+(\w+)((?:\[\d+\])+)\s*(?:=\s*\{[^}]*\})?\s*;'
     # Match any type: int i; fpdtype_t x = expr; size_t n;
-    _LOCAL_SCALAR_PATTERN = r'\s*([A-Za-z_]\w*)\s+(\w+)\s*(?:=\s*[^;]+)?;'
+    _LOCAL_SCALAR_PATTERN = r'\s*([A-Za-z_]\w*)\s+(\w+)(?!\s*\[)\s*(?:=\s*[^;]+)?;'
 
-    def _ikp_split_into_sections(self, body):
+    def _split_ikp_sections(self, body):
         """
-        Split IKP body into alternating prep/interruption sections.
+        Split IKP body into sections based on loop requirements.
+
+        Sections are delimited by **IKP_SECTION_START/END markers.
+        Each section is classified as 'looped' or 'noloop' based on
+        presence of // NO LOOP marker.
 
         Returns:
-            list of (section_type, content) tuples
-            section_type is 'prep' or 'interruption'
+            list of (section_type, content) tuples where section_type is:
+            - 'looped': needs per-element loop wrapping
+            - 'noloop': batched operation, no loop needed
         """
+        # Extract all sections between START/END markers
+        pattern = r'\*\*IKP_SECTION_START\s*(.*?)\s*\*\*IKP_SECTION_END'
+        matches = re.finditer(pattern, body, re.S)
+
         sections = []
-        remaining = body
+        for match in matches:
+            content = match[1].strip()
 
-        while True:
-            # Find next interruption
-            match = re.search(
-                r'(.*?)// PYFR_IKP_INTERRUPTION_START\n(.*?)// PYFR_IKP_INTERRUPTION_END',
-                remaining, flags=re.DOTALL
-            )
+            # Skip empty sections
+            if not content:
+                continue
 
-            if not match:
-                # No more interruptions, rest is final prep/proc section
-                if remaining.strip():
-                    sections.append(('prep', remaining))
-                break
-
-            # Extract prep section before interruption
-            prep_section = match.group(1)
-            if prep_section.strip():
-                sections.append(('prep', prep_section))
-
-            # Extract interruption section
-            interruption_section = match.group(2)
-            sections.append(('interruption', interruption_section))
-
-            # Continue with remainder
-            remaining = remaining[match.end():]
+            # Check for NO LOOP marker
+            stype = 'noloop' if '// NO LOOP' in content else 'looped'
+            sections.append((stype, content))
 
         return sections
 
-    def _ikp_analyze_variable_usage(self, sections):
+    def _find_hvars(self, secs):
         """
-        Analyze which variables are used in which sections.
+        Find local variables that need hoisting to block scope.
+
+        Variables are hoisted if declared in one section and used in another.
 
         Returns:
-            dict: {var_name: {'localvar': IKPLocalVar instance,
-                              'declared_in': section_index,
-                              'used_in': set of section_indices}}
+            list: HoistVar objects for variables needing hoisting
         """
-        variables = {}
+        hvars = []
 
-        for idx, (section_type, content) in enumerate(sections):
-            # Skip interruptions - they don't have local declarations
-            if section_type == 'interruption':
+        # Process each looped section
+        for idx, (stype, content) in enumerate(secs):
+            if stype == 'noloop':
                 continue
 
-            # Find local array declarations (1D or 2D)
+            # Find arrays declared in this section
             for match in re.finditer(self._LOCAL_ARRAY_PATTERN, content):
                 dtype, name, dimstr = match.groups()
-                if name not in variables:
-                    variables[name] = {
-                        'localvar': IKPLocalVar(dtype, name, dimstr),
-                        'declared_in': idx,
-                        'used_in': set()
-                    }
 
-            # Find local scalar declarations (but filter out arrays)
-            content_no_arrays = re.sub(self._LOCAL_ARRAY_PATTERN, '', content)
+                # Check if used in any downstream section
+                for dsidx in range(idx + 1, len(secs)):
+                    if re.search(rf'\b{name}\b', secs[dsidx][1]):
+                        hvars.append(HoistVar(dtype, name, dimstr))
+                        break
 
-            for match in re.finditer(self._LOCAL_SCALAR_PATTERN, content_no_arrays):
+            # Find scalars declared in this section
+            for match in re.finditer(self._LOCAL_SCALAR_PATTERN, content):
                 dtype, name = match.groups()
-                if name not in variables:
-                    variables[name] = {
-                        'localvar': IKPLocalVar(dtype, name, ''),  # Empty dimstr for scalars
-                        'declared_in': idx,
-                        'used_in': set()
-                    }
 
-        # Now find usages of each variable across all sections
-        for var_name in variables.keys():
-            for idx, (section_type, content) in enumerate(sections):
-                # Check if variable is used in this section (look for var_name as a word)
-                if re.search(r'\b' + re.escape(var_name) + r'\b', content):
-                    variables[var_name]['used_in'].add(idx)
+                # Check if used in any downstream section
+                for dsidx in range(idx + 1, len(secs)):
+                    if re.search(rf'\b{name}\b', secs[dsidx][1]):
+                        hvars.append(HoistVar(dtype, name, ''))
+                        break
 
-        return variables
+        return hvars
 
     # Backend-specific methods (must be implemented by subclasses)
 
