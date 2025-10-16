@@ -271,13 +271,7 @@ def kernel(context, name, ndim, **kwargs):
 
 @supports_caller
 def ikpkernel(context, name, ndim, **kwargs):
-    """
-    Define an IKP kernel with cache-block interruptions.
 
-    Like kernel() but detects IKP_SECTION markers for automatic
-    splitting into prep/interruption/proc phases.
-    """
-    # Do the same work as kernel(), but with our own body capture
     extrns = context['_extrns']
 
     # Validate the argument list
@@ -293,6 +287,12 @@ def ikpkernel(context, name, ndim, **kwargs):
         body = capture(context, context['caller'].body)
     except Exception as e:
         raise ExceptionGroup(f'In kernel: {name}', [e]) from None
+    ikp = '**IKP_SECTION' in body
+
+    if not ikp:
+        raise ValueError(f'No IKP found in IKP Kernel "{name}"')
+    if ikp and ndim != '1':
+        raise ValueError(f'Only 1 dim IKP kernels supported: "{name}"')
 
     body = f'''**IKP_SECTION_START
     {body}
@@ -303,7 +303,6 @@ def ikpkernel(context, name, ndim, **kwargs):
     fpdtype, ixdtype = context['fpdtype'], context['ixdtype']
 
     # Instantiate
-    ikp = '**IKP_SECTION' in body
     kern = kerngen(name, int(ndim), kwargs, body, fpdtype, ixdtype, ikp=ikp)
 
     # Save the argument/type list for later use
