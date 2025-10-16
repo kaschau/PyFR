@@ -11,6 +11,12 @@ import pyfr.nputil as nputil
 import pyfr.util as util
 
 
+# C/C++ type qualifiers used across makoutil and ikpgenerator
+C_TYPE_QUALIFIERS = ['const', 'static', '__constant__', '__shared__',
+                     'volatile', 'restrict', '__restrict__', 'inline',
+                     '__inline__']
+
+
 def ndrange(context, *args):
     return util.ndrange(*args)
 
@@ -74,8 +80,14 @@ def _locals(body):
     # First, strip away any comments
     body = re.sub(r'//.*?\n', '', body)
 
-    # Next, find all variable declaration statements
-    decls = re.findall(r'(?:[A-Za-z_]\w*)\s+([A-Za-z_]\w*[^;]*?);', body)
+    # Pattern to match variable declarations with optional qualifiers
+    # Matches: [qualifiers...] type name [array_dims] [= init] [, name2...];
+    pattern = (
+        rf'(?:(?:{"|".join(C_TYPE_QUALIFIERS)})\s+)*'  # Optional qualifiers
+        r'[A-Za-z_]\w*\s+'                              # Type name
+        r'([A-Za-z_]\w*[^;]*?);'                        # Variable name(s) and rest
+    )
+    decls = re.findall(pattern, body)
 
     # Strip anything inside () or {}
     decls = [_strip_parens(d) for d in decls]
@@ -83,8 +95,12 @@ def _locals(body):
     # A statement can define multiple variables, so split by ','
     decls = it.chain.from_iterable(d.split(',') for d in decls)
 
-    # Extract the variable names
-    lvars = [re.match(r'\s*(\w+)', v)[1] for v in decls]
+    # Extract the variable names (before any [ or =)
+    lvars = []
+    for v in decls:
+        # Match variable name: word characters before [, =, or end
+        if match := re.match(r'\s*(\w+)', v):
+            lvars.append(match[1])
 
     # Reserved C/C++ keywords and PyFR types that should not be renamed
     reserved = {'void', 'int', 'char', 'float', 'double', 'long', 'short',
@@ -148,7 +164,7 @@ def macro(context, name, params, externs='', id=''):
     # Extract signature from callable for Python variables
     argsig = signature(context['caller'].body)
 
-    # Register the macro with an empty ids set
+    # Register the macro
     context['_macros'][name] = Macro(params, externs, argsig,
                                      context['caller'].body, id)
     return ''

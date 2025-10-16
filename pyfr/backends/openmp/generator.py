@@ -29,11 +29,11 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         decls = []
         for hvar in hvars:
             if hvar.isscalar:
-                decls.append(f'    {hvar.dtype} {hvar.name}[BLK_SZ];')
+                decls.append(f'{hvar.qual} {hvar.dtype} {hvar.name}[BLK_SZ];')
             else:
                 ldim = hvar.cdims[0]
                 tdims = ''.join(f'[{d}]' for d in hvar.cdims[1:])
-                decls.append(f'    {hvar.dtype} {hvar.name}[BLK_SZ*{ldim}]{tdims};')
+                decls.append(f'{hvar.qual} {hvar.dtype} {hvar.name}[BLK_SZ*{ldim}]{tdims};')
 
         return decls
 
