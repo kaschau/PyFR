@@ -121,30 +121,6 @@ class OpenMPIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
 
         return '\n'.join(result)
 
-    def _remove_hoisted_decls(self, body, hvars):
-        """
-        Remove hoisted variable declarations from body.
-
-        - Arrays: Remove entire declaration
-        - Scalars: Convert "int x = expr;" to "x = expr;" or remove if no initializer
-
-        Returns:
-            str: Body with declarations removed
-        """
-        for hvar in hvars:
-            if hvar.isarray:
-                # Remove array declarations (any dimensions, optional initializer)
-                pattern = rf'\s*{hvar.dtype}\s+{hvar.name}(?:\[\d+\])+\s*(?:=\s*\{{[^}}]*\}})?\s*;'
-                body = re.sub(pattern, '', body)
-            else:
-                # Preserve initializer: int x = expr; -> x = expr;
-                pattern = rf'(\s*){hvar.dtype}\s+{hvar.name}\s*=\s*([^;]+);'
-                body = re.sub(pattern, rf'\1{hvar.name} = \2;', body)
-                # Remove declarations without initializers
-                body = re.sub(rf'\s*{hvar.dtype}\s+{hvar.name}\s*;', '', body)
-
-        return body
-
     def _ikp_render_body_preamble(self, body, preamble):
         """
         Main IKP transformation pipeline for OpenMP backend.

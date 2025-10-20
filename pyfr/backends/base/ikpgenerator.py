@@ -162,3 +162,233 @@ class IKPKernelGeneratorMixin:
                         break
 
         return hvars
+
+    def _remove_hoisted_decls(self, body, hvars):
+        """
+        Remove hoisted variable declarations from body.
+
+        Handles comma-separated declarations, qualifiers, arrays, scalars,
+        and optional initializers. For scalars with initializers, preserves
+        the assignment.
+
+        Returns:
+            str: Body with declarations removed
+        """
+        for hvar in hvars:
+            if hvar.isarray:
+                # For arrays, we must match the complete declaration with dimensions
+                # This handles: dtype name[dims] [= {...}] [, other_vars...];
+                # We remove just this variable from the declaration list
+
+                # Match the array variable with optional initializer
+                var_pattern = rf'{hvar.name}(?:\[\d+\])+\s*(?:=\s*\{{[^}}]*\}})?'
+
+                # Try to match as part of comma-separated list
+                # Case 1: var, rest...  (remove var and comma)
+                pattern = rf'{hvar.qual}\s+{hvar.dtype}\s+{var_pattern}\s*,\s*'
+                body = re.sub(pattern, f'{hvar.qual} {hvar.dtype} ', body)
+
+                # Case 2: ..., var, rest...  (remove comma and var)
+                pattern = rf',\s*{var_pattern}\s*(?=,|;)'
+                body = re.sub(pattern, '', body)
+
+                # Case 3: dtype var;  (only variable in declaration)
+                pattern = rf'\s*{hvar.qual}\s+{hvar.dtype}\s+{var_pattern}\s*;'
+                body = re.sub(pattern, '', body)
+            else:
+                # For scalars, preserve initializers if they exist
+                # Case 1: dtype x = expr, rest...  (convert to x = expr;, keep rest as new declaration)
+                pattern = rf'({hvar.qual}\s+{hvar.dtype}\s+){hvar.name}\s*=\s*([^,;]+)\s*,\s*'
+                body = re.sub(pattern, rf'{hvar.name} = \2;\n\1', body)
+
+                # Case 2: dtype x = expr;  (convert to x = expr;)
+                pattern = rf'(\s*){hvar.qual}\s+{hvar.dtype}\s+{hvar.name}\s*=\s*([^;]+);'
+                body = re.sub(pattern, rf'\1{hvar.name} = \2;', body)
+
+                # Case 3: ..., x = expr, ...  (keep x = expr;, handle rest)
+                pattern = rf',\s*{hvar.name}\s*=\s*([^,;]+)\s*(?=,|;)'
+                body = re.sub(pattern, rf';\n{hvar.name} = \1', body)
+
+                # Case 4: dtype x, rest...  (remove x, keep rest)
+                pattern = rf'{hvar.qual}\s+{hvar.dtype}\s+{hvar.name}\s*,\s*'
+                body = re.sub(pattern, f'{hvar.qual} {hvar.dtype} ', body)
+
+                # Case 5: ..., x, rest...  (remove comma and x)
+                pattern = rf',\s*{hvar.name}\s*(?=,|;)'
+                body = re.sub(pattern, '', body)
+
+                # Case 6: dtype x;  (remove entire declaration)
+                pattern = rf'\s*{hvar.qual}\s+{hvar.dtype}\s+{hvar.name}\s*;'
+                body = re.sub(pattern, '', body)
+
+        return body
+
+
+class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
+    """
+    GPU-specific IKP transformation logic (CUDA/HIP).
+
+    Thread cooperation model:
+    - Threads cooperate in groups (ikpnthrds threads per element)
+    - Variables marked in **SHARED[...] are converted to shared memory
+    - Each thread group processes one element
+
+    Note: ikpnthrds is set by the provider (e.g., CUDAPointwiseKernelProvider)
+    """
+
+    def _ikp_gid(self):
+        """
+        Generate IKP-specific global ID calculation.
+
+        For thread cooperation, multiple threads share the same element ID:
+        _x = blockIdx.x * (blockDim.x / ikpnthrds) + threadIdx.x / ikpnthrds
+
+        This ensures that threads 0-7 work on element 0, threads 8-15 on element 1, etc.
+        """
+        return f'ixdtype_t(blockIdx.x)*(blockDim.x/{self.ikpnthrds}) + threadIdx.x/{self.ikpnthrds}'
+
+    def _extract_shared_vars(self, body):
+        """
+        Extract variable names from **SHARED[...] markers.
+
+        Returns:
+            set: Variable names that need shared memory
+        """
+        shared_names = set()
+        for match in re.finditer(r'\*\*SHARED\[([^\]]+)\]', body):
+            vars_str = match.group(1)
+            names = [v.strip() for v in vars_str.split(',') if v.strip()]
+            shared_names.update(names)
+        return shared_names
+
+    def _find_shared_var_decls(self, body, shared_names):
+        """
+        Find declarations of variables marked for shared memory.
+
+        Returns:
+            list: HoistVar objects for shared variables
+        """
+        svars = []
+
+        # Find array declarations
+        for match in re.finditer(self._LOCAL_ARRAY_PATTERN, body):
+            quals, dtype, name, dimstr = match.groups()
+            if name in shared_names:
+                svars.append(HoistVar(dtype, name, dimstr, quals))
+
+        # Find scalar declarations
+        for match in re.finditer(self._LOCAL_SCALAR_PATTERN, body):
+            quals, dtype, name = match.groups()
+            if name in shared_names:
+                svars.append(HoistVar(dtype, name, '', quals))
+
+        return svars
+
+    def _decl_shared(self, svars):
+        """
+        Generate __shared__ declarations for shared variables.
+
+        Strategy: Flatten first dimension with group dimension for better performance
+        - Scalar: x -> __shared__ dtype x[NELEM];
+        - 1D array: arr[N] -> __shared__ dtype arr[N*NELEM];
+        - 2D array: arr[M][N] -> __shared__ dtype arr[M*NELEM][N];
+        - ND array: arr[...] -> __shared__ dtype arr[first_dim*NELEM][remaining dims];
+
+        Returns:
+            list: Shared memory declaration strings
+        """
+        decls = []
+        nelem_per_block = self.block1d[0] // self.ikpnthrds
+
+        for svar in svars:
+            if svar.isscalar:
+                # Scalar: __shared__ dtype name[NELEM];
+                decls.append(f'{self._shared_prfx} {svar.dtype} {svar.name}[{nelem_per_block}];')
+            else:
+                # Array: flatten first dimension with group dimension
+                ldim = svar.cdims[0]
+                tdims = ''.join(f'[{d}]' for d in svar.cdims[1:])
+                decls.append(f'{self._shared_prfx} {svar.dtype} {svar.name}[{ldim}*{nelem_per_block}]{tdims};')
+
+        return decls
+
+    def _transform_shared_refs(self, body, svars):
+        """
+        Add thread group index to all references.
+
+        Strategy: Use blocked layout where each group owns a contiguous block
+        - Scalars: x -> x[group_idx]
+        - 1D: arr[i] -> arr[i + group_idx * array_size]
+        - 2D: arr[i][j] -> arr[i + group_idx * first_dim][j]
+        - 3D: arr[i][j][k] -> arr[i + group_idx * first_dim][j][k]
+
+        This gives each group a contiguous block of memory:
+        - Group 0: arr[0..N-1]
+        - Group 1: arr[N..2N-1]
+        - etc.
+
+        Returns:
+            str: Body with transformed references
+        """
+        group_idx = f'threadIdx.x / {self.ikpnthrds}'
+
+        for svar in svars:
+            if svar.isscalar:
+                # Scalar: name -> name[group_idx]
+                pattern = rf'\b{svar.name}\b'
+                replacement = f'{svar.name}[{group_idx}]'
+                body = re.sub(pattern, replacement, body)
+            else:
+                # Array: build pattern matching all dimensions
+                pattern = rf'\b{svar.name}' + r'\[([^\]]+)\]' * svar.ncdim
+
+                # Build replacement: arr[i + group_idx * array_size][j][k]...
+                array_size = svar.cdims[0]
+                replacement = rf'{svar.name}[(\1) + {group_idx} * {array_size}]'
+                for i in range(2, svar.ncdim + 1):
+                    replacement += rf'[\{i}]'
+
+                body = re.sub(pattern, replacement, body)
+
+        return body
+
+    def _ikp_render_body_preamble(self, body, preamble):
+        """
+        Apply GPU IKP transformations.
+
+        Pipeline:
+        1. Extract shared variable names from **SHARED[...] markers
+        2. Strip all IKP markers (merge sections)
+        3. Find declarations of shared variables
+        4. Generate __shared__ declarations
+        5. Remove original declarations from body
+        6. Transform all references to add group index
+
+        Returns:
+            tuple: (transformed_body, preamble)
+        """
+        # Extract variables marked for shared memory (before stripping markers)
+        shared_names = self._extract_shared_vars(body)
+
+        # Strip all IKP markers to merge sections into one body
+        body = re.sub(r'\*\*IKP_SECTION_START', '', body)
+        body = re.sub(r'\*\*IKP_SECTION_END', '', body)
+        body = re.sub(r'\*\*SHARED\[[^\]]+\]', '', body)
+
+        # Find declarations of shared variables (in clean body)
+        svars = self._find_shared_var_decls(body, shared_names)
+
+        # Generate __shared__ declarations
+        shared_decls = self._decl_shared(svars)
+
+        # Remove original declarations from body
+        body = self._remove_hoisted_decls(body, svars)
+
+        # Transform references to add group index
+        body = self._transform_shared_refs(body, svars)
+
+        # Add declarations to preamble
+        if shared_decls:
+            preamble = '\n'.join(shared_decls) + '\n' + preamble
+
+        return body, preamble

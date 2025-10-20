@@ -239,15 +239,26 @@ def ikpexpand(context, name, /, *args, **kwargs):
     """
     Expand an IKP macro (cache-block interruption).
 
-    Like expand() but wraps the returned body with clear boundary markers.
-    The generator will later split on these markers.
+    Like expand() but wraps the returned body with clear boundary markers
+    and injects shared variable information for GPU backends.
     """
+    mdef = context['_macros'][name]
+
+    # Parse arguments to determine which params are regular (not py:)
+    params, _ = _parse_expand_args(name, mdef.params, mdef.argsig,
+                                          args, kwargs)
+
     # Use regular expand() to do the actual macro expansion
     body = expand(context, name, *args, **kwargs)
 
-    # Wrap body with boundary markers so generator can identify interruptions
+    # Inject shared variable marker with regular param names (for GPU)
+    # These are the variables that will be accessed cooperatively
+    shared = ','.join(params.values())
+
+    # Wrap body with boundary markers and shared variable info
     return f'''**IKP_SECTION_END
     **IKP_SECTION_START
+**SHARED[{shared}]
 {body}
 **IKP_SECTION_END
 **IKP_SECTION_START'''
