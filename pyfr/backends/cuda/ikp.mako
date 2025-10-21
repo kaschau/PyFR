@@ -19,7 +19,6 @@
   #          e.g., [(i, svar) for i in range(nupts)] for a column
   #          e.g., [(i, i) for i in range(n)] for diagonal
 
-  nthreads = _kernel_generator.ikpnthrds
   indices_list = list(indices)
   nelem = len(indices_list)
 
@@ -28,18 +27,19 @@
   rows = [row for row, col in indices_list]
   cols = [col for row, col in indices_list]
 %>
-  // Cooperative load: ${nelem} elements from 2D array (${nthreads} threads)
+  // Cooperative load: ${nelem} elements from 2D array (blockDim.y threads)
   {
     // Index maps: which (row,col) corresponds to each dst element
     const int _rows[${nelem}] = {${', '.join(map(str, rows))}};
     const int _cols[${nelem}] = {${', '.join(map(str, cols))}};
 
-    int _tid_ = threadIdx.x % ${nthreads};
-    for (int _i = _tid_; _i < ${nelem}; _i += ${nthreads})
+    int _tid_ = threadIdx.y;
+    for (int _i = _tid_; _i < ${nelem}; _i += blockDim.y)
     {
         dst[_i] = src[_rows[_i]][_cols[_i]];
     }
   }
+  __syncthreads();
 </%pyfr:macro>
 
 
@@ -56,11 +56,8 @@
   # Flatten matrix to 1D array for embedding
   # Row-major layout: A[i][j] = flat_data[i*n + j]
   flat_data = A.flatten()
-
-  # Get threads per element from generator configuration
-  nthreads = _kernel_generator.ikpnthrds
 %>
-  ## GEMV: c = A @ b (thread-cooperative with ${nthreads} threads per element)
+  ## GEMV: c = A @ b (thread-cooperative with blockDim.y threads per element)
   ## Matrix ${m}x${n}, embedded as compile-time constant
 
   // Embed matrix data as compile-time constant
@@ -70,14 +67,9 @@
 % endfor
   };
 
-  // Cooperatively load input vector into shared memory (if needed)
-  // Note: Generator transforms 'b' references to shared memory access
-  __syncthreads();
-
   // Each thread computes subset of output rows
-  // Use threadIdx.x % nthreads to get position within cooperative group
-  int _tid = threadIdx.x % ${nthreads};
-  for (int _row = _tid; _row < ${m}; _row += ${nthreads}) {
+  int _tid = threadIdx.y;
+  for (int _row = _tid; _row < ${m}; _row += blockDim.y) {
       fpdtype_t _sum = 0.0;
       #pragma unroll
       for (int _col = 0; _col < ${n}; _col++) {

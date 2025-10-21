@@ -65,13 +65,11 @@ class CUDAPointwiseKernelProvider(CUDAKernelProvider,
 
         self._block1d = (64, 1, 1)
         self._block2d = (32, 8, 1)
-        self._ikpnthrds = 8
 
         # Pass these block sizes to the generator
         class KernelGenerator(CUDAKernelGenerator):
             block1d = self._block1d
             block2d = self._block2d
-            ikpnthrds = self._ikpnthrds
 
         self.kernel_generator_cls = KernelGenerator
 

@@ -270,9 +270,6 @@ class BaseGPUKernelGenerator(BaseKernelGenerator):
     block1d = None
     block2d = None
 
-    # IKP configuration: threads per element for cooperative operations
-    ikpnthrds = None
-
     # Expressions for local x/y id's and global x id
     _lid = None
     _gid = None

@@ -37,7 +37,11 @@ class CUDAKernelGenerator(BaseGPUKernelGenerator, GPUIKPKernelGeneratorMixin):
                 kargs.append(f'ixdtype_t ld{va.name}')
 
         # Determine the launch bounds for the kernel
-        nthrds = prod(self.block1d if self.ndim == 1 else self.block2d)
+        # IKP kernels use block2d for threadIdx.y cooperation
+        if self.ikp:
+            nthrds = prod(self.block2d)
+        else:
+            nthrds = prod(self.block1d if self.ndim == 1 else self.block2d)
         kattrs = f'__global__ __launch_bounds__({nthrds})'
 
         return '{0} void {1}({2})'.format(kattrs, self.name, ', '.join(kargs))
@@ -67,12 +71,9 @@ class CUDAKernelGenerator(BaseGPUKernelGenerator, GPUIKPKernelGeneratorMixin):
         """
         spec = self._render_spec()
 
-        # Use IKP-specific global ID calculation if IKP is enabled
-        gid = self._ikp_gid() if self.ikp else self._gid
-
         return f'''{spec}
             {{
-                ixdtype_t _x = {gid};
+                ixdtype_t _x = {self._gid};
                 #define X_IDX (_x)
                 #define X_IDX_AOSOA(v, nv) SOA_IX(X_IDX, v, nv)
                 #define BCAST_BLK(r, c, ld)  c

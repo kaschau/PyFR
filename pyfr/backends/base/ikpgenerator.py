@@ -228,24 +228,12 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
     """
     GPU-specific IKP transformation logic (CUDA/HIP).
 
-    Thread cooperation model:
-    - Threads cooperate in groups (ikpnthrds threads per element)
+    Thread cooperation model (threadIdx.y cooperation):
+    - Each X-thread (threadIdx.x) processes one element
+    - Y-threads (threadIdx.y) cooperate within the element
     - Variables marked in **SHARED[...] are converted to shared memory
-    - Each thread group processes one element
-
-    Note: ikpnthrds is set by the provider (e.g., CUDAPointwiseKernelProvider)
+    - Uses block2d configuration: (32, 8, 1) → 32 elements, 8 cooperative threads
     """
-
-    def _ikp_gid(self):
-        """
-        Generate IKP-specific global ID calculation.
-
-        For thread cooperation, multiple threads share the same element ID:
-        _x = blockIdx.x * (blockDim.x / ikpnthrds) + threadIdx.x / ikpnthrds
-
-        This ensures that threads 0-7 work on element 0, threads 8-15 on element 1, etc.
-        """
-        return f'ixdtype_t(blockIdx.x)*(blockDim.x/{self.ikpnthrds}) + threadIdx.x/{self.ikpnthrds}'
 
     def _extract_shared_vars(self, body):
         """
@@ -254,14 +242,14 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         Returns:
             set: Variable names that need shared memory
         """
-        shared_names = set()
+        names = set()
         for match in re.finditer(r'\*\*SHARED\[([^\]]+)\]', body):
             vars_str = match.group(1)
             names = [v.strip() for v in vars_str.split(',') if v.strip()]
-            shared_names.update(names)
-        return shared_names
+            names.update(names)
+        return names
 
-    def _find_shared_var_decls(self, body, shared_names):
+    def _find_shared_var_decls(self, body, names):
         """
         Find declarations of variables marked for shared memory.
 
@@ -273,13 +261,13 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         # Find array declarations
         for match in re.finditer(self._LOCAL_ARRAY_PATTERN, body):
             quals, dtype, name, dimstr = match.groups()
-            if name in shared_names:
+            if name in names:
                 svars.append(HoistVar(dtype, name, dimstr, quals))
 
         # Find scalar declarations
         for match in re.finditer(self._LOCAL_SCALAR_PATTERN, body):
             quals, dtype, name = match.groups()
-            if name in shared_names:
+            if name in names:
                 svars.append(HoistVar(dtype, name, '', quals))
 
         return svars
@@ -288,17 +276,19 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         """
         Generate __shared__ declarations for shared variables.
 
-        Strategy: Flatten first dimension with group dimension for better performance
-        - Scalar: x -> __shared__ dtype x[NELEM];
-        - 1D array: arr[N] -> __shared__ dtype arr[N*NELEM];
-        - 2D array: arr[M][N] -> __shared__ dtype arr[M*NELEM][N];
-        - ND array: arr[...] -> __shared__ dtype arr[first_dim*NELEM][remaining dims];
+        With threadIdx.y cooperation model:
+        - Scalar: x -> __shared__ dtype x[blockDim.x];
+        - 1D array: arr[N] -> __shared__ dtype arr[N*blockDim.x];
+        - 2D array: arr[M][N] -> __shared__ dtype arr[M*blockDim.x][N];
+        - ND array: arr[...] -> __shared__ dtype arr[first_dim*blockDim.x][remaining dims];
+
+        Each X-thread (element) gets its own block of memory.
 
         Returns:
             list: Shared memory declaration strings
         """
         decls = []
-        nelem_per_block = self.block1d[0] // self.ikpnthrds
+        nelem_per_block = self.block2d[0]
 
         for svar in svars:
             if svar.isscalar:
@@ -314,37 +304,37 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
 
     def _transform_shared_refs(self, body, svars):
         """
-        Add thread group index to all references.
+        Add thread index to all references.
 
-        Strategy: Use blocked layout where each group owns a contiguous block
-        - Scalars: x -> x[group_idx]
-        - 1D: arr[i] -> arr[i + group_idx * array_size]
-        - 2D: arr[i][j] -> arr[i + group_idx * first_dim][j]
-        - 3D: arr[i][j][k] -> arr[i + group_idx * first_dim][j][k]
+        With threadIdx.y cooperation model:
+        - Scalars: x -> x[threadIdx.x]
+        - 1D: arr[i] -> arr[i + threadIdx.x * array_size]
+        - 2D: arr[i][j] -> arr[i + threadIdx.x * first_dim][j]
+        - 3D: arr[i][j][k] -> arr[i + threadIdx.x * first_dim][j][k]
 
-        This gives each group a contiguous block of memory:
-        - Group 0: arr[0..N-1]
-        - Group 1: arr[N..2N-1]
+        Each X-thread owns a contiguous block:
+        - threadIdx.x=0: arr[0..N-1]
+        - threadIdx.x=1: arr[N..2N-1]
         - etc.
 
         Returns:
             str: Body with transformed references
         """
-        group_idx = f'threadIdx.x / {self.ikpnthrds}'
+        eidx = 'threadIdx.x'
 
         for svar in svars:
             if svar.isscalar:
-                # Scalar: name -> name[group_idx]
+                # Scalar: name -> name[threadIdx.x]
                 pattern = rf'\b{svar.name}\b'
-                replacement = f'{svar.name}[{group_idx}]'
+                replacement = f'{svar.name}[{eidx}]'
                 body = re.sub(pattern, replacement, body)
             else:
                 # Array: build pattern matching all dimensions
                 pattern = rf'\b{svar.name}' + r'\[([^\]]+)\]' * svar.ncdim
 
-                # Build replacement: arr[i + group_idx * array_size][j][k]...
-                array_size = svar.cdims[0]
-                replacement = rf'{svar.name}[(\1) + {group_idx} * {array_size}]'
+                # Build replacement: arr[i + threadIdx.x * array_size][j][k]...
+                size = svar.cdims[0]
+                replacement = rf'{svar.name}[(\1) + {eidx} * {size}]'
                 for i in range(2, svar.ncdim + 1):
                     replacement += rf'[\{i}]'
 
@@ -368,7 +358,7 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
             tuple: (transformed_body, preamble)
         """
         # Extract variables marked for shared memory (before stripping markers)
-        shared_names = self._extract_shared_vars(body)
+        snames = self._extract_shared_vars(body)
 
         # Strip all IKP markers to merge sections into one body
         body = re.sub(r'\*\*IKP_SECTION_START', '', body)
@@ -376,10 +366,10 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         body = re.sub(r'\*\*SHARED\[[^\]]+\]', '', body)
 
         # Find declarations of shared variables (in clean body)
-        svars = self._find_shared_var_decls(body, shared_names)
+        svars = self._find_shared_var_decls(body, snames)
 
         # Generate __shared__ declarations
-        shared_decls = self._decl_shared(svars)
+        sdecls = self._decl_shared(svars)
 
         # Remove original declarations from body
         body = self._remove_hoisted_decls(body, svars)
@@ -388,7 +378,7 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         body = self._transform_shared_refs(body, svars)
 
         # Add declarations to preamble
-        if shared_decls:
-            preamble = '\n'.join(shared_decls) + '\n' + preamble
+        if sdecls:
+            preamble = '\n'.join(sdecls) + '\n' + preamble
 
         return body, preamble
