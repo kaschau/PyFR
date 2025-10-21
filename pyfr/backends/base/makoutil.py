@@ -239,26 +239,16 @@ def ikpexpand(context, name, /, *args, **kwargs):
     """
     Expand an IKP macro (cache-block interruption).
 
-    Like expand() but wraps the returned body with clear boundary markers
-    and injects shared variable information for GPU backends.
+    Like expand() but wraps the returned body with clear boundary markers.
+    Kernel developers must explicitly mark shared variables with **SHARED[...]
+    at the kernel level.
     """
-    mdef = context['_macros'][name]
-
-    # Parse arguments to determine which params are regular (not py:)
-    params, _ = _parse_expand_args(name, mdef.params, mdef.argsig,
-                                          args, kwargs)
-
     # Use regular expand() to do the actual macro expansion
     body = expand(context, name, *args, **kwargs)
 
-    # Inject shared variable marker with regular param names (for GPU)
-    # These are the variables that will be accessed cooperatively
-    shared = ','.join(params.values())
-
-    # Wrap body with boundary markers and shared variable info
+    # Wrap body with boundary markers (no automatic shared injection)
     return f'''**IKP_SECTION_END
     **IKP_SECTION_START
-**SHARED[{shared}]
 {body}
 **IKP_SECTION_END
 **IKP_SECTION_START'''

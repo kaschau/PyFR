@@ -80,3 +80,86 @@
   __syncthreads();
 
 </%pyfr:macro>
+
+
+<%pyfr:macro name='square_arr' params='dst, src, py:n'>
+  // Cooperatively compute dst[i] = src[i] * src[i]
+  int _tid = threadIdx.y;
+  for (int _i = _tid; _i < ${n}; _i += blockDim.y) {
+      dst[_i] = src[_i] * src[_i];
+  }
+  __syncthreads();
+
+</%pyfr:macro>
+
+
+<%pyfr:macro name='reduce_sum' params='_redbuf, result, src, py:n'>
+<%
+  import math
+  ythrds = 8  # block2d[1] for CUDA backend
+%>
+  // Cooperative reduction: result = sum(src[i] for i in range(n))
+  // Works for any n (independent of block2d configuration)
+  // Uses shared memory buffer _redbuf for blockDim.y=${ythrds} threads per element
+  int _tid = threadIdx.y;
+
+  // Each thread accumulates its subset
+  fpdtype_t _psum = 0.0;
+  for (int _i = _tid; _i < ${n}; _i += ${ythrds}) {
+      _psum += src[_i];
+  }
+  _redbuf[_tid] = _psum;
+  __syncthreads();
+
+  // Tree reduction in shared memory
+% for step in range(int(math.log2(ythrds)), 0, -1):
+<%
+    stride = 2 ** (step - 1)
+%>
+  if (_tid < ${stride}) {
+      _redbuf[_tid] += _redbuf[_tid + ${stride}];
+  }
+  __syncthreads();
+% endfor
+
+  // All threads read the result
+  result = _redbuf[0];
+
+</%pyfr:macro>
+
+
+<%pyfr:macro name='reduce_sum_masked' params='_redbuf, result, src, mask, py:n'>
+<%
+  import math
+  ythrds = 8  # block2d[1] for CUDA backend
+%>
+  // Cooperative masked reduction: result = sum(src[i] where mask[i])
+  // Works for any n (independent of block2d configuration)
+  // Uses shared memory buffer _redbuf for blockDim.y=${ythrds} threads per element
+  int _tid = threadIdx.y;
+
+  // Each thread accumulates its subset
+  fpdtype_t _psum = 0.0;
+  for (int _i = _tid; _i < ${n}; _i += ${ythrds}) {
+      if (mask[_i]) {
+          _psum += src[_i];
+      }
+  }
+  _redbuf[_tid] = _psum;
+  __syncthreads();
+
+  // Tree reduction in shared memory
+% for step in range(int(math.log2(ythrds)), 0, -1):
+<%
+    stride = 2 ** (step - 1)
+%>
+  if (_tid < ${stride}) {
+      _redbuf[_tid] += _redbuf[_tid + ${stride}];
+  }
+  __syncthreads();
+% endfor
+
+  // All threads read the result
+  result = _redbuf[0];
+
+</%pyfr:macro>
