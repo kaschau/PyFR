@@ -244,9 +244,9 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         """
         names = set()
         for match in re.finditer(r'\*\*SHARED\[([^\]]+)\]', body):
-            vars_str = match.group(1)
-            names = [v.strip() for v in vars_str.split(',') if v.strip()]
-            names.update(names)
+            vstr = match[1]
+            vnames = [v.strip() for v in vstr.split(',') if v.strip()]
+            names.update(vnames)
         return names
 
     def _find_shared_var_decls(self, body, names):
