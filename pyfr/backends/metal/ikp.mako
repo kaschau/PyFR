@@ -12,63 +12,59 @@
 
 <%pyfr:macro name='loadv' params='dst, src, py:indices'>
 <%
-  # Cooperative vector load from 2D array into 1D array using arithmetic indexing
-  # dst: destination array name (e.g., 'ucol')
-  # src: source 2D array name (e.g., 'u')
-  # indices: List of (row, col) tuples specifying which elements to load
-
   indices_list = list(indices)
   nelem = len(indices_list)
-
-  # Build index mapping arrays that we'll embed as constants
   rows = [row for row, col in indices_list]
   cols = [col for row, col in indices_list]
+
+  # Detect if rows are sequential starting from 0 and cols are all the same
+  rows_sequential = (rows == list(range(nelem)))
+  cols_constant = (len(set(cols)) == 1)
+
+  nthreads_y = _kernel_generator.block2d[1]
 %>
-  // Cooperative load: ${nelem} elements from 2D array (_tpitg.y threads)
+% if rows_sequential and cols_constant:
+<%
+  const_col = cols[0]
+%>
+  // Cooperative load: ${nelem} elements from 2D array (${nthreads_y} threads, shared memory)
+  // Optimized: sequential rows, constant column ${const_col}
   {
-    // Index maps: which (row,col) corresponds to each dst element
+    uint _tid_ = _tpitg.y;
+    for (int _i = _tid_; _i < ${nelem}; _i += ${nthreads_y})
+    {
+        dst[_i] = src[_i][${const_col}];
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+% else:
+  // Cooperative load: ${nelem} elements from 2D array (${nthreads_y} threads, shared memory)
+  {
     const int _rows[${nelem}] = {${', '.join(map(str, rows))}};
     const int _cols[${nelem}] = {${', '.join(map(str, cols))}};
 
     uint _tid_ = _tpitg.y;
-    for (int _i = _tid_; _i < ${nelem}; _i += 8)
+    for (int _i = _tid_; _i < ${nelem}; _i += ${nthreads_y})
     {
         dst[_i] = src[_rows[_i]][_cols[_i]];
     }
   }
   threadgroup_barrier(mem_flags::mem_threadgroup);
+% endif
 </%pyfr:macro>
 
 
-<%pyfr:macro name='gemv' params='c, b, py:A'>
+<%pyfr:macro name='gemv' params='c, b, A, py:m, py:n'>
 <%
-  import numpy as np
-
-  # Matrix dimensions
-  m, n = A.shape
-
-  # Generate unique name for this matrix constant
-  name = f'_ikp_mat_{id(A)}'
-
-  # Flatten matrix to 1D array for embedding
-  flat_data = A.flatten()
+  nthreads_y = _kernel_generator.block2d[1]
 %>
-  ## GEMV: c = A @ b (thread-cooperative with 8 threads per element)
-  ## Matrix ${m}x${n}, embedded as compile-time constant
+  // GEMV: c = A @ b (thread-cooperative with ${nthreads_y} threads per element, shared memory)
 
-  // Embed matrix data as compile-time constant (const, not constant address space)
-  const fpdtype_t ${name}[${m * n}] = {
-% for i, val in enumerate(flat_data):
-      ${val}${',' if i < len(flat_data)-1 else ''}
-% endfor
-  };
-
-  // Each thread computes subset of output rows
   uint _tid = _tpitg.y;
-  for (int _row = _tid; _row < ${m}; _row += 8) {
+  for (int _row = _tid; _row < ${m}; _row += ${nthreads_y}) {
       fpdtype_t _sum = 0.0;
       for (int _col = 0; _col < ${n}; _col++) {
-          _sum += ${name}[_row * ${n} + _col] * b[_col];
+          _sum += A[_row][_col] * b[_col];
       }
       c[_row] = _sum;
   }
@@ -77,10 +73,78 @@
 </%pyfr:macro>
 
 
+<%pyfr:macro name='gemv_simdgroup' params='c, b, A, py:m, py:n'>
+#include <metal_simdgroup_matrix>
+
+<%
+  import math
+  ntiles_row = int(math.ceil(m / 8.0))
+  ntiles_col = int(math.ceil(n / 8.0))
+  n_padded = ntiles_col * 8
+  m_padded = ntiles_row * 8
+%>
+
+  threadgroup fpdtype_t _b_matrix[${n_padded * 8}];
+  {
+    uint _tid = _tpitg.y;
+    for (int _i = _tid; _i < ${n_padded * 8}; _i += 32) {
+      int _row = _i / 8;
+      int _col = _i % 8;
+      _b_matrix[_i] = (_col == 0 && _row < ${n}) ? b[_row] : 0.0;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+
+  threadgroup fpdtype_t _c_matrix[${m_padded * 8}];
+  {
+    for (int _tile_row = 0; _tile_row < ${ntiles_row}; _tile_row++) {
+      simdgroup_float8x8 _acc = make_filled_simdgroup_matrix<float, 8, 8>(0.0);
+
+      for (int _tile_k = 0; _tile_k < ${ntiles_col}; _tile_k++) {
+        simdgroup_float8x8 _A_tile, _B_tile;
+
+        simdgroup_load(_A_tile,
+                      &A[_tile_row*8][_tile_k*8],
+                      ${n},
+                      ulong2(0, 0),
+                      false);
+
+        simdgroup_load(_B_tile,
+                      &_b_matrix[_tile_k*${8*8}],
+                      8,
+                      ulong2(0, 0),
+                      false);
+
+        simdgroup_multiply_accumulate(_acc, _A_tile, _B_tile, _acc);
+      }
+
+      simdgroup_store(_acc,
+                     &_c_matrix[_tile_row*${8*8}],
+                     8,
+                     ulong2(0, 0),
+                     false);
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+
+  {
+    uint _tid = _tpitg.y;
+    for (int _i = _tid; _i < ${m}; _i += 32) {
+      c[_i] = _c_matrix[_i * 8];
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+
+</%pyfr:macro>
+
+
 <%pyfr:macro name='square_arr' params='dst, src, py:n'>
-  // Cooperatively compute dst[i] = src[i] * src[i]
+<%
+  nthreads_y = _kernel_generator.block2d[1]
+%>
+  // Cooperatively compute dst[i] = src[i] * src[i] (shared memory)
   uint _tid = _tpitg.y;
-  for (int _i = _tid; _i < ${n}; _i += 8) {
+  for (int _i = _tid; _i < ${n}; _i += ${nthreads_y}) {
       dst[_i] = src[_i] * src[_i];
   }
   threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -91,11 +155,9 @@
 <%pyfr:macro name='reduce_sum' params='_redbuf, result, src, py:n'>
 <%
   import math
-  ythrds = 8  # block2d[1] for Metal backend
+  ythrds = _kernel_generator.block2d[1]
 %>
-  // Cooperative reduction: result = sum(src[i] for i in range(n))
-  // Works for any n (independent of block configuration)
-  // Uses threadgroup memory buffer _redbuf for ${ythrds} threads per element
+  // Cooperative reduction using threadgroup memory
   uint _tid = _tpitg.y;
 
   // Each thread accumulates its subset
@@ -126,11 +188,9 @@
 <%pyfr:macro name='reduce_sum_masked' params='_redbuf, result, src, mask, py:n'>
 <%
   import math
-  ythrds = 8  # block2d[1] for Metal backend
+  ythrds = _kernel_generator.block2d[1]
 %>
-  // Cooperative masked reduction: result = sum(src[i] where mask[i])
-  // Works for any n (independent of block configuration)
-  // Uses threadgroup memory buffer _redbuf for ${ythrds} threads per element
+  // Cooperative masked reduction using threadgroup memory
   uint _tid = _tpitg.y;
 
   // Each thread accumulates its subset
