@@ -1,5 +1,4 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%include file='pyfr.backends.base.ikp'/>
 
 ## Metal IKP Macros
 ## Thread-cooperative operations for inner-kernel parallelism
