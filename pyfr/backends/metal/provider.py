@@ -131,14 +131,20 @@ class MetalPointwiseKernelProvider(MetalKernelProvider,
 
         self.kernel_generator_cls = KernelGenerator
 
-    def _instantiate_kernel(self, dims, fun, arglst, argm, argv):
+    def _instantiate_kernel(self, dims, fun, arglst, argm, argv, ikp=False):
         kargs, rtargs = [], []
 
         # Determine the thread group and grid sizes
-        if len(dims) == 1:
+        if ikp:
+            # IKP kernels: ndim=1 but use 2D thread cooperation
+            tgrp = self._tgrp2d
+            grid = (dims[0] - dims[0] % -tgrp[0], tgrp[1], 1)
+        elif len(dims) == 1:
+            # 1D non-IKP kernels
             tgrp = self._tgrp1d
             grid = (dims[0] - dims[0] % -tgrp[0], 1, 1)
         else:
+            # 2D kernels
             tgrp = self._tgrp2d
             grid = (dims[1] - dims[1] % -tgrp[0], tgrp[1], 1)
 

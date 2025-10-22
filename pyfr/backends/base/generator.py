@@ -123,7 +123,7 @@ class BaseKernelGenerator:
                 argt.append([np.uintp])
 
         # Return
-        return self.ndim, argn, argt
+        return self.ndim, argn, argt, self.ikp
 
     def ldim_size(self, name, factor=1):
         pass

@@ -168,7 +168,7 @@ class OpenMPPointwiseKernelProvider(OpenMPKernelProvider,
                                     BasePointwiseKernelProvider):
     kernel_generator_cls = OpenMPKernelGenerator
 
-    def _instantiate_kernel(self, dims, fun, arglst, argm, argv):
+    def _instantiate_kernel(self, dims, fun, arglst, argm, argv, ikp=False):
         rtargs = []
 
         # Set the number of blocks

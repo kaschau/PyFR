@@ -93,9 +93,9 @@ class BasePointwiseKernelProvider(BaseKernelProvider):
             raise ValueError(f'Kernel "{name}" not defined in template')
 
         # Extract the metadata for the kernel
-        ndim, argn, argt = argspecs[name]
+        ndim, argn, argt, ikp = argspecs[name]
 
-        return src, ndim, argn, argt
+        return src, ndim, argn, argt, ikp
 
     def _build_kernel(self, name, src, args, argn=[]):
         pass
@@ -153,7 +153,7 @@ class BasePointwiseKernelProvider(BaseKernelProvider):
 
         return arglst, argmats, argviews
 
-    def _instantiate_kernel(self, dims, fun, arglst, argmv):
+    def _instantiate_kernel(self, dims, fun, arglst, argmv, ikp=False):
         pass
 
     def register(self, mod):
@@ -173,8 +173,8 @@ class BasePointwiseKernelProvider(BaseKernelProvider):
         # Generate the kernel providing method
         def kernel_meth(self, tplargs, dims, extrns={}, **kwargs):
             # Render the source of kernel
-            src, ndim, argn, argt = self._render_kernel(name, mod, extrns,
-                                                        tplargs)
+            src, ndim, argn, argt, ikp = self._render_kernel(name, mod, extrns,
+                                                             tplargs)
 
             # Compile the kernel
             fun = self._build_kernel(name, src, list(it.chain(*argt)), argn)
@@ -183,7 +183,7 @@ class BasePointwiseKernelProvider(BaseKernelProvider):
             argb, argm, argv = self._build_arglst(dims, argn, argt, kwargs)
 
             # Return a Kernel subclass instance
-            return self._instantiate_kernel(dims, fun, argb, argm, argv)
+            return self._instantiate_kernel(dims, fun, argb, argm, argv, ikp)
 
         # Attach the module to the method as an attribute
         kernel_meth._mod = mod

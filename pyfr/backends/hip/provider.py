@@ -72,7 +72,7 @@ class HIPPointwiseKernelProvider(HIPKernelProvider,
 
         self.kernel_generator_cls = KernelGenerator
 
-    def _instantiate_kernel(self, dims, fun, arglst, argm, argv):
+    def _instantiate_kernel(self, dims, fun, arglst, argm, argv, ikp=False):
         rtargs = []
         block = self._block1d if len(dims) == 1 else self._block2d
         grid = get_grid_for_block(block, dims[-1])
