@@ -1,9 +1,10 @@
 import re
 
 from pyfr.backends.base.generator import BaseGPUKernelGenerator
+from pyfr.backends.base.ikpgenerator import GPUIKPKernelGeneratorMixin
 
 
-class MetalKernelGenerator(BaseGPUKernelGenerator):
+class MetalKernelGenerator(BaseGPUKernelGenerator, GPUIKPKernelGeneratorMixin):
     _lid = ('_tpitg.x', '_tpitg.y')
     _gid = '_tpig.x'
     _shared_prfx = 'threadgroup'
@@ -35,7 +36,24 @@ class MetalKernelGenerator(BaseGPUKernelGenerator):
 
         # Finally, the attribute arguments
         kargs.append('uint2 _tpig [[thread_position_in_grid]]')
-        if re.search(r'\b_tpitg\b', self.preamble):
+        # IKP kernels always need _tpitg for thread cooperation
+        if self.ikp or re.search(r'\b_tpitg\b', self.preamble):
             kargs.append('uint2 _tpitg [[thread_position_in_threadgroup]]')
 
         return 'kernel void {0}({1})'.format(self.name, ', '.join(kargs))
+
+    def _render_body_preamble(self, body):
+        """
+        Transform kernel body and generate preamble.
+
+        Calls base class for standard dereferencing, then performs GPU IKP
+        transformations if enabled.
+        """
+        # Standard dereferencing (base class)
+        body, preamble = super()._render_body_preamble(body)
+
+        # Apply GPU IKP transformations if enabled
+        if self.ikp:
+            body, preamble = self._ikp_render_body_preamble(body, preamble)
+
+        return body, preamble

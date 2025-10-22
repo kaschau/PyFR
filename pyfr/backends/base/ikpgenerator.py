@@ -307,20 +307,20 @@ class GPUIKPKernelGeneratorMixin(IKPKernelGeneratorMixin):
         Add thread index to all references.
 
         With threadIdx.y cooperation model:
-        - Scalars: x -> x[threadIdx.x]
-        - 1D: arr[i] -> arr[i + threadIdx.x * array_size]
-        - 2D: arr[i][j] -> arr[i + threadIdx.x * first_dim][j]
-        - 3D: arr[i][j][k] -> arr[i + threadIdx.x * first_dim][j][k]
+        - Scalars: x -> x[_lid[0]]
+        - 1D: arr[i] -> arr[i + _lid[0] * array_size]
+        - 2D: arr[i][j] -> arr[i + _lid[0] * first_dim][j]
+        - 3D: arr[i][j][k] -> arr[i + _lid[0] * first_dim][j][k]
 
         Each X-thread owns a contiguous block:
-        - threadIdx.x=0: arr[0..N-1]
-        - threadIdx.x=1: arr[N..2N-1]
+        - _lid[0]=0: arr[0..N-1]
+        - _lid[0]=1: arr[N..2N-1]
         - etc.
 
         Returns:
             str: Body with transformed references
         """
-        eidx = 'threadIdx.x'
+        eidx = self._lid[0]  # Use backend-specific thread index
 
         for svar in svars:
             if svar.isscalar:
