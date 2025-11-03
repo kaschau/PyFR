@@ -28,8 +28,6 @@ class TplargsMixin:
                                            5*self._be.fpdtype_eps)
         mcfluid = MCFluid(self.cfg)
         self.c |= mcfluid.consts
-        # Viscous Sponge
-        visc_sponge = 'viscous-sponge' in self.cfg.sections()
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              rsolver=rsolver,
@@ -37,7 +35,7 @@ class TplargsMixin:
                              mixing_rule = mcfluid.mixing_rule,
                              shock_capturing=shock_capturing, c=self.c,
                              d_min=self.d_min, inte_min=self.inte_min,
-                             visc_sponge=visc_sponge)
+                             visc_sponge=self.visc_sponge)
 
     def validate_species(self):
         Y = []
@@ -71,7 +69,8 @@ class MCNavierStokesIntInters(TplargsMixin,
             ul=self._scal_lhs, ur=self._scal_rhs,
             gradul=self._vect_lhs, gradur=self._vect_rhs,
             artviscl=self._artvisc_lhs, artviscr=self._artvisc_rhs,
-            nl=self._pnorm_lhs
+            nl=self._pnorm_lhs, extrns=self._external_args,
+            **self._external_vals
         )
 
 

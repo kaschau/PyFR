@@ -42,6 +42,61 @@ class BaseInters:
         self._external_args = {}
         self._external_vals = {}
 
+        # Viscous Sponge
+        self.visc_sponge = 'viscous-sponge' in self.cfg.sections()
+
+        if self.visc_sponge:
+            import numpy as np
+            start_point = np.asarray([float(i) for i in self.cfg.get('viscous-sponge','start').split(',')])
+            end_point = np.asarray([float(i) for i in self.cfg.get('viscous-sponge','end').split(',')])
+            mult = self.cfg.getfloat('viscous-sponge','mult')
+            profile = self.cfg.get('viscous-sponge','profile', default='linear')
+            ploc = self._const_mat(lhs, 'get_ploc_for_inter').get()
+            # Calculate the direction vector from start to end
+            direction = end_point - start_point
+            direction_norm = np.linalg.norm(direction)
+
+            if direction_norm < 1e-10:  # Start and end points are too close
+                raise ValueError("Sponge start and end points are too close or identical")
+
+            # Normalize the direction vector
+            direction_unit = direction / direction_norm
+
+            # For each point, calculate its projection onto the line from start to end
+            # First, vector from start to each point
+            vectors_from_start = ploc - start_point[np.newaxis,:,np.newaxis]
+
+            # Project these vectors onto the direction unit vector
+            projections = np.einsum('ijk,j->ik', vectors_from_start, direction_unit)
+
+            # Normalize projections to get a parameter t between 0 and 1
+            # where t=0 at start_point and t=1 at end_point
+            t = projections / direction_norm
+
+            # Apply the growth function
+            if profile.lower() == 'linear':
+                # Linear growth from 1 to mag
+                scaled = np.clip(t, 0, 1)
+            elif profile.lower() == 'quadratic':
+                # Quadratic growth from 1 to mag
+                scaled = np.clip(t, 0, 1)**2
+            elif profile.lower() == 'tanh':
+                # Scale t from [0,1] to [-1.5,1.5]
+                # Apply tanh and then rescale to ensure we go exactly from 1 to mag
+                scaled = (np.tanh(3 * (t - 0.5)) - np.tanh(-1.5)) / (np.tanh(1.5) - np.tanh(-1.5))
+            else:
+                raise ValueError("Sponge growth type must be 'linear', 'quadratic', or 'tanh'")
+            multipliers = 1.0 + (mult - 1.0) * scaled
+
+            # Set multiplier to 1 for all points before start point (t < 0)
+            # and to mag for all points after end point (t > 1)
+            multipliers = np.where(t < 0, 1.0, multipliers)
+            multipliers = np.where(t > 1, mult, multipliers)
+
+            self._set_external('sponge_mult',
+                               'in fpdtype_t',
+                               self._be.const_matrix(multipliers))
+
     def _set_external(self, name, spec, value=None):
         self._external_args[name] = spec
 
