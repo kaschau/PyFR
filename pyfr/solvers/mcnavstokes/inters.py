@@ -92,7 +92,7 @@ class MCNavierStokesMPIInters(TplargsMixin,
             ul=self._scal_lhs, ur=self._scal_rhs,
             gradul=self._vect_lhs, gradur=self._vect_rhs,
             artviscl=self._artvisc_lhs, artviscr=self._artvisc_rhs,
-            nl=self._pnorm_lhs, externs=self._external_args,
+            nl=self._pnorm_lhs, extrns=self._external_args,
             **self._external_vals
         )
 
