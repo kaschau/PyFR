@@ -28,13 +28,16 @@ class TplargsMixin:
                                            5*self._be.fpdtype_eps)
         mcfluid = MCFluid(self.cfg)
         self.c |= mcfluid.consts
+        # Viscous Sponge
+        visc_sponge = 'viscous-sponge' in self.cfg.sections()
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              rsolver=rsolver,
                              eos = mcfluid.eos, trans = mcfluid.trans,
                              mixing_rule = mcfluid.mixing_rule,
                              shock_capturing=shock_capturing, c=self.c,
-                             d_min=self.d_min, inte_min=self.inte_min)
+                             d_min=self.d_min, inte_min=self.inte_min,
+                             visc_sponge=visc_sponge)
 
     def validate_species(self):
         Y = []
