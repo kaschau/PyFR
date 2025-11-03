@@ -199,7 +199,7 @@
     fpdtype_t log_pmod = log_Pr - log(1.0 + exp(log_Pr)) + log_F_pdr;
     log_k_f += log_pmod;
   % elif c['r_type'][i] == 'SRI':
-  <% raise ImplementedError("SRI reactions not supporeted")%>
+  <% raise NotImplementedError("SRI reactions not supporeted")%>
   % endif
 
   // Set rates of progress (log space)
