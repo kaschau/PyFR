@@ -5,7 +5,9 @@ from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionMPIInters)
 from pyfr.solvers.mceuler.inters import (MCFluidIntIntersMixin,
                                          MCFluidMPIIntersMixin)
+from pyfr.solvers.navstokes.inters import NSCBCMixin
 from pyfr.multicomp.mcfluid import MCFluid
+from itertools import chain
 
 
 class TplargsMixin:
@@ -103,7 +105,6 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
         self._tplargs['bccfluxstate'] = self.cflux_state
 
         self._be.pointwise.register('pyfr.solvers.mcnavstokes.kernels.bcconu')
-        self._be.pointwise.register('pyfr.solvers.mcnavstokes.kernels.bccflux')
 
         self.kernels['con_u'] = lambda: self._be.kernel(
             'bcconu', tplargs=self._tplargs, dims=[self.ninterfpts],
@@ -111,12 +112,14 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
             ulout=self._comm_lhs, nlin=self._pnorm_lhs,
             **self._external_vals
         )
-        self.kernels['comm_flux'] = lambda: self._be.kernel(
-            'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            extrns=self._external_args, ul=self._scal_lhs,
-            gradul=self._vect_lhs, nl=self._pnorm_lhs,
-            artviscl=self._artvisc_lhs, **self._external_vals
-        )
+        if 'nscbc' not in self.type:
+            self._be.pointwise.register('pyfr.solvers.mcnavstokes.kernels.bccflux')
+            self.kernels['comm_flux'] = lambda: self._be.kernel(
+                'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
+                extrns=self._external_args, ul=self._scal_lhs,
+                gradul=self._vect_lhs, nl=self._pnorm_lhs,
+                artviscl=self._artvisc_lhs, **self._external_vals
+            )
 
         if self._ef_enabled:
             self._be.pointwise.register(
@@ -143,8 +146,8 @@ class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
     type = 'sub-in-mdot'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'mdot-per-area']
         bcvars += self.c['names']
@@ -159,8 +162,8 @@ class MCNavierStokesNoSlpIsotWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-isot-wall'
     cflux_state = 'ghost-imperm'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['T'], lhs)
         self.c |= self._exp_opts('uvw'[:self.ndims], lhs,
@@ -171,8 +174,8 @@ class MCNavierStokesSubOutflowBCInters(MCNavierStokesBaseBCInters):
     type = 'sub-out-fp'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['p'], lhs)
 
@@ -181,8 +184,8 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
     type = 'sup-in-fa'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
@@ -200,12 +203,78 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
     type = 'char-riem-inv'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
         default = {spn: 0 for spn in self.c['names']}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
+        self.validate_species()
+
+class MCNSCBCSubOutFpBCInters(NSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-out-nscbc-fp'
+    decomp_type = 'normal'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+
+        for shape, fidx, lhs_idx in self.ef_pairs:
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+            self.c |= self._exp_opts_ele(['p'], lhs_efp,
+                                         self._external_args_efp[shape][fidx],
+                                         self._external_vals_efp[shape][fidx])
+        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=1.0)
+
+class MCNSCBCSubInFtvyBCInters(NSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-in-nscbc-ftvy'
+    decomp_type = 'cartesian'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+        bcvars = ['T', 'u', 'v', 'w'][:self.ndims + 1]
+        for i in chain(bcvars,['Y']):
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=1.0)
+
+        bcvars += self.c['names']
+        default = {spn: 0 for spn in self.c['names']}
+        for shape, fidx, lhs_idx in self.ef_pairs:
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+
+            self.c |= self._exp_opts_ele(bcvars, lhs_efp,
+                                         self._external_args_efp[shape][fidx],
+                                         self._external_vals_efp[shape][fidx],
+                                         default=default)
+        self.validate_species()
+
+class MCNSCBCSubInNRIBCInters(NSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-in-nscbc-nri'
+    decomp_type = 'normal'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+        bcvars = ['T', 'un'] + self.c['names']
+        force = ['u_a', 'du_a_dt', 'u_v', 'du_v_dt']
+        default = {spn: 0 for spn in self.c['names']}
+        for shape, fidx, lhs_idx in self.ef_pairs:
+            # Generate lhs for element-face pair
+            lhs_efp = [lhs[i] for i in lhs_idx]
+
+            self.c |= self._exp_opts_ele(bcvars, lhs_efp,
+                                         self._external_args_efp[shape][fidx],
+                                         self._external_vals_efp[shape][fidx],
+                                         default=default)
+            self.c |= self._exp_opts_ele(force, lhs_efp,
+                                         self._external_args_efp[shape][fidx],
+                                         self._external_vals_efp[shape][fidx],
+                                         default={f: 0.0 for f in force})
+        for i in ['ac','ut']:
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=1.0)
+
         self.validate_species()
