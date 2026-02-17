@@ -58,6 +58,15 @@ class BaseInters:
 
         return self._be.const_matrix(m)
 
+    def _ewise_const_mat(self, inter, meth):
+        m = _get_inter_objs(inter, meth, self.elemap)
+
+        # Swizzle the dimensions
+        m = np.array(m)
+        m = np.moveaxis(m, 0, -1)
+
+        return self._be.const_matrix(m)
+
     def _get_perm_for_view(self, inter, meth):
         vm = _get_inter_objs(inter, meth, self.elemap)
         vm = [np.concatenate(m) for m in zip(*vm)]
@@ -76,6 +85,28 @@ class BaseInters:
 
     def _vect_view(self, inter, meth):
         return self._view(inter, meth, (self.ndims, self.nvars))
+
+    def _scal_upts_view(self, inter, meth):
+        nupts = first(self.elemap.values()).basis.nupts
+        return self._view(inter, meth, (nupts, self.nvars), with_perm=False)
+
+    def _scal_fpts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        vshape = (basis.nfpts, self.nvars)
+        with_perm = False
+        return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
+
+    def _grad_upts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        vshape = (self.ndims*basis.nupts, self.nvars)
+        with_perm = False
+        return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
+
+    def _vect_fpts_view(self, inter, meth):
+        basis = first(self.elemap.values()).basis
+        vshape = (self.ndims*basis.nfpts, self.nvars)
+        with_perm = False
+        return self._view(inter, meth, vshape=vshape, with_perm=with_perm)
 
     def _xchg_view(self, inter, meth, vshape=(), with_perm=True):
         vm = _get_inter_objs(inter, meth, self.elemap)
