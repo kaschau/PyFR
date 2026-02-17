@@ -1,8 +1,9 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <%include file='pyfr.solvers.navstokes.kernels.bcs.common'/>
 <% sq2 = 2**0.5 %>
 <% invsq2 = 2**-0.5 %>
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='compute_wave_amp' params='u, q, qh, Phi, jac' externs='ploc, t'>
   fpdtype_t invc = 1.0/qh[2];
