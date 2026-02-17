@@ -14,9 +14,9 @@ vfile = open('pyfr/_version.py').read()
 vsrch = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", vfile, re.M)
 
 if vsrch:
-    version = vsrch.group(1)
+    version = vsrch[1]
 else:
-    print('Unable to find a version string in pyfr/_version.py')
+    sys.exit('Unable to find a version string in pyfr/_version.py')
 
 # Modules
 modules = [
