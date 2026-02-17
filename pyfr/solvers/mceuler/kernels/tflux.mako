@@ -1,11 +1,12 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <%pyfr:kernel name='tflux' ndim='2'
               u='in fpdtype_t[${str(nvars)}]'

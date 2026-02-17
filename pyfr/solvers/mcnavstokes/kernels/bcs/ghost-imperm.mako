@@ -1,12 +1,14 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 
 ## bc_ldg_state AND bc_rsolve_state must fill in ur, qr, qhr
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='bc_common_flux_state' params='ul, ql, qhl, gradul, artviscl, nl, magnl'>
 

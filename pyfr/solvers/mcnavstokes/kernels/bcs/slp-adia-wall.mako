@@ -1,10 +1,11 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.common'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr'>
     fpdtype_t nor = ${' + '.join(f'ul[{i + vix}]*nl[{i}]' for i in range(ndims))};

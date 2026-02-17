@@ -1,8 +1,9 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.chem.net-rate-of-production'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
 <% MW = c['MW'] %>\
 <% Ru = c['Ru'] %>\
 <% nu_f = c['nu_f'] %>\
@@ -63,16 +64,16 @@
     {
       % if fast_props:
       {
-        fpdtype_t cps = ${pyfr.nasa_cps(fast_coeff[n], Ru, MW[n])};
+        fpdtype_t cps = ${mc.nasa_cps(fast_coeff[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }
       % else:
       if (T < ${T_cutoff[n]})
       {
-        fpdtype_t cps = ${pyfr.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
+        fpdtype_t cps = ${mc.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }else{
-        fpdtype_t cps = ${pyfr.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
+        fpdtype_t cps = ${mc.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
         cp += cps*q[${n}];
       }
       % endif
@@ -90,15 +91,15 @@
       <% nu_sum = nu_b[n,:] - nu_f[n,:] %>\
       % if max(abs(nu_sum)) > 0.0:
         % if fast_props:
-          fpdtype_t hi = ${pyfr.nasa_hi(fast_coeff[n])};
+          fpdtype_t hi = ${mc.nasa_hi(fast_coeff[n])};
         % else:
           fpdtype_t hi;
           if (T < ${T_cutoff[n]})
           {
-            hi = ${pyfr.nasa_hi(NASA7_Tlow[n])};
+            hi = ${mc.nasa_hi(NASA7_Tlow[n])};
           }else
           {
-            hi = ${pyfr.nasa_hi(NASA7_Thigh[n])};
+            hi = ${mc.nasa_hi(NASA7_Thigh[n])};
           }
         % endif
         dTdt -= hi * tmpSrc[${n}];

@@ -1,10 +1,11 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.intestar'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
 
 <%pyfr:macro name='get_minima' params='u, m0, rhomin, tot_rhoYmin, rhoYmin, intemin, smin, Xmin, s0'>
 

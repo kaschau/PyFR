@@ -1,8 +1,8 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${eos}.e_Y_Y_x'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.transform_grad'/>
@@ -29,7 +29,7 @@
     fpdtype_t ${rcpdjac} = 1 / djac;
 % endif
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
 
 % if 'fused' in ktype:
     // Transform the corrected gradient

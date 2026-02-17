@@ -1,6 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
@@ -54,17 +55,17 @@
     {
       fpdtype_t cps, hs;
       % if fast_props:
-          cps = ${pyfr.nasa_cps(fast_coeff[n], Ru, MW[n])};
-          hs = ${pyfr.nasa_hs(fast_coeff[n], Ru, MW[n])};
+          cps = ${mc.nasa_cps(fast_coeff[n], Ru, MW[n])};
+          hs = ${mc.nasa_hs(fast_coeff[n], Ru, MW[n])};
       % else:
         if (T < ${T_cutoff[n]})
         {
-          cps = ${pyfr.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
-          hs = ${pyfr.nasa_hs(NASA7_Tlow[n], Ru, MW[n])};
+          cps = ${mc.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
+          hs = ${mc.nasa_hs(NASA7_Tlow[n], Ru, MW[n])};
         }else
         {
-          cps = ${pyfr.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
-          hs = ${pyfr.nasa_hs(NASA7_Thigh[n], Ru, MW[n])};
+          cps = ${mc.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
+          hs = ${mc.nasa_hs(NASA7_Thigh[n], Ru, MW[n])};
         }
       % endif
       h += hs * q[${n}];

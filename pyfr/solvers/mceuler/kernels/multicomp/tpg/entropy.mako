@@ -1,6 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
 <% Ru = c['Ru'] %>\
 <% MW = c['MW'] %>\
@@ -24,13 +25,13 @@
     {
       fpdtype_t ss;
       % if fast_props:
-        ss = ${pyfr.nasa_s(fast_coeff[n], Ru, MW[n])};
+        ss = ${mc.nasa_s(fast_coeff[n], Ru, MW[n])};
       % else:
         if (T < ${T_cutoff[n]})
         {
-          ss = ${pyfr.nasa_s(NASA7_Tlow[n], Ru, MW[n])};
+          ss = ${mc.nasa_s(NASA7_Tlow[n], Ru, MW[n])};
         }else{
-          ss = ${pyfr.nasa_s(NASA7_Thigh[n], Ru, MW[n])};
+          ss = ${mc.nasa_s(NASA7_Thigh[n], Ru, MW[n])};
         }
       % endif
 

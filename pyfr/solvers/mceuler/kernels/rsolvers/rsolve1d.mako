@@ -1,8 +1,9 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
 <%include file='pyfr.solvers.baseadvec.kernels.transform'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     fpdtype_t utl[${nvars}], utr[${nvars}], ntf[${nvars}];

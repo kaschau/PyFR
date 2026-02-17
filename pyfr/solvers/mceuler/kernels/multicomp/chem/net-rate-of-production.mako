@@ -1,7 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 <% import math %>\
 
-<% ns, vix, Eix, rhoix, pix, Tix = pyfr.thermix(c['ns'], ndims) %>\
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
 
 <% nr = c['Ea_f'].shape[0] %>\
 <% MW = c['MW'] %>\
@@ -147,12 +148,12 @@
   % for n in range(ns):
     // ${c['names'][n]} Properties
     % if fast_props:
-      gbs[${n}] = ${pyfr.nasa_gbs(fast_coeff[n])};
+      gbs[${n}] = ${mc.nasa_gbs(fast_coeff[n])};
     % else:
       if (T < ${T_cutoff[n]}){
-        gbs[${n}] = ${pyfr.nasa_gbs(NASA7_Tlow[n])};
+        gbs[${n}] = ${mc.nasa_gbs(NASA7_Tlow[n])};
       }else{
-        gbs[${n}] = ${pyfr.nasa_gbs(NASA7_Thigh[n])};
+        gbs[${n}] = ${mc.nasa_gbs(NASA7_Thigh[n])};
       }
     % endif
   % endfor
