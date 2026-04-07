@@ -3,8 +3,6 @@ import numpy as np
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
                                         BaseAdvectionDiffusionMPIInters)
-from pyfr.solvers.mceuler.inters import (MCFluidIntIntersMixin,
-                                         MCFluidMPIIntersMixin)
 from pyfr.multicomp.mcfluid import MCFluid
 
 
@@ -13,7 +11,7 @@ class TplargsMixin:
         super().__init__(*args, **kwargs)
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
-        shock_capturing = self.cfg.get('solver', 'shock-capturing')
+        shock_capturing = self.cfg.get('solver', 'shock-capturing', 'none')
         if shock_capturing == 'entropy-filter':
             self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
                                            1e-6)
@@ -47,9 +45,7 @@ class TplargsMixin:
         elif test < 1.0:
             self.c[self.c['names'][-1]] = f'({1.0 - test})'
 
-class MCNavierStokesIntInters(TplargsMixin,
-                              MCFluidIntIntersMixin,
-                              BaseAdvectionDiffusionIntInters):
+class MCNavierStokesIntInters(TplargsMixin, BaseAdvectionDiffusionIntInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -58,21 +54,18 @@ class MCNavierStokesIntInters(TplargsMixin,
 
         self.kernels['con_u'] = lambda: self._be.kernel(
             'intconu', tplargs=self._tplargs, dims=[self.ninterfpts],
-            ulin=self._scal_lhs, urin=self._scal_rhs,
+            ulin=self.scal_lhs, urin=self.scal_rhs,
             ulout=self._comm_lhs, urout=self._comm_rhs
         )
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'intcflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            ul=self._scal_lhs, ur=self._scal_rhs,
+            ul=self.scal_lhs, ur=self.scal_rhs,
             gradul=self._vect_lhs, gradur=self._vect_rhs,
-            artviscl=self._artvisc_lhs, artviscr=self._artvisc_rhs,
-            nl=self._pnorm_lhs
+            artvisc=self.artvisc, nl=self._pnorm_lhs
         )
 
 
-class MCNavierStokesMPIInters(TplargsMixin,
-                              MCFluidMPIIntersMixin,
-                              BaseAdvectionDiffusionMPIInters):
+class MCNavierStokesMPIInters(TplargsMixin, BaseAdvectionDiffusionMPIInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -81,14 +74,13 @@ class MCNavierStokesMPIInters(TplargsMixin,
 
         self.kernels['con_u'] = lambda: self._be.kernel(
             'mpiconu', tplargs=self._tplargs, dims=[self.ninterfpts],
-            ulin=self._scal_lhs, urin=self._scal_rhs, ulout=self._comm_lhs
+            ulin=self.scal_lhs, urin=self.scal_rhs, ulout=self._comm_lhs
         )
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'mpicflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            ul=self._scal_lhs, ur=self._scal_rhs,
+            ul=self.scal_lhs, ur=self.scal_rhs,
             gradul=self._vect_lhs, gradur=self._vect_rhs,
-            artviscl=self._artvisc_lhs, artviscr=self._artvisc_rhs,
-            nl=self._pnorm_lhs
+            artvisc=self.artvisc, nl=self._pnorm_lhs
         )
 
 
@@ -107,27 +99,25 @@ class MCNavierStokesBaseBCInters(TplargsMixin, BaseAdvectionDiffusionBCInters):
 
         self.kernels['con_u'] = lambda: self._be.kernel(
             'bcconu', tplargs=self._tplargs, dims=[self.ninterfpts],
-            extrns=self._external_args, ulin=self._scal_lhs,
+            extrns=self._external_args, ulin=self.scal_lhs,
             ulout=self._comm_lhs, nlin=self._pnorm_lhs,
             **self._external_vals
         )
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            extrns=self._external_args, ul=self._scal_lhs,
+            extrns=self._external_args, ul=self.scal_lhs,
             gradul=self._vect_lhs, nl=self._pnorm_lhs,
-            artviscl=self._artvisc_lhs, **self._external_vals
+            artvisc=self.artvisc, **self._external_vals
         )
 
-        if self._ef_enabled:
-            self._be.pointwise.register(
-                'pyfr.solvers.mcnavstokes.kernels.bccent'
-            )
+    def comm_entropy_kernel(self, entmin_lhs):
+        self._be.pointwise.register('pyfr.solvers.mcnavstokes.kernels.bccent')
 
-            self.kernels['comm_entropy'] = lambda: self._be.kernel(
-                'bccent', tplargs=self._tplargs, dims=[self.ninterfpts],
-                extrns=self._external_args, entmin_lhs=self._entmin_lhs,
-                nl=self._pnorm_lhs, ul=self._scal_lhs, **self._external_vals
-            )
+        return lambda: self._be.kernel(
+            'bccent', tplargs=self._tplargs, dims=[self.ninterfpts],
+            extrns=self._external_args, entmin_lhs=entmin_lhs,
+            nl=self._pnorm_lhs, ul=self.scal_lhs, **self._external_vals
+        )
 
 class MCNavierStokesNoSlpAdiaWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-adia-wall'
@@ -143,8 +133,8 @@ class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
     type = 'sub-in-mdot'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'mdot-per-area']
         bcvars += self.c['names']
@@ -159,8 +149,8 @@ class MCNavierStokesNoSlpIsotWallBCInters(MCNavierStokesBaseBCInters):
     type = 'no-slp-isot-wall'
     cflux_state = 'ghost-imperm'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['T'], lhs)
         self.c |= self._exp_opts('uvw'[:self.ndims], lhs,
@@ -171,8 +161,8 @@ class MCNavierStokesSubOutflowBCInters(MCNavierStokesBaseBCInters):
     type = 'sub-out-fp'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['p'], lhs)
 
@@ -181,8 +171,8 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
     type = 'sup-in-fa'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
@@ -200,8 +190,8 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
     type = 'char-riem-inv'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']

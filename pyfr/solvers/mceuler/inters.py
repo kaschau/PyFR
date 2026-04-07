@@ -4,25 +4,12 @@ from pyfr.solvers.baseadvec import (BaseAdvectionIntInters,
 from pyfr.multicomp.mcfluid import MCFluid
 
 
-class MCFluidIntIntersMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if self._ef_enabled:
-            self._be.pointwise.register('pyfr.solvers.mceuler.kernels.intcent')
-
-            self.kernels['comm_entropy'] = lambda: self._be.kernel(
-                'intcent', tplargs={}, dims=[self.ninters],
-                entmin_lhs=self._entmin_lhs, entmin_rhs=self._entmin_rhs
-            )
-
-
 class TplargsMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
-        if self._ef_enabled:
+        if self.cfg.get('solver', 'shock-capturing', 'none') == 'entropy-filter':
             self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
                                            1e-6)
             self.inte_min = self.cfg.getfloat('solver-entropy-filter', 'inte-min',
@@ -55,21 +42,7 @@ class TplargsMixin:
             self.c[self.c['names'][-1]] = f'({1.0 - test})'
 
 
-class MCFluidMPIIntersMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if self._ef_enabled:
-            self._be.pointwise.register('pyfr.solvers.mceuler.kernels.mpicent')
-
-            self.kernels['comm_entropy'] = lambda: self._be.kernel(
-                'mpicent', tplargs={}, dims=[self.ninters],
-                entmin_lhs=self._entmin_lhs, entmin_rhs=self._entmin_rhs
-            )
-
-
-class MCEulerIntInters(TplargsMixin, MCFluidIntIntersMixin,
-                       BaseAdvectionIntInters):
+class MCEulerIntInters(TplargsMixin, BaseAdvectionIntInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -77,12 +50,11 @@ class MCEulerIntInters(TplargsMixin, MCFluidIntIntersMixin,
 
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'intcflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            ul=self._scal_lhs, ur=self._scal_rhs, nl=self._pnorm_lhs
+            ul=self.scal_lhs, ur=self.scal_rhs, nl=self._pnorm_lhs
         )
 
 
-class MCEulerMPIInters(TplargsMixin, MCFluidMPIIntersMixin,
-                       BaseAdvectionMPIInters):
+class MCEulerMPIInters(TplargsMixin, BaseAdvectionMPIInters):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -90,7 +62,7 @@ class MCEulerMPIInters(TplargsMixin, MCFluidMPIIntersMixin,
 
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'mpicflux', self._tplargs, dims=[self.ninterfpts],
-            ul=self._scal_lhs, ur=self._scal_rhs, nl=self._pnorm_lhs
+            ul=self.scal_lhs, ur=self.scal_rhs, nl=self._pnorm_lhs
         )
 
 
@@ -104,25 +76,25 @@ class MCEulerBaseBCInters(TplargsMixin, BaseAdvectionBCInters):
 
         self.kernels['comm_flux'] = lambda: self._be.kernel(
             'bccflux', tplargs=self._tplargs, dims=[self.ninterfpts],
-            extrns=self._external_args, ul=self._scal_lhs, nl=self._pnorm_lhs,
+            extrns=self._external_args, ul=self.scal_lhs, nl=self._pnorm_lhs,
             **self._external_vals
         )
 
-        if self.cfg.get('solver', 'shock-capturing') == 'entropy-filter':
-            self._be.pointwise.register('pyfr.solvers.mceuler.kernels.bccent')
+    def comm_entropy_kernel(self, entmin_lhs):
+        self._be.pointwise.register('pyfr.solvers.mceuler.kernels.bccent')
 
-            self.kernels['comm_entropy'] = lambda: self._be.kernel(
-                'bccent', tplargs=self._tplargs, dims=[self.ninterfpts],
-                extrns=self._external_args, entmin_lhs=self._entmin_lhs,
-                nl=self._pnorm_lhs, ul=self._scal_lhs, **self._external_vals
-            )
+        return lambda: self._be.kernel(
+            'bccent', tplargs=self._tplargs, dims=[self.ninterfpts],
+            extrns=self._external_args, entmin_lhs=entmin_lhs,
+            nl=self._pnorm_lhs, ul=self.scal_lhs, **self._external_vals
+        )
 
 
 class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
     type = 'sup-in-fa'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
         bcvars += self.c['names']
@@ -142,8 +114,8 @@ class MCEulerSubOutflowBCInters(MCEulerBaseBCInters):
     type = 'sub-out-fp'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(['p'], lhs)
 
@@ -156,8 +128,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
     type = 'sub-in-mdot'
     cflux_state = 'ghost'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         bcvars = ['T', 'mdot-per-area']
         bcvars += self.c['names']
@@ -170,8 +142,8 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
 class MCEulerCharRiemInvBCInters(MCEulerBaseBCInters):
     type = 'char-riem-inv'
 
-    def __init__(self, be, lhs, elemap, cfgsect, cfg):
-        super().__init__(be, lhs, elemap, cfgsect, cfg)
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
         self.c |= self._exp_opts(
             ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
