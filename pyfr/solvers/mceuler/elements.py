@@ -1,10 +1,25 @@
 import numpy as np
 
+from pyfr.solvers.base.elements import ExportableField
 from pyfr.solvers.baseadvec import BaseAdvectionElements
 from pyfr.multicomp.mcfluid import MCFluid
 
 
 class BaseMCFluidElements:
+    eos_kernel_module = 'pyfr.solvers.mceuler.kernels.multicomp'
+
+    @classmethod
+    def eos_tplargs(cls, ndims, cfg):
+        mcfluid = MCFluid(cfg, justTherm=True)
+        consts = cfg.items_as('constants', float)
+        consts |= mcfluid.consts
+        return {
+            'ndims': ndims,
+            'nvars': len(cls.convars(ndims, cfg)),
+            'c': consts,
+            'eos': mcfluid.eos,
+        }
+
     @staticmethod
     def privars(ndims, cfg):
         species_names = MCFluid.get_species_names(cfg)
@@ -73,82 +88,10 @@ class BaseMCFluidElements:
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
 
-        # Can elide shock-capturing at p = 0
-        shock_capturing = self.cfg.get('solver', 'shock-capturing', 'none')
-
-        # Modified entropy filtering method using specific physical
-        # entropy (without operator splitting for Navier-Stokes)
-        # doi:10.1016/j.jcp.2022.111501
-        if shock_capturing == 'entropy-filter' and self.basis.order != 0:
-            self._be.pointwise.register(
-                'pyfr.solvers.mceuler.kernels.entropylocal'
-            )
-            self._be.pointwise.register(
-                'pyfr.solvers.mceuler.kernels.entropyfilter'
-            )
-
-            # Template arguments
-            consts = self.cfg.items_as('constants', float)
-            consts |= self.mcfluid.consts
-            fpts_in_upts = self.basis.fpts_in_upts
-            self.nefpts = self.nupts if fpts_in_upts else self.nupts + self.nfpts
-            ub = self.basis.ubasis
-            meanwts = ub.invvdm[:, 0] / np.sum(ub.invvdm[:, 0])
-            eftplargs = {
-                'ndims': self.ndims, 'nupts': self.nupts,
-                'nfpts': self.nfpts, 'nefpts': self.nefpts,
-                'nvars': self.nvars, 'nfaces': self.nfaces,
-                'c': consts,
-                'eos': self.mcfluid.eos,
-                'order': self.basis.order, 'fpts_in_upts': fpts_in_upts,
-                'meanwts': meanwts
-            }
-
-            # Check to see if running anti-aliasing
-            if self.antialias:
-                raise ValueError('Entropy filter not compatible with '
-                                 'anti-aliasing.')
-
-            # Minimum density / shifted internal energy constraints
-            eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'd-min', 1e-6)
-            eftplargs['inte_min'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'inte-min', 1e-6)
-
-            # Entropy tolerance
-            eftplargs['e_tol'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'e-tol', 1e-6)
-
-            # Inner solver parameters
-            eftplargs['f_tol'] = self.cfg.getfloat('solver-entropy-filter',
-                                                   'f-tol', 1e-4)
-            eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
-                                                    'niters', 2)
-
-            # Use linearised constraints/limiting kernel approach from
-            # Ching et al. (doi:10.1016/j.jcp.2024.112881)
-            form = self.cfg.get('solver-entropy-filter', 'formulation',
-                                'nonlinear')
-            eftplargs['linearise'] = form == 'linearised'
-
-            # Precompute basis orders for filter
-            ubdegs = self.basis.ubasis.degrees
-            eftplargs['ubdegs'] = [int(max(dd)) for dd in ubdegs]
-            eftplargs['order'] = self.basis.order
-
-            # Compute local entropy bounds
-            self.kernels['local_entropy'] = lambda uin: self._be.kernel(
-                'entropylocal', tplargs=eftplargs, dims=[self.neles],
-                u=self.scal_upts[uin], entmin_int=self.entmin_int,
-                m0=self.m0
-            )
-
-            # Apply entropy filter
-            self.kernels['entropy_filter'] = lambda uin: self._be.kernel(
-                'entropyfilter', tplargs=eftplargs, dims=[self.neles],
-                u=self.scal_upts[uin], entmin_int=self.entmin_int,
-                vdm=self.vdm_ef, invvdm=self.invvdm, m0=self.m0
-            )
+        # Register wavespeed kernel for CFL-based time stepping
+        self._be.pointwise.register(
+            'pyfr.solvers.mceuler.kernels.wavespeed'
+        )
 
         if self.cfg.getbool('multi-component', 'chemistry', default=False):
 
@@ -186,6 +129,57 @@ class BaseMCFluidElements:
                                    False,
                                    True)
 
+    def init_wavespeed(self):
+        self._wspd = self._be.matrix((1, self.neles), tags={'align'})
+        self.kernels['wavespeed'] = lambda uin: self._wavespeed_kernel(uin)
+
+        def cfl_getter():
+            with np.errstate(divide='ignore'):
+                wspd = (2*self.basis.order + 1)*self._wspd.get()[0]
+                return np.nan_to_num(1/wspd, posinf=0.0)
+
+        self.export_fields.append(ExportableField(
+            name='dt-cfl', shape=(), getter=cfl_getter
+        ))
+        return self._wspd
+
+    def _wavespeed_kernel(self, uin):
+        r, s = self.mesh_regions, self._slice_mat
+
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
+        tplargs = {
+            'ndims': self.ndims,
+            'nvars': self.nvars,
+            'nverts': len(self.basis.linspts),
+            'c': consts,
+            'eos': self.mcfluid.eos,
+            'jac_exprs': self.basis.jac_exprs
+        }
+
+        wkerns = []
+        for rgn in ('curved', 'linear'):
+            if rgn not in r:
+                continue
+
+            if rgn == 'curved':
+                kw = {'smats': self.curved_smat_at('upts'),
+                      'rcpdjac': self.rcpdjac_at('upts', 'curved')}
+            else:
+                kw = {'verts': self.ploc_at('linspts', 'linear'),
+                      'upts': self.upts}
+
+            wkerns.append(self._be.kernel(
+                'wavespeed', tplargs=tplargs | {'ktype': rgn},
+                dims=[self.nupts, r[rgn]], u=s(self.scal_upts[uin], rgn),
+                wspd=self._wspd, **kw
+            ))
+
+        if len(wkerns) > 1:
+            return self._be.unordered_meta_kernel(wkerns)
+        else:
+            return wkerns[0]
+
 
 class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
@@ -218,7 +212,7 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         # Helpers
         tdisf = []
         c, l = 'curved', 'linear'
-        r, s = self._mesh_regions, self._slice_mat
+        r, s = self.mesh_regions, self._slice_mat
         slicedk = self._make_sliced_kernel
 
         if c in r and 'flux' not in self.antialias:
