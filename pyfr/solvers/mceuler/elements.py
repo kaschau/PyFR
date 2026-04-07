@@ -1,0 +1,255 @@
+import numpy as np
+
+from pyfr.solvers.baseadvec import BaseAdvectionElements
+from pyfr.multicomp.mcfluid import MCFluid
+
+
+class BaseMCFluidElements:
+    @staticmethod
+    def privars(ndims, cfg):
+        species_names = MCFluid.get_species_names(cfg)
+
+        if ndims == 2:
+            return ['p', 'u', 'v', 'T'] + species_names[0:-1]
+        elif ndims == 3:
+            return ['p', 'u', 'v', 'w', 'T'] + species_names[0:-1]
+
+    @staticmethod
+    def convars(ndims, cfg):
+        species_names = MCFluid.get_species_names(cfg)
+        if ndims == 2:
+            return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'E']
+        elif ndims == 3:
+            return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'rhow', 'E']
+
+    dualcoeffs = convars
+
+    @staticmethod
+    def visvars(ndims, cfg):
+        species_names = MCFluid.get_species_names(cfg)
+        if ndims == 2:
+            varmap = {
+                'pressure': ['p'],
+                'velocity': ['u', 'v'],
+                'temperature': ['T']
+            }
+        elif ndims == 3:
+            varmap = {
+                'pressure': ['p'],
+                'velocity': ['u', 'v', 'w'],
+                'temperature': ['T']
+            }
+        for sn in species_names[0:-1]:
+            varmap[sn] = [sn]
+
+        return varmap
+
+    @staticmethod
+    def pri_to_con(pris, cfg):
+        fluid = MCFluid(cfg, justTherm=True)
+        return fluid.pri_to_con(pris)
+
+    @staticmethod
+    def con_to_pri(cons, cfg):
+        fluid = MCFluid(cfg, justTherm=True)
+        return fluid.con_to_pri(cons)
+
+    @staticmethod
+    def diff_con_to_pri(cons, diff_cons, cfg):
+        fluid = MCFluid(cfg, justTherm=True)
+        return fluid.diff_con_to_pri(cons, diff_cons)
+
+    @staticmethod
+    def validate_formulation(ctrl):
+        shock_capturing = ctrl.cfg.get('solver', 'shock-capturing', 'none')
+        if shock_capturing == 'entropy-filter':
+            if ctrl.formulation == 'dual':
+                raise ValueError('Entropy filtering not compatible with '
+                                 'dual time stepping.')
+            elif ctrl.controller_has_variable_dt:
+                raise ValueError('Entropy filtering not compatible with '
+                                 'adaptive time stepping.')
+
+    def set_backend(self, *args, **kwargs):
+        super().set_backend(*args, **kwargs)
+
+        # Can elide shock-capturing at p = 0
+        shock_capturing = self.cfg.get('solver', 'shock-capturing', 'none')
+
+        # Modified entropy filtering method using specific physical
+        # entropy (without operator splitting for Navier-Stokes)
+        # doi:10.1016/j.jcp.2022.111501
+        if shock_capturing == 'entropy-filter' and self.basis.order != 0:
+            self._be.pointwise.register(
+                'pyfr.solvers.mceuler.kernels.entropylocal'
+            )
+            self._be.pointwise.register(
+                'pyfr.solvers.mceuler.kernels.entropyfilter'
+            )
+
+            # Template arguments
+            consts = self.cfg.items_as('constants', float)
+            consts |= self.mcfluid.consts
+            fpts_in_upts = self.basis.fpts_in_upts
+            self.nefpts = self.nupts if fpts_in_upts else self.nupts + self.nfpts
+            ub = self.basis.ubasis
+            meanwts = ub.invvdm[:, 0] / np.sum(ub.invvdm[:, 0])
+            eftplargs = {
+                'ndims': self.ndims, 'nupts': self.nupts,
+                'nfpts': self.nfpts, 'nefpts': self.nefpts,
+                'nvars': self.nvars, 'nfaces': self.nfaces,
+                'c': consts,
+                'eos': self.mcfluid.eos,
+                'order': self.basis.order, 'fpts_in_upts': fpts_in_upts,
+                'meanwts': meanwts
+            }
+
+            # Check to see if running anti-aliasing
+            if self.antialias:
+                raise ValueError('Entropy filter not compatible with '
+                                 'anti-aliasing.')
+
+            # Minimum density / shifted internal energy constraints
+            eftplargs['d_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'd-min', 1e-6)
+            eftplargs['inte_min'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'inte-min', 1e-6)
+
+            # Entropy tolerance
+            eftplargs['e_tol'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'e-tol', 1e-6)
+
+            # Inner solver parameters
+            eftplargs['f_tol'] = self.cfg.getfloat('solver-entropy-filter',
+                                                   'f-tol', 1e-4)
+            eftplargs['niters'] = self.cfg.getfloat('solver-entropy-filter',
+                                                    'niters', 2)
+
+            # Use linearised constraints/limiting kernel approach from
+            # Ching et al. (doi:10.1016/j.jcp.2024.112881)
+            form = self.cfg.get('solver-entropy-filter', 'formulation',
+                                'nonlinear')
+            eftplargs['linearise'] = form == 'linearised'
+
+            # Precompute basis orders for filter
+            ubdegs = self.basis.ubasis.degrees
+            eftplargs['ubdegs'] = [int(max(dd)) for dd in ubdegs]
+            eftplargs['order'] = self.basis.order
+
+            # Compute local entropy bounds
+            self.kernels['local_entropy'] = lambda uin: self._be.kernel(
+                'entropylocal', tplargs=eftplargs, dims=[self.neles],
+                u=self.scal_upts[uin], entmin_int=self.entmin_int,
+                m0=self.m0
+            )
+
+            # Apply entropy filter
+            self.kernels['entropy_filter'] = lambda uin: self._be.kernel(
+                'entropyfilter', tplargs=eftplargs, dims=[self.neles],
+                u=self.scal_upts[uin], entmin_int=self.entmin_int,
+                vdm=self.vdm_ef, invvdm=self.invvdm, m0=self.m0
+            )
+
+        if self.cfg.getbool('multi-component', 'chemistry', default=False):
+
+            consts = self.cfg.items_as('constants', float)
+            consts |= self.mcfluid.consts
+
+            sub_steps = self.cfg.get('multi-component', 'sub-steps', default=0)
+            chem_tplargs = {
+                'ndims': self.ndims,
+                'nvars': self.nvars,
+                'c': consts,
+                'eos': self.mcfluid.eos,
+                'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
+            }
+
+            if sub_steps == 'auto':
+                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 10)
+                chem_tplargs['max_subs'] = max_subs
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-auto',
+                                   'finite_rate_auto',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+            elif not int(sub_steps):
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate',
+                                   'finite_rate',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+            else:
+                chem_tplargs['sub_steps'] = int(sub_steps)
+                self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-substep',
+                                   'finite_rate_substep',
+                                   chem_tplargs,
+                                   False,
+                                   True)
+
+
+class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.mcfluid = MCFluid(self.cfg, justTherm=True)
+
+    def set_backend(self, *args, **kwargs):
+        super().set_backend(*args, **kwargs)
+
+        # Can elide interior flux calculations at p = 0
+        if self.basis.order == 0:
+            return
+
+        # Register our flux kernels
+        self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
+
+        # Template parameters for the flux kernels
+        consts = self.cfg.items_as('constants', float)
+        consts |= self.mcfluid.consts
+        tplargs = {
+            'ndims': self.ndims,
+            'nvars': self.nvars,
+            'nverts': len(self.basis.linspts),
+            'c': consts,
+            'eos': self.mcfluid.eos,
+            'jac_exprs': self.basis.jac_exprs
+        }
+
+        # Helpers
+        tdisf = []
+        c, l = 'curved', 'linear'
+        r, s = self._mesh_regions, self._slice_mat
+        slicedk = self._make_sliced_kernel
+
+        if c in r and 'flux' not in self.antialias:
+            tdisf.append(lambda uin: self._be.kernel(
+                'tflux', tplargs=tplargs | {'ktype': 'curved'},
+                dims=[self.nupts, r[c]], u=s(self.scal_upts[uin], c),
+                f=s(self._vect_upts, c), smats=self.curved_smat_at('upts')
+            ))
+        elif c in r:
+            tdisf.append(lambda: self._be.kernel(
+                'tflux', tplargs=tplargs | {'ktype': 'curved'},
+                dims=[self.nqpts, r[c]], u=s(self._scal_qpts, c),
+                f=s(self._vect_qpts, c), smats=self.curved_smat_at('qpts')
+            ))
+
+        if l in r and 'flux' not in self.antialias:
+            tdisf.append(lambda uin: self._be.kernel(
+                'tflux', tplargs=tplargs | {'ktype': 'linear'},
+                dims=[self.nupts, r[l]], u=s(self.scal_upts[uin], l),
+                f=s(self._vect_upts, l), verts=self.ploc_at('linspts', l),
+                upts=self.upts
+            ))
+        elif l in r:
+            tdisf.append(lambda: self._be.kernel(
+                'tflux', tplargs=tplargs | {'ktype': 'linear'},
+                dims=[self.nqpts, r[l]], u=s(self._scal_qpts, l),
+                f=s(self._vect_qpts, l), verts=self.ploc_at('linspts', l),
+                upts=self.qpts
+            ))
+
+        if 'flux' not in self.antialias:
+            self.kernels['tdisf'] = lambda uin: slicedk(k(uin) for k in tdisf)
+        else:
+            self.kernels['tdisf'] = lambda: slicedk(k() for k in tdisf)
