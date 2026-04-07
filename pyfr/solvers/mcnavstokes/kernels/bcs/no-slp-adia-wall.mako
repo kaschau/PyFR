@@ -1,0 +1,147 @@
+<%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
+<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
+
+% for n in range(ns):
+    ur[${n}] = ul[${n}];
+% endfor
+
+% for i in range(ndims):
+    ur[${i + vix}] = -ul[${i + vix}];
+% endfor
+    ur[${Eix}] = ul[${Eix}];
+
+    ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
+</%pyfr:macro>
+
+<%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
+
+% for n in range(ns):
+    ur[${n}] = ul[${n}];
+% endfor
+
+% for i in range(ndims):
+    ur[${i + vix}] = 0.0;
+% endfor
+
+    fpdtype_t rho = ql[${rhoix}];
+    ur[${Eix}] = ul[${Eix}]
+                     - (0.5/rho)*${pyfr.dot('ul[{i}]', i=(vix,vix + ndims))};
+
+    ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
+
+</%pyfr:macro>
+
+<%pyfr:macro name='bc_ldg_grad_state' params='ur, qr, qhr, nl, grad_ul, grad_ur'>
+    fpdtype_t rhoE = ur[${Eix}];
+    fpdtype_t rho = qr[${rhoix}];
+    fpdtype_t rcprho = 1.0/rho;
+    fpdtype_t E = rhoE*rcprho;
+
+    // Copy all gradients to the right side, we will keep momentum, but we will
+    // correct the energy and species terms such that the T and Y gradients
+    // computed are orthogonal to the normal vector
+% for i, j in pyfr.ndrange(ndims, nvars):
+    grad_ur[${i}][${j}] = grad_ul[${i}][${j}];
+% endfor
+
+% if ndims == 2:
+
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
+
+    // Velocity
+    fpdtype_t u = qr[${vix + 0}];
+    fpdtype_t v = qr[${vix + 1}];
+
+    // Velocity derivatives (rho*d[u,v]/d[x,y])
+    fpdtype_t u_x = grad_ul[0][${vix + 0}] - u*rho_x;
+    fpdtype_t u_y = grad_ul[1][${vix + 0}] - u*rho_y;
+    fpdtype_t v_x = grad_ul[0][${vix + 1}] - v*rho_x;
+    fpdtype_t v_y = grad_ul[1][${vix + 1}] - v*rho_y;
+
+    fpdtype_t rhoE_x = grad_ul[0][${Eix}];
+    fpdtype_t rhoE_y = grad_ul[1][${Eix}];
+
+    // Compute temperature derivatives (rho*cv*dT/d[x,y])
+    fpdtype_t e_Y_Y_x;
+    fpdtype_t e_Y_Y_y;
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'ur', 'qr', 'qhr', 'grad_ul', 'rho_x', 'rho_y')};
+
+    fpdtype_t T_x = rhoE_x - E*rho_x - u*u_x - v*v_x - rho*e_Y_Y_x;
+    fpdtype_t T_y = rhoE_y - E*rho_y - u*u_y - v*v_y - rho*e_Y_Y_y;
+
+    // Enforce no normal component of temperature gradient
+    fpdtype_t Tdotn = T_x*nl[0] + T_y*nl[1];
+    grad_ur[0][${Eix}] -= Tdotn*nl[0];
+    grad_ur[1][${Eix}] -= Tdotn*nl[1];
+
+    // Enforce zero normal species gradient in wall
+    fpdtype_t Y_x, Y_y, Ydotn;
+%   for n in range(ns):
+    // Species derivative (rho*dY/d[x,y])
+    Y_x = grad_ul[0][${n}] - qr[${n}]*rho_x;
+    Y_y = grad_ul[1][${n}] - qr[${n}]*rho_y;
+    Ydotn = Y_x*nl[0] + Y_y*nl[1];
+    grad_ur[0][${n}] -= Ydotn*nl[0];
+    grad_ur[1][${n}] -= Ydotn*nl[1];
+%   endfor
+
+% elif ndims == 3:
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(ns)])};
+
+    // Velocity
+    fpdtype_t u = qr[${vix + 0}];
+    fpdtype_t v = qr[${vix + 1}];
+    fpdtype_t w = qr[${vix + 2}];
+
+    // Velocity derivatives (rho*d[u,v,w]/d[x,y,z])
+    fpdtype_t u_x = grad_ul[0][${vix + 0}] - u*rho_x;
+    fpdtype_t u_y = grad_ul[1][${vix + 0}] - u*rho_y;
+    fpdtype_t u_z = grad_ul[2][${vix + 0}] - u*rho_z;
+    fpdtype_t v_x = grad_ul[0][${vix + 1}] - v*rho_x;
+    fpdtype_t v_y = grad_ul[1][${vix + 1}] - v*rho_y;
+    fpdtype_t v_z = grad_ul[2][${vix + 1}] - v*rho_z;
+    fpdtype_t w_x = grad_ul[0][${vix + 2}] - w*rho_x;
+    fpdtype_t w_y = grad_ul[1][${vix + 2}] - w*rho_y;
+    fpdtype_t w_z = grad_ul[2][${vix + 2}] - w*rho_z;
+
+    fpdtype_t rhoE_x = grad_ul[0][${Eix}];
+    fpdtype_t rhoE_y = grad_ul[1][${Eix}];
+    fpdtype_t rhoE_z = grad_ul[2][${Eix}];
+
+    // Compute temperature derivatives (rho*cv*dT/d[x,y,z])
+    fpdtype_t e_Y_Y_x;
+    fpdtype_t e_Y_Y_y;
+    fpdtype_t e_Y_Y_z;
+    ${pyfr.expand('e_Y_Y_x', 'e_Y_Y_x', 'e_Y_Y_y', 'e_Y_Y_z', 'ur', 'qr', 'qhr', 'grad_ul', 'rho_x', 'rho_y', 'rho_z')};
+    fpdtype_t T_x = rhoE_x - E*rho_x - u*u_x - v*v_x - w*w_x - rho*e_Y_Y_x;
+    fpdtype_t T_y = rhoE_y - E*rho_y - u*u_y - v*v_y - w*w_y - rho*e_Y_Y_y;
+    fpdtype_t T_z = rhoE_z - E*rho_z - u*u_z - v*v_z - w*w_z - rho*e_Y_Y_z;
+
+    // Enforce no normal component of temperature gradient
+    fpdtype_t Tdotn = T_x*nl[0] + T_y*nl[1] + T_z*nl[2];
+    grad_ur[0][${Eix}] -= Tdotn*nl[0];
+    grad_ur[1][${Eix}] -= Tdotn*nl[1];
+    grad_ur[2][${Eix}] -= Tdotn*nl[2];
+
+    // Enforce zero normal species gradient
+    fpdtype_t Y_x, Y_y, Y_z, Ydotn;
+%   for n in range(ns):
+    // Species derivative (rho*dY/d[x,y,z])
+    Y_x = grad_ul[0][${n}] - qr[${n}]*rho_x;
+    Y_y = grad_ul[1][${n}] - qr[${n}]*rho_y;
+    Y_z = grad_ul[2][${n}] - qr[${n}]*rho_z;
+    Ydotn = Y_x*nl[0] + Y_y*nl[1] + Y_z*nl[2];
+    grad_ur[0][${n}] -= Ydotn*nl[0];
+    grad_ur[1][${n}] -= Ydotn*nl[1];
+    grad_ur[2][${n}] -= Ydotn*nl[2];
+%   endfor
+
+% endif
+</%pyfr:macro>
