@@ -1,10 +1,10 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.entropy'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.entropy'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:kernel name='entropylocal' ndim='1'
               u='in fpdtype_t[${str(nupts)}][${str(nvars)}]'
@@ -13,7 +13,7 @@
     // Compute minimum entropy across element
     fpdtype_t ui[${nvars}], e;
     fpdtype_t qi[${nvars + 2}];
-    fpdtype_t qhi[${4 + ns}];
+    fpdtype_t qhi[${4 + mcf.ns}];
 
     fpdtype_t entmin = ${fpdtype_max};
     for (int i = 0; i < ${nupts}; i++)

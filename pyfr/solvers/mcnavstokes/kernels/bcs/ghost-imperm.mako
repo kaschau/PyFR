@@ -1,27 +1,27 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${mcf.trans}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 
 ## bc_ldg_state AND bc_rsolve_state must fill in ur, qr, qhr
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='bc_common_flux_state' params='ul, ql, qhl, gradul, artviscl, nl, magnl'>
 
     // Right states
     fpdtype_t ur[${nvars}], gradur[${ndims}][${nvars}];
     fpdtype_t qr[${nvars + 2}];
-    fpdtype_t qhr[${4 + ns}];
+    fpdtype_t qhr[${4 + mcf.ns}];
 
     ${pyfr.expand('bc_ldg_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
     ${pyfr.expand('bc_ldg_grad_state', 'ur', 'qr', 'qhr', 'nl', 'gradul', 'gradur')};
 
     // Mixture transport properties
-    fpdtype_t qtr[${2 + ns}];
+    fpdtype_t qtr[${2 + mcf.ns}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
 
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
