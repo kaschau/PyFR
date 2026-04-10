@@ -1,7 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 % if ndims == 2:
 <%pyfr:macro name='e_Y_Y_x' params='e_Y_Y_x, e_Y_Y_y, u, q, qh, gradu, rho_x, rho_y'>
@@ -11,11 +11,11 @@
     e_Y_Y_x = 0.0;
     e_Y_Y_y = 0.0;
 
-% for n in range(ns):
+% for n in range(mcf.ns):
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${n}] - q[${n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${n}] - q[${n}]*rho_y);
-      fpdtype_t e_Y = T*(${c['cp0'][n] - c['Ru']/c['MW'][n]});
+      fpdtype_t e_Y = T*(${mcf[n].cp0 - mcf.Ru / mcf[n].MW});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
     }
@@ -30,12 +30,12 @@
     e_Y_Y_x = 0.0;
     e_Y_Y_y = 0.0;
     e_Y_Y_z = 0.0;
-% for n in range(ns):
+% for n in range(mcf.ns):
     {
       fpdtype_t Y_x =  invrho*(gradu[0][${n}] - q[${n}]*rho_x);
       fpdtype_t Y_y =  invrho*(gradu[1][${n}] - q[${n}]*rho_y);
       fpdtype_t Y_z =  invrho*(gradu[2][${n}] - q[${n}]*rho_z);
-      fpdtype_t e_Y = T*(${c['cp0'][n] - c['Ru']/c['MW'][n]});
+      fpdtype_t e_Y = T*(${mcf[n].cp0 - mcf.Ru / mcf[n].MW});
       e_Y_Y_x += e_Y * Y_x;
       e_Y_Y_y += e_Y * Y_y;
       e_Y_Y_z += e_Y * Y_z;

@@ -1,8 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
 

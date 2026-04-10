@@ -1,7 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='stateFrom-prims' params='u, q, qh'>
     ## q is an array of length nvars + 2
@@ -16,9 +16,9 @@
     // Compute mixture properties
     fpdtype_t R = 0.0;
     fpdtype_t cp = 0.0;
-% for n in range(ns):
-    R += q[${n}] * ${c['Ru']/c['MW'][n]};
-    cp += q[${n}] * ${c['cp0'][n]};
+% for n in range(mcf.ns):
+    R += q[${n}] * ${mcf.Ru / mcf[n].MW};
+    cp += q[${n}] * ${mcf[n].cp0};
 % endfor
 
     // Compute density
@@ -26,7 +26,7 @@
     q[${rhoix}] = rho;
 
     // Species mass
-% for n in range(ns):
+% for n in range(mcf.ns):
     u[${n}] = q[${n}] * rho;
 % endfor
 
@@ -45,8 +45,8 @@
     qh[2] = sqrt(qh[0] * R * q[${Tix}]);
     qh[3] = rho * e;
 
-% for n in range(ns):
-    qh[${4 + n}] = q[${Tix}] * ${c['cp0'][n]};
+% for n in range(mcf.ns):
+    qh[${4 + n}] = q[${Tix}] * ${mcf[n].cp0};
 % endfor
 
 #ifdef DEBUG
@@ -58,8 +58,8 @@
   printf("therm&v${i + vix} = %e\n", q[${i + vix}]);
 % endfor
   printf("therm&T = %e\n", q[${Tix}]);
-% for n in range(ns):
-  printf("therm&Y_${c['names'][n]} = %e\n", q[${n}]);
+% for n in range(mcf.ns):
+  printf("therm&Y_${mcf.sp_names[n]} = %e\n", q[${n}]);
 % endfor
 
   printf("\nCOMPUTED STATE\n");
@@ -68,8 +68,8 @@
   printf("therm&rhov${i + vix} = %e\n", u[${i + vix}]);
 % endfor
   printf("therm&rhoE = %e\n", u[${Eix}]);
-% for n in range(ns):
-  printf("therm&rhoY_${c['names'][n]} = %e\n", u[${n}]);
+% for n in range(mcf.ns):
+  printf("therm&rhoY_${mcf.sp_names[n]} = %e\n", u[${n}]);
 % endfor
   printf("*********************************\n");
 #endif

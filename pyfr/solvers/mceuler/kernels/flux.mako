@@ -1,7 +1,7 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='inviscid_flux' params='u, f, q'>
     fpdtype_t rho = q[${rhoix}];
@@ -10,7 +10,7 @@
     fpdtype_t rhoE = u[${Eix}];
 
    // Species fluxes
-% for i, n in pyfr.ndrange(ndims,ns):
+% for i, n in pyfr.ndrange(ndims,mcf.ns):
    f[${i}][${n}] = q[${vix + i}]*u[${n}];
 % endfor
 
@@ -38,7 +38,7 @@
 % endfor
 
     // Species fluxes
-% for n in range(ns):
+% for n in range(mcf.ns):
     f[${n}] = u[${n}]*v[0];
 % endfor
 

@@ -47,6 +47,7 @@ class BaseBackend:
         self.fpdtype = np.dtype(prec).type
         self.fpdtype_eps = float(np.finfo(self.fpdtype).eps)
         self.fpdtype_max = float(np.finfo(self.fpdtype).max)
+        self.fpdtype_min = float(np.finfo(self.fpdtype).tiny)
 
         # Memory model
         match cfg.get('backend', 'memory-model', 'normal'):
@@ -83,8 +84,8 @@ class BaseBackend:
         pkg = f'pyfr.backends.{self.name}.kernels'
         dfltargs = {
             'fpdtype': self.fpdtype, 'ixdtype': self.ixdtype,
-            'fpdtype_max': self.fpdtype_max, 'csubsz': self.csubsz,
-            'fpdtype_eps': self.fpdtype_eps,
+            'fpdtype_max': self.fpdtype_max, 'fpdtype_min': self.fpdtype_min,
+            'csubsz': self.csubsz, 'fpdtype_eps': self.fpdtype_eps,
             'soasz': self.soasz, 'math': math
         }
 
