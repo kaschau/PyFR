@@ -7,6 +7,7 @@ from pyfr.solvers.mcnavstokes.inters import (MCNavierStokesBaseBCInters,
 
 class MCNavierStokesSystem(BaseAdvectionDiffusionSystem):
     name = 'mcnavier-stokes'
+    ef_solver = 'mceuler'
 
     elementscls = MCNavierStokesElements
     intinterscls = MCNavierStokesIntInters

@@ -1,16 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
 <%include file='pyfr.solvers.mceuler.kernels.multicomp.chem.net-rate-of-production'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
-
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='finite_rate' params='t, u, ploc, src'>
 
-  // Compute thermodynamic properties
   fpdtype_t q[${nvars + 2}];
-  fpdtype_t qh[${4 + ns}];
+  fpdtype_t qh[${4 + mcf.ns}];
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
   fpdtype_t rho = q[${rhoix}];
@@ -18,20 +15,18 @@
 
   ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
 
-  // Set non chemical terms to zero
   % for i in range(ndims):
     src[${i + vix}] = 0.0;
   % endfor
     src[${Eix}] = 0.0;
 
-
-  #ifdef DEBUG
+#ifdef DEBUG
     printf("*********************************\n");
     printf("CHEMICAL SOURCE TERMS\n");
-  % for n in range(ns):
-    printf("chem&omega_${c['names'][n]} = %e\n", src[${n}]);
+  % for n in range(mcf.ns):
+    printf("chem&omega_${mcf.sp_names[n]} = %e\n", src[${n}]);
   % endfor
     printf("*********************************\n");
-  #endif
+#endif
 
-  </%pyfr:macro>
+</%pyfr:macro>

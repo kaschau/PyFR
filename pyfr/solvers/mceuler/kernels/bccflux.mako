@@ -1,12 +1,12 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mceuler.kernels.bcs.${bctype}'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:kernel name='bccflux' ndim='1'
               ul='inout view fpdtype_t[${str(nvars)}]'
@@ -16,13 +16,13 @@
 
     // Compute left thermodynamic quantities
     fpdtype_t ql[${nvars + 2}];
-    fpdtype_t qhl[${4 + ns}];
+    fpdtype_t qhl[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 
     // Compute the right BC state
     fpdtype_t ur[${nvars}];
     fpdtype_t qr[${nvars + 2}];
-    fpdtype_t qhr[${4 + ns}];
+    fpdtype_t qhr[${4 + mcf.ns}];
     ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'norm_nl', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve

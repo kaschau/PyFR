@@ -1,13 +1,13 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
     fpdtype_t nor = ${' + '.join(f'ul[{vix + i}]*nl[{i}]' for i in range(ndims))};
 
-% for n in range(ns):
+% for n in range(mcf.ns):
     ur[${n}] = ul[${n}];
 % endfor
 

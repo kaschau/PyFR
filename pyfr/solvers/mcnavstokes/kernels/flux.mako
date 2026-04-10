@@ -1,9 +1,9 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${eos}.e_Y_Y_x'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${mcf.eos}.e_Y_Y_x'/>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>\
 
 % if ndims == 2:
 <%pyfr:macro name='viscous_flux_add' params='uin, grad_uin, q, qh, qt, fout'>
@@ -15,8 +15,8 @@
     fpdtype_t mu = qt[0];
     fpdtype_t kappa = qt[1];
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(mcf.ns)])};
 
     // Velocity derivatives (d[u,v]/d[x,y])
     fpdtype_t u_x = rcprho*(grad_uin[0][${vix}] - u*rho_x);
@@ -49,11 +49,11 @@
     fout[1][${Eix}] += u*t_xy + v*t_yy + -kappa*T_y;
 
     // Species diffusion
-    fpdtype_t Y_x[${ns}];
-    fpdtype_t Y_y[${ns}];
+    fpdtype_t Y_x[${mcf.ns}];
+    fpdtype_t Y_y[${mcf.ns}];
     fpdtype_t Vcx = 0.0;
     fpdtype_t Vcy = 0.0;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
       // Species derivative (Dk*rho*dY/d[x,y])
       Y_x[${n}] = qt[${2 + n}]*(grad_uin[0][${n}] - q[${n}]*rho_x);
       Y_y[${n}] = qt[${2 + n}]*(grad_uin[1][${n}] - q[${n}]*rho_y);
@@ -65,7 +65,7 @@
 
     // Species mass diffusion
     fpdtype_t Jx, Jy;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
       Jx = -Y_x[${n}] + q[${n}]*Vcx;
       fout[0][${n}] += Jx;
       Jy = -Y_y[${n}] + q[${n}]*Vcy;
@@ -87,9 +87,9 @@
     fpdtype_t mu = qt[0];
     fpdtype_t kappa = qt[1];
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(ns)])};
-    fpdtype_t rho_z = ${" + ".join([f"grad_uin[2][{n}]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_uin[0][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_uin[1][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_uin[2][{n}]" for n in range(mcf.ns)])};
 
     // Velocity derivatives (grad[u,v,w])
     fpdtype_t u_x = rcprho*(grad_uin[0][${vix + 0}] - u*rho_x);
@@ -134,13 +134,13 @@
     fout[2][${Eix}] += u*t_xz + v*t_yz + w*t_zz + -kappa*T_z;
 
     // Species diffusion
-    fpdtype_t Y_x[${ns}];
-    fpdtype_t Y_y[${ns}];
-    fpdtype_t Y_z[${ns}];
+    fpdtype_t Y_x[${mcf.ns}];
+    fpdtype_t Y_y[${mcf.ns}];
+    fpdtype_t Y_z[${mcf.ns}];
     fpdtype_t Vcx = 0.0;
     fpdtype_t Vcy = 0.0;
     fpdtype_t Vcz = 0.0;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
       // Species derivative (Dk*rho*dY/d[x,y,z])
       Y_x[${n}] = qt[${2 + n}]*(grad_uin[0][${n}] - q[${n}]*rho_x);
       Y_y[${n}] = qt[${2 + n}]*(grad_uin[1][${n}] - q[${n}]*rho_y);
@@ -153,7 +153,7 @@
 %   endfor
 
     fpdtype_t Jx, Jy, Jz;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
       // Species mass diffusion
       Jx = -Y_x[${n}] + q[${n}]*Vcx;
       fout[0][${n}] += Jx;

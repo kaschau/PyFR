@@ -1,16 +1,16 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
+
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${mcf.trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 
 <% beta, tau = c['ldg-beta'], c['ldg-tau'] %>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>\
 
 <%pyfr:kernel name='mpicflux' ndim='1'
               ul='inout view fpdtype_t[${str(nvars)}]'
@@ -25,12 +25,12 @@
 
     // Compute left thermodynamic quantities
     fpdtype_t ql[${nvars + 2}];
-    fpdtype_t qhl[${4 + ns}];
+    fpdtype_t qhl[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'ul', 'ql', 'qhl')};
 
     // Compute right thermodynamic quantities
     fpdtype_t qr[${nvars + 2}];
-    fpdtype_t qhr[${4 + ns}];
+    fpdtype_t qhr[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve
@@ -40,7 +40,7 @@
 % if beta != -0.5:
     fpdtype_t fvl[${ndims}][${nvars}] = {{0}};
     // Compute transport properties
-    fpdtype_t qtl[${ns + 2}];
+    fpdtype_t qtl[${mcf.ns + 2}];
     ${pyfr.expand('mixture_transport', 'ul', 'ql', 'qhl', 'qtl')};
     ${pyfr.expand('viscous_flux_add', 'ul', 'gradul', 'ql', 'qhl', 'qtl', 'fvl')};
     ${pyfr.expand('artificial_viscosity_add', 'gradul', 'fvl', 'artviscl')};
@@ -49,7 +49,7 @@
 % if beta != 0.5:
     fpdtype_t fvr[${ndims}][${nvars}] = {{0}};
     // Compute transport properties
-    fpdtype_t qtr[${ns + 2}];
+    fpdtype_t qtr[${mcf.ns + 2}];
     ${pyfr.expand('mixture_transport', 'ur', 'qr', 'qhr', 'qtr')};
     ${pyfr.expand('viscous_flux_add', 'ur', 'gradur', 'qr', 'qhr', 'qtr', 'fvr')};
     ${pyfr.expand('artificial_viscosity_add', 'gradur', 'fvr', 'artviscr')};

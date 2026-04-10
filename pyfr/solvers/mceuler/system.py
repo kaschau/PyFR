@@ -7,6 +7,7 @@ from pyfr.solvers.mceuler.inters import (MCEulerIntInters,
 
 class MCEulerSystem(BaseAdvectionSystem):
     name = 'mceuler'
+    ef_solver = 'mceuler'
 
     elementscls = MCEulerElements
     intinterscls = MCEulerIntInters

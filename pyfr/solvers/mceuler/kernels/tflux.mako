@@ -1,12 +1,12 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:kernel name='tflux' ndim='2'
               u='in fpdtype_t[${str(nvars)}]'
@@ -22,7 +22,7 @@
 
     // Compute thermodynamic properties
     fpdtype_t q[${nvars + 2}];
-    fpdtype_t qh[${4 + ns}];
+    fpdtype_t qh[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
     // Compute the flux

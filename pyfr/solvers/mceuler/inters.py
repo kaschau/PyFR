@@ -1,10 +1,12 @@
 from pyfr.solvers.baseadvec import (BaseAdvectionIntInters,
                                     BaseAdvectionMPIInters,
                                     BaseAdvectionBCInters)
-from pyfr.multicomp.mcfluid import MCFluid
+from pyfr.multicomp.mcfluid import get_mcfluid
 
 
 class TplargsMixin:
+    needs_transport = False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -20,26 +22,20 @@ class TplargsMixin:
             self.inte_min = self.cfg.getfloat('solver-interfaces', 'inte-min',
                                            5*self._be.fpdtype_eps)
 
-        self.mcfluid = MCFluid(self.cfg)
-        self.c |= self.mcfluid.consts
+        self.mcfluid = get_mcfluid(self.cfg, needs_transport=self.needs_transport)
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
-                             eos=self.mcfluid.eos,
+                             mcf=self.mcfluid,
                              rsolver=rsolver, c=self.c,
                              d_min=self.d_min, inte_min=self.inte_min)
 
     def validate_species(self):
-        Y = []
-        for n in self.c['names']:
-            Y.append(float(self.c[n].replace('(','').replace(')','')))
+        sp_names = self.mcfluid.sp_names
+        total = sum(float(self.c[n].strip('()')) for n in sp_names[:-1])
 
-        test = sum(Y)
-        if test == 0.0:
-            self.c[self.c['names'][-1]] = '(1.)'
-        elif test > 1.0:
-            raise ValueError('Invalid BC species mass fraction specification.')
-        elif test < 1.0:
-            self.c[self.c['names'][-1]] = f'({1.0 - test})'
+        if total > 1.0:
+            raise ValueError('BC species mass fractions sum to > 1')
+        self.c[sp_names[-1]] = f'({1.0 - total})'
 
 
 class MCEulerIntInters(TplargsMixin, BaseAdvectionIntInters):
@@ -96,10 +92,9 @@ class MCEulerSupInflowBCInters(MCEulerBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names']
-
-        default = {spn: 0 for spn in self.c['names']}
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default)
         self.validate_species()
@@ -131,13 +126,13 @@ class MCEulerConstantMassFlowBCInters(MCEulerBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        bcvars = ['T', 'mdot-per-area']
-        bcvars += self.c['names']
-
-        default = {spn: 0 for spn in self.c['names']}
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'mdot-per-area'] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()
+
 
 class MCEulerCharRiemInvBCInters(MCEulerBaseBCInters):
     type = 'char-riem-inv'
@@ -145,13 +140,9 @@ class MCEulerCharRiemInvBCInters(MCEulerBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        self.c |= self._exp_opts(
-            ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2], lhs
-        )
-
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names']
-        default = {spn: 0 for spn in self.c['names']}
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()

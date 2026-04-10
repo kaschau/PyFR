@@ -1,11 +1,11 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-% for n in range(ns):
+% for n in range(mcf.ns):
     ur[${n}] = ul[${n}];
 % endfor
 
@@ -19,7 +19,7 @@
 
 <%pyfr:macro name='bc_ldg_state' params='ul, ql, qhl, nl, ur, qr, qhr' externs='ploc, t'>
 
-% for n in range(ns):
+% for n in range(mcf.ns):
     ur[${n}] = ul[${n}];
 % endfor
 
@@ -50,8 +50,8 @@
 
 % if ndims == 2:
 
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(mcf.ns)])};
 
     // Velocity
     fpdtype_t u = qr[${vix + 0}];
@@ -81,7 +81,7 @@
 
     // Enforce zero normal species gradient in wall
     fpdtype_t Y_x, Y_y, Ydotn;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
     // Species derivative (rho*dY/d[x,y])
     Y_x = grad_ul[0][${n}] - qr[${n}]*rho_x;
     Y_y = grad_ul[1][${n}] - qr[${n}]*rho_y;
@@ -91,9 +91,9 @@
 %   endfor
 
 % elif ndims == 3:
-    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(ns)])};
-    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(ns)])};
-    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(ns)])};
+    fpdtype_t rho_x = ${" + ".join([f"grad_ul[0][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_y = ${" + ".join([f"grad_ul[1][{n}]" for n in range(mcf.ns)])};
+    fpdtype_t rho_z = ${" + ".join([f"grad_ul[2][{n}]" for n in range(mcf.ns)])};
 
     // Velocity
     fpdtype_t u = qr[${vix + 0}];
@@ -132,7 +132,7 @@
 
     // Enforce zero normal species gradient
     fpdtype_t Y_x, Y_y, Y_z, Ydotn;
-%   for n in range(ns):
+%   for n in range(mcf.ns):
     // Species derivative (rho*dY/d[x,y,z])
     Y_x = grad_ul[0][${n}] - qr[${n}]*rho_x;
     Y_y = grad_ul[1][${n}] - qr[${n}]*rho_y;

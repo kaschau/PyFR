@@ -2,7 +2,7 @@ import numpy as np
 
 from pyfr.solvers.baseadvecdiff import BaseAdvectionDiffusionElements
 from pyfr.solvers.mceuler.elements import BaseMCFluidElements
-from pyfr.multicomp.mcfluid import MCFluid
+from pyfr.multicomp.mcfluid import get_mcfluid
 
 
 class MCNavierStokesElements(BaseMCFluidElements,
@@ -11,11 +11,11 @@ class MCNavierStokesElements(BaseMCFluidElements,
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.mcfluid = MCFluid(self.cfg, justTherm=False)
+        self.mcfluid = get_mcfluid(self.cfg, needs_transport=True)
 
     @staticmethod
     def grad_con_to_pri(cons, grad_cons, cfg):
-        fluid = MCFluid(cfg, justTherm=True)
+        fluid = get_mcfluid(cfg)
         return fluid.diff_con_to_pri(cons, grad_cons)
 
     def set_backend(self, *args, **kwargs):
@@ -33,16 +33,12 @@ class MCNavierStokesElements(BaseMCFluidElements,
         shock_capturing = self.cfg.get('solver', 'shock-capturing')
 
         # Template parameters for the flux kernels
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
             'nverts': len(self.basis.linspts),
-            'c': consts,
-            'eos': self.mcfluid.eos,
-            'trans': self.mcfluid.trans,
-            'mixing_rule': self.mcfluid.mixing_rule,
+            'c': self.cfg.items_as('constants', float),
+            'mcf': self.mcfluid,
             'jac_exprs': self.basis.jac_exprs,
             'interp_expr': self.basis.interp_expr,
             'shock_capturing': shock_capturing,

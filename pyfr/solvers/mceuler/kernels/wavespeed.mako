@@ -1,12 +1,12 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
 
 <% smats = 'smats_l' if 'linear' in ktype else 'smats' %>
 <% rcpdjac_v = 'rcpdjac_l' if 'linear' in ktype else 'rcpdjac' %>
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:kernel name='wavespeed' ndim='2'
               u='in fpdtype_t[${str(nvars)}]'
@@ -23,7 +23,7 @@
 
     // Compute thermodynamic state
     fpdtype_t q[${nvars + 2}];
-    fpdtype_t qh[${4 + ns}];
+    fpdtype_t qh[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
     fpdtype_t csnd = qh[2];

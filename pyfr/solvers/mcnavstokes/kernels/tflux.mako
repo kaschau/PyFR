@@ -1,9 +1,9 @@
 <%inherit file='base'/>
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 <%include file='pyfr.solvers.baseadvec.kernels.smats'/>
-<%include file='pyfr.solvers.mceuler.kernels.multicomp.${eos}.stateFrom-cons'/>
-<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${trans}'/>
+<%include file='pyfr.solvers.mceuler.kernels.multicomp.${mcf.eos}.stateFrom-cons'/>
+<%include file='pyfr.solvers.mcnavstokes.kernels.multicomp.${mcf.trans}'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.artvisc'/>
 <%include file='pyfr.solvers.baseadvecdiff.kernels.transform_grad'/>
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
@@ -29,7 +29,7 @@
     fpdtype_t ${rcpdjac} = 1 / djac;
 % endif
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>\
 
 % if 'fused' in ktype:
     // Transform the corrected gradient
@@ -40,14 +40,14 @@
 
     // Compute thermodynamic properties
     fpdtype_t q[${nvars + 2}];
-    fpdtype_t qh[${4 + ns}];
+    fpdtype_t qh[${4 + mcf.ns}];
     ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
     fpdtype_t ftemp[${ndims}][${nvars}];
     ${pyfr.expand('inviscid_flux', 'u', 'ftemp', 'q')};
 
     // Compute transport properties
-    fpdtype_t qt[${2 + ns}];
+    fpdtype_t qt[${2 + mcf.ns}];
     ${pyfr.expand('mixture_transport', 'u', 'q', 'qh', 'qt')};
     ${pyfr.expand('viscous_flux_add', 'u', gradu, 'q', 'qh', 'qt', 'ftemp')};
     ${pyfr.expand('artificial_viscosity_add', gradu, 'ftemp', 'artvisc')};
