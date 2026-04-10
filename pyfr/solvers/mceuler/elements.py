@@ -2,7 +2,7 @@ import numpy as np
 
 from pyfr.solvers.base.elements import ExportableField
 from pyfr.solvers.baseadvec import BaseAdvectionElements
-from pyfr.multicomp.mcfluid import MCFluid
+from pyfr.multicomp.mcfluid import MCFluidBase, get_mcfluid
 
 
 class BaseMCFluidElements:
@@ -10,19 +10,17 @@ class BaseMCFluidElements:
 
     @classmethod
     def eos_tplargs(cls, ndims, cfg):
-        mcfluid = MCFluid(cfg, justTherm=True)
-        consts = cfg.items_as('constants', float)
-        consts |= mcfluid.consts
+        fluid = get_mcfluid(cfg)
         return {
             'ndims': ndims,
             'nvars': len(cls.convars(ndims, cfg)),
-            'c': consts,
-            'eos': mcfluid.eos,
+            'c': cfg.items_as('constants', float),
+            'mcf': fluid,
         }
 
     @staticmethod
     def privars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)
+        species_names = MCFluidBase.get_species_names(cfg)
 
         if ndims == 2:
             return ['p', 'u', 'v', 'T'] + species_names[0:-1]
@@ -31,7 +29,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def convars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)
+        species_names = MCFluidBase.get_species_names(cfg)
         if ndims == 2:
             return [f"rho{n}" for n in species_names] + ['rhou', 'rhov', 'E']
         elif ndims == 3:
@@ -41,7 +39,7 @@ class BaseMCFluidElements:
 
     @staticmethod
     def visvars(ndims, cfg):
-        species_names = MCFluid.get_species_names(cfg)
+        species_names = MCFluidBase.get_species_names(cfg)
         if ndims == 2:
             varmap = {
                 'pressure': ['p'],
@@ -61,17 +59,17 @@ class BaseMCFluidElements:
 
     @staticmethod
     def pri_to_con(pris, cfg):
-        fluid = MCFluid(cfg, justTherm=True)
+        fluid = get_mcfluid(cfg)
         return fluid.pri_to_con(pris)
 
     @staticmethod
     def con_to_pri(cons, cfg):
-        fluid = MCFluid(cfg, justTherm=True)
+        fluid = get_mcfluid(cfg)
         return fluid.con_to_pri(cons)
 
     @staticmethod
     def diff_con_to_pri(cons, diff_cons, cfg):
-        fluid = MCFluid(cfg, justTherm=True)
+        fluid = get_mcfluid(cfg)
         return fluid.diff_con_to_pri(cons, diff_cons)
 
     @staticmethod
@@ -94,21 +92,17 @@ class BaseMCFluidElements:
         )
 
         if self.cfg.getbool('multi-component', 'chemistry', default=False):
-
-            consts = self.cfg.items_as('constants', float)
-            consts |= self.mcfluid.consts
-
             sub_steps = self.cfg.get('multi-component', 'sub-steps', default=0)
             chem_tplargs = {
                 'ndims': self.ndims,
                 'nvars': self.nvars,
-                'c': consts,
-                'eos': self.mcfluid.eos,
+                'c': self.cfg.items_as('constants', float),
+                'mcf': self.mcfluid,
                 'dt': self.cfg.getfloat('solver-time-integrator', 'dt'),
             }
 
             if sub_steps == 'auto':
-                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default = 10)
+                max_subs = self.cfg.getfloat('multi-component', 'max-subs', default=10)
                 chem_tplargs['max_subs'] = max_subs
                 self.add_src_macro('pyfr.solvers.mceuler.kernels.multicomp.chem.finite-rate-auto',
                                    'finite_rate_auto',
@@ -146,14 +140,12 @@ class BaseMCFluidElements:
     def _wavespeed_kernel(self, uin):
         r, s = self.mesh_regions, self._slice_mat
 
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
             'nverts': len(self.basis.linspts),
-            'c': consts,
-            'eos': self.mcfluid.eos,
+            'c': self.cfg.items_as('constants', float),
+            'mcf': self.mcfluid,
             'jac_exprs': self.basis.jac_exprs
         }
 
@@ -185,7 +177,7 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.mcfluid = MCFluid(self.cfg, justTherm=True)
+        self.mcfluid = get_mcfluid(self.cfg)
 
     def set_backend(self, *args, **kwargs):
         super().set_backend(*args, **kwargs)
@@ -198,14 +190,12 @@ class MCEulerElements(BaseMCFluidElements, BaseAdvectionElements):
         self._be.pointwise.register('pyfr.solvers.mceuler.kernels.tflux')
 
         # Template parameters for the flux kernels
-        consts = self.cfg.items_as('constants', float)
-        consts |= self.mcfluid.consts
         tplargs = {
             'ndims': self.ndims,
             'nvars': self.nvars,
             'nverts': len(self.basis.linspts),
-            'c': consts,
-            'eos': self.mcfluid.eos,
+            'c': self.cfg.items_as('constants', float),
+            'mcf': self.mcfluid,
             'jac_exprs': self.basis.jac_exprs
         }
 

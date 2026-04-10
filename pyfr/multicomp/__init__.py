@@ -1,63 +1,21 @@
-import numpy as np
-from pathlib import Path
-import yaml
+import functools
+import re
 
-def complete_species(key, usersp, refsp):
-    # A function to collect the data in order of species listed in the input spdata
-    # returns a numpy array of the data.
-    prop = []
-    for sp in usersp.keys():
-        try:
-            prop.append(usersp[sp][key])
-        except KeyError:
-            try:
-                prop.append(refsp[sp][key])
-            except KeyError:
-                raise KeyError(
-                    f"You want to use species {sp}, but did not provide a {key}, and it is not in the PyFR species database."
-                )
-        except TypeError:
-            try:
-                prop.append(refsp[sp][key])
-            except TypeError:
-                raise TypeError(
-                    "The top level in your spieces data input yaml file must only be species names."
-                )
-            except KeyError:
-                raise KeyError(
-                    f"You want to use species {sp}, but did not provide a {key}, and it is not in the PyFR species database."
-                )
-    if isinstance(prop[0], str):
-        return prop
-    else:
-        return np.array(prop, dtype=np.float64)
+# Physical constants
+RU = 8314.46261815324         # Universal gas constant [J/(kmol·K)]
+AVOGADRO = 6.02214076e26     # Avogadro's number [1/kmol]
+KB = 1.380649e-23            # Boltzmann constant [J/K]
+EPS0 = 8.8541878128e-12      # Vacuum permittivity [F/m]
 
-def find_species_input(file_or_list):
-    is_file = False
 
-    test_paths = [
-        # Assume we are given a relative path
-        Path.cwd(),
-        # Otherwise, search our database for the file
-        Path(__file__).parent / 'database',
-    ]
-    for path in test_paths:
-        if "," in file_or_list:
-            break
-        fullpath = path / file_or_list
-        if Path(fullpath).exists():
-            is_file = True
-            break
-
-    if is_file:
-        with open(fullpath, "r") as f:
-            usersp = yaml.load(f, Loader=yaml.SafeLoader)
-    else:
-        usersp = {
-            "properties": {
-                key: dict() for key in file_or_list.replace(" ", "").split(",")
-            },
-            "chemistry": dict(),
-        }
-
-    return usersp
+def clean_csigns(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        s = fn(*args, **kwargs)
+        s = re.sub(r'\+\s*\-', '- ', s)
+        s = re.sub(r'\-\s*\-', '+ ', s)
+        s = re.sub(r'\-\s*\+', '- ', s)
+        s = re.sub(r'\+\s*\+', '+ ', s)
+        s = re.sub(r'=\s*\+\s*', '= ', s)
+        return s
+    return wrapper

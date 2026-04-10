@@ -1,15 +1,15 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 
 <%include file='pyfr.solvers.baseadvec.kernels.transform'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>\
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>\
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     fpdtype_t utl[${nvars}], utr[${nvars}], ntf[${nvars}];
     fpdtype_t qtransl[${nvars + 2}], qtransr[${nvars + 2}];
 
-    % for n in range(ns):
+    % for n in range(mcf.ns):
       utl[${n}] = ul[${n}];
       qtransl[${n}] = ql[${n}];
       utr[${n}] = ur[${n}];
@@ -37,7 +37,7 @@
 
     ${pyfr.expand('rsolve_1d', 'utl', 'utr', 'qtransl', 'qtransr', 'qhl', 'qhr', 'n', 'ntf')};
 
-    % for n in range(ns):
+    % for n in range(mcf.ns):
       nf[${n}] = ntf[${n}];
     % endfor
     nf[${Eix}] = ntf[${Eix}];

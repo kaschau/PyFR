@@ -1,8 +1,8 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='rsolve' params='ul, ur, ql, qr, qhl, qhr, n, nf'>
     // Compute the left and right fluxes + velocities and pressures
@@ -68,7 +68,7 @@
     fpdtype_t rusl = ul_com*rl;
     fpdtype_t rusr = ur_com*rr;
     // Star state species
-% for n in range(ns):
+% for n in range(mcf.ns):
     usl[${n}] = rusl*ql[${n}];
     usr[${n}] = rusr*qr[${n}];
 % endfor

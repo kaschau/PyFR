@@ -104,7 +104,7 @@ class EntropyFilter:
         nefpts = eles.nupts if fpts_in_upts else eles.nupts + eles.nfpts
         ub = eles.basis.ubasis
 
-        return {
+        tplargs = {
             'ndims': eles.ndims, 'nupts': eles.nupts,
             'nfpts': eles.nfpts, 'nefpts': nefpts,
             'nvars': eles.nvars, 'nfaces': nfaces,
@@ -113,12 +113,19 @@ class EntropyFilter:
             'fpts_in_upts': fpts_in_upts,
             'd_min': cfg.getfloat('solver-entropy-filter', 'd-min', 1e-6),
             'p_min': cfg.getfloat('solver-entropy-filter', 'p-min', 1e-6),
+            'inte_min': cfg.getfloat('solver-entropy-filter', 'inte-min', 1e-6),
             'e_tol': cfg.getfloat('solver-entropy-filter', 'e-tol', 1e-6),
             'f_tol': cfg.getfloat('solver-entropy-filter', 'f-tol', 1e-4),
             'niters': cfg.getfloat('solver-entropy-filter', 'niters', 2),
             'linearise': form == 'linearised',
             'ubdegs': [int(max(dd)) for dd in ub.degrees],
         }
+
+        # MC elements carry mcfluid for EOS-specific entropy computation
+        if hasattr(eles, 'mcfluid'):
+            tplargs['mcf'] = eles.mcfluid
+
+        return tplargs
 
     def _setup_interfaces(self, system, int_inters, mpi_inters, bc_inters):
         be = self._be

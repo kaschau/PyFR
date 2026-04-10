@@ -1,14 +1,54 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<%import math %>
 
-<% MW = c['MW'] %>\
-<% muPoly = c['muPoly'] %>\
-<% kappaPoly = c['kappaPoly'] %>\
-## Dij is a symmetric matrix, so just store half and index appropriately
-<% DijPoly = c['DijPoly'] %>\
-<% Dijix = lambda n,n2 : int(ns * (ns-1) / 2 - (ns - n) * (ns - n - 1)/2 + n2) %>\
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
+
+<%pyfr:macro name='mix_visc_Wilke' params='polymu_sp, invpolymu_sp, X, sqrtT, mu'>
+    fpdtype_t phitemp[${mcf.ns}] = {0};
+    % for n in range(mcf.ns):
+      {
+        % for n2 in range(n, mcf.ns):
+          {
+          % if n == n2:
+            phitemp[${n}] += X[${n2}];
+          % else:
+<%
+            mwn = mcf[n].MW
+            mwn2 = mcf[n2].MW
+%>\
+            {
+              fpdtype_t polymu_ratio = polymu_sp[${n}]*invpolymu_sp[${n2}];
+              fpdtype_t num = 1.0 + polymu_ratio * ${(mwn2 / mwn)**0.25};
+              fpdtype_t phi_temp = num * num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + mwn/mwn2))};
+              phitemp[${n}] += phi_temp * X[${n2}];
+
+              polymu_ratio = polymu_sp[${n2}]*invpolymu_sp[${n}];
+              num = 1.0 + polymu_ratio * ${(mwn / mwn2)**0.25};
+              phi_temp = num * num * ${1.0/(math.sqrt(8.0)*math.sqrt(1.0 + mwn2/mwn))};
+              phitemp[${n2}] += phi_temp * X[${n}];
+            }
+          % endif
+          }
+        % endfor
+        fpdtype_t mu_sp = polymu_sp[${n}] * polymu_sp[${n}]*sqrtT;
+        mu += mu_sp * X[${n}] / phitemp[${n}];
+      }
+    % endfor
+</%pyfr:macro>
+
+<%pyfr:macro name='mix_visc_Herning-Zipperer' params='polymu_sp, invpolymu_sp, X, sqrtT, mu'>
+    fpdtype_t numerator = 0.0;
+    fpdtype_t denominator = 0.0;
+    % for n in range(mcf.ns):
+    {
+      fpdtype_t X_sqrt_MW = X[${n}] * ${math.sqrt(mcf[n].MW)};
+      numerator += X_sqrt_MW * polymu_sp[${n}] * polymu_sp[${n}];
+      denominator += X_sqrt_MW;
+    }
+    % endfor
+    mu = (numerator / denominator) * sqrtT;
+</%pyfr:macro>
 
 <%pyfr:macro name='mixture_transport' params='u, q, qh, qt'>
   fpdtype_t p = q[${pix}];
@@ -16,85 +56,34 @@
 
   // Mole fraction
   fpdtype_t MWmix = 0.0;
-  fpdtype_t X[${ns}];
+  fpdtype_t X[${mcf.ns}];
   {
     fpdtype_t total_moles = 0.0;
-% for n in range(ns):
-    X[${n}] = q[${n}] * ${1.0 / MW[n]};
+% for n in range(mcf.ns):
+    X[${n}] = q[${n}] * ${1.0 / mcf[n].MW};
     total_moles += X[${n}];
 % endfor
     fpdtype_t inv_total_moles = 1.0 / total_moles;
-% for n in range(ns):
+% for n in range(mcf.ns):
     X[${n}] *= inv_total_moles;
-    MWmix += X[${n}] * ${MW[n]};
-    // Avoid pure species condition
+    MWmix += X[${n}] * ${mcf[n].MW};
     X[${n}] = fmax(X[${n}], ${fpdtype_eps});
 % endfor
   }
 
   // Viscosity
-  // because we fit poly'l to sqrt(mu), and we need sqrt(mu) a lot, just
-  // evaluate the poly'l first, then convert to physical viscosity at the end
   fpdtype_t logT = log(T);
   fpdtype_t sqrtT = sqrt(T);
-  fpdtype_t polymu_sp[${ns}];
-  fpdtype_t invpolymu_sp[${ns}];
-  % for n in range(ns):
-    // ${c['names'][n]} viscosity
-    <% deg = len(muPoly[n]) - 1%>\
-    polymu_sp[${n}] = ${'+ logT*('.join(str(c) for c in muPoly[n])+')'*deg};
+  fpdtype_t polymu_sp[${mcf.ns}];
+  fpdtype_t invpolymu_sp[${mcf.ns}];
+  % for n in range(mcf.ns):
+    polymu_sp[${n}] = ${mcf[n].mu_expr('logT')};
     invpolymu_sp[${n}] = 1.0/polymu_sp[${n}];
   % endfor
 
   {
   fpdtype_t mu = 0.0;
-  % if mixing_rule == 'Wilke':
-    // Wilke Approximation
-    fpdtype_t phitemp[${ns}] = {0};
-    % for n in range(ns):
-      // ${c['names'][n]} viscosity
-      {
-        % for n2 in range(n, ns):
-          {
-          % if n == n2:
-            phitemp[${n}] += X[${n2}];
-          % else:
-            {
-              fpdtype_t polymu_ratio = polymu_sp[${n}]*invpolymu_sp[${n2}];
-              fpdtype_t num = 1.0 + polymu_ratio * ${(MW[n2] / MW[n])**0.25};
-              fpdtype_t phi_temp = num * num * ${1.0/(math.sqrt(8.0) * math.sqrt(1.0 + MW[n]/MW[n2]))};
-              phitemp[${n}] += phi_temp * X[${n2}];
-
-              polymu_ratio = polymu_sp[${n2}]*invpolymu_sp[${n}];
-              num = 1.0 + polymu_ratio * ${(MW[n] / MW[n2])**0.25};
-              phi_temp = num * num * ${1.0/(math.sqrt(8.0)*math.sqrt(1.0 + MW[n2]/MW[n]))};
-              phitemp[${n2}] += phi_temp * X[${n}];
-            }
-          % endif
-          }
-        % endfor
-        // Set to correct dimensions
-        fpdtype_t mu_sp = polymu_sp[${n}] * polymu_sp[${n}]*sqrtT;
-        mu += mu_sp * X[${n}] / phitemp[${n}];
-      }
-    % endfor
-
-  % elif mixing_rule == 'Herning-Zipperer':
-    // Herning-Zipperer Approximation
-    fpdtype_t numerator = 0.0;
-    fpdtype_t denominator = 0.0;
-
-    % for n in range(ns):
-    {
-      fpdtype_t X_sqrt_MW = X[${n}] * ${math.sqrt(MW[n])};
-      // mu_sp[n] = polymu_sp[n]^2 * sqrtT, but we can factor out sqrtT
-      numerator += X_sqrt_MW * polymu_sp[${n}] * polymu_sp[${n}];
-      denominator += X_sqrt_MW;
-    }
-    % endfor
-    // Apply temperature scaling
-    mu = (numerator / denominator) * sqrtT;
-  % endif
+  ${pyfr.expand('mix_visc_' + mcf.mixing_rule, 'polymu_sp', 'invpolymu_sp', 'X', 'sqrtT', 'mu')};
   qt[0] = mu;
   }
 
@@ -102,45 +91,37 @@
   {
     fpdtype_t sum1 = 0.0;
     fpdtype_t sum2 = 0.0;
-    % for n in range(ns):
+    % for n in range(mcf.ns):
     {
-      // ${c['names'][n]} thermal conductivity
-      <% deg = len(kappaPoly[n]) - 1 %>\
-      fpdtype_t kappa_sp = ${'+ logT*('.join(str(c) for c in kappaPoly[n])+')'*deg};
+      fpdtype_t kappa_sp = ${mcf[n].kappa_expr('logT')};
       kappa_sp *= sqrtT;
       sum1 += X[${n}] * kappa_sp;
       sum2 += X[${n}] / kappa_sp;
     }
     % endfor
-    fpdtype_t kappa = 0.5*(sum1 + 1.0 / sum2);
-    qt[1] = kappa;
+    qt[1] = 0.5*(sum1 + 1.0 / sum2);
   }
 
   // Diffusion coefficient
   {
     fpdtype_t T_m3o2 = 1.0/(sqrtT*sqrtT*sqrtT);
-    fpdtype_t sum1[${ns}] = {0};
-    fpdtype_t sum2[${ns}] = {0};
+    fpdtype_t sum1[${mcf.ns}] = {0};
+    fpdtype_t sum2[${mcf.ns}] = {0};
 
-    // Iterate over upper triangle only
-    % for n in range(ns):
-      % for n2 in range(n+1, ns):
+    % for n in range(mcf.ns):
+      % for n2 in range(n+1, mcf.ns):
       {
-        <% ix = Dijix(n,n2) %>\
-        <% deg = len(DijPoly[ix]) - 1 %>\
-        fpdtype_t invDij = (${'+ logT*('.join(str(c) for c in DijPoly[ix])+')'*deg})*T_m3o2;
-        // Contribute to species ${n} sums
+        fpdtype_t invDij = ${mcf[n].dij_expr(n2, 'logT')}*T_m3o2;
         fpdtype_t temp = X[${n2}] * invDij;
         sum1[${n}] += temp;
-        sum2[${n}] += temp * ${MW[n2]};
+        sum2[${n}] += temp * ${mcf[n2].MW};
 
-        // Contribute to species ${n2} sums (symmetric)
         temp = X[${n}] * invDij;
         sum1[${n2}] += temp;
-        sum2[${n2}] += temp * ${MW[n]};
+        sum2[${n2}] += temp * ${mcf[n].MW};
       }
       % endfor
-      sum2[${n}] *= X[${n}] / (MWmix - ${MW[n]} * X[${n}]);
+      sum2[${n}] *= X[${n}] / (MWmix - ${mcf[n].MW} * X[${n}]);
       qt[${2 + n}] = 1.0 / (p * (sum1[${n}] + sum2[${n}]));
     % endfor
   }
@@ -153,16 +134,16 @@
   printf("trans&rho = %e\n", q[${rhoix}]);
   printf("trans&p = %e\n", q[${pix}]);
   printf("trans&T = %e\n", q[${Tix}]);
-% for n in range(ns):
-  printf("trans&Y_${c['names'][n]} = %e\n", q[${n}]);
+% for n in range(mcf.ns):
+  printf("trans&Y_${mcf.sp_names[n]} = %e\n", q[${n}]);
 % endfor
 
   printf("\nCOMPUTED PROPERTIES\n");
   printf("trans&MWmix = %e\n", MWmix);
   printf("trans&mu = %e\n", qt[0]);
   printf("trans&kappa = %e\n", qt[1]);
-% for n in range(ns):
-  printf("trans&D_${c['names'][n]} = %e\n", qt[${2+n}]);
+% for n in range(mcf.ns):
+  printf("trans&D_${mcf.sp_names[n]} = %e\n", qt[${2+n}]);
 % endfor
   printf("*********************************\n");
 

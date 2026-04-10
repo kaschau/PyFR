@@ -1,64 +1,59 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
 
-<% Ru = c['Ru'] %>\
-<% MW = c['MW'] %>\
-<% fast_props = 'fast_coeff' in c %>\
-<% niter_max = 4 if fast_props else 7 %>\
-% if fast_props:
-<% fast_coeff = c['fast_coeff'] %>\
-% else:
-<% T_cutoff = c['T_cutoff'] %>\
-<% NASA7_Thigh = c['NASA7_Thigh'] %>\
-<% NASA7_Tlow = c['NASA7_Tlow'] %>\
-% endif\
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
-<%pyfr:macro name='T_iter' params='e, cp, Rmix, T, q, qh'>
+<%pyfr:macro name='T_iter_newton' params='e, cp, Rmix, T, q, qh'>
+    T = ${0.5*(mcf[0].thermo_ranges[0] + mcf[0].thermo_ranges[-1])};
+% for i in range(mcf.T_iter_count):
+{
+  fpdtype_t h = 0.0;
+  cp = 0.0;
+  % for n in range(mcf.ns):
+  {
+    fpdtype_t cps = ${mcf[n].cp_expr('T')};
+    fpdtype_t hs = ${mcf[n].h_expr('T')};
+    cp += cps * q[${n}];
+    h += hs * q[${n}];
+    % if i == mcf.T_iter_count - 1:
+    qh[${4 + n}] = hs;
+    % endif
+  }
+  % endfor
+  T -= (e - (h - Rmix * T)) / (-cp + Rmix);
+}
+% endfor
+</%pyfr:macro>
 
-% for i in range(niter_max):
+<%pyfr:macro name='T_iter_halley' params='e, cp, Rmix, T, q, qh'>
+<%
+    tc = [(sp.thermo_coeffs[0], mcf.Ru / sp.MW) for sp in mcf.species]
+%>\
+    fpdtype_t _a = -(${'+'.join([f'{c[1]*s/2.0}*q[{n}]' for n, (c, s) in enumerate(tc)])});
+    fpdtype_t _b = Rmix - (${'+'.join([f'{c[0]*s}*q[{n}]' for n, (c, s) in enumerate(tc)])});
+    fpdtype_t _c = e - (${'+'.join([f'{c[-2]*s}*q[{n}]' for n, (c, s) in enumerate(tc)])});
+    T = fmin(${mcf[0].thermo_ranges[1]}, fmax(${mcf[0].thermo_ranges[0]}, fabs(_a) < ${fpdtype_eps} ? -_c/_b : (-_b + sqrt(fmax(0.0,_b*_b-4*_a*_c)))/(2*_a)));
+% for i in range(mcf.T_iter_count):
 {
   fpdtype_t h = 0.0;
   cp = 0.0;
   fpdtype_t cpp = 0.0;
-  % for n in range(ns):
-  // ${c['names'][n]} Properties
+  % for n in range(mcf.ns):
   {
-    fpdtype_t cps, hs, cpps;
-    % if fast_props:
-        cps = ${mc.nasa_cps(fast_coeff[n], Ru, MW[n])};
-        hs = ${mc.nasa_hs(fast_coeff[n], Ru, MW[n])};
-        cpps = ${mc.nasa_cpp(fast_coeff[n], Ru, MW[n])};
-        cpp += cpps * q[${n}];
-    % else:
-      if (T < ${T_cutoff[n]})
-      {
-        cps = ${mc.nasa_cps(NASA7_Tlow[n], Ru, MW[n])};
-        hs = ${mc.nasa_hs(NASA7_Tlow[n], Ru, MW[n])};
-      }else
-      {
-        cps = ${mc.nasa_cps(NASA7_Thigh[n], Ru, MW[n])};
-        hs = ${mc.nasa_hs(NASA7_Thigh[n], Ru, MW[n])};
-      }
-    % endif
+    fpdtype_t cps = ${mcf[n].cp_expr('T')};
+    fpdtype_t hs = ${mcf[n].h_expr('T')};
+    fpdtype_t cpps = ${mcf[n].dcp_expr('T')};
     cp += cps * q[${n}];
     h += hs * q[${n}];
-    % if i == niter_max - 1:
+    cpp += cpps * q[${n}];
+    % if i == mcf.T_iter_count - 1:
     qh[${4 + n}] = hs;
     % endif
   }
   % endfor
   fpdtype_t f = e - (h - Rmix * T);
   fpdtype_t fp = -cp + Rmix;
-  % if fast_props:
-  fpdtype_t fpp = -cpp;
-  // Halleys's Method
-  T -= (f*fp) / (fp*fp - 0.5*f*fpp);
-  % else:
-  // Newtons's Method
-  T -= f / fp;
-  % endif
+  T -= (f*fp) / (fp*fp - 0.5*f*(-cpp));
 }
 % endfor
 </%pyfr:macro>

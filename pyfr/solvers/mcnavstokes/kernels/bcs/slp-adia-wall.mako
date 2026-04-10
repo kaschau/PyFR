@@ -1,17 +1,17 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
-<%namespace module='pyfr.multicomp.makoutil' name='mc'/>
+
 
 <%include file='pyfr.solvers.mceuler.kernels.rsolvers.${rsolver}'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.bcs.common'/>
 <%include file='pyfr.solvers.mcnavstokes.kernels.flux'/>
 
-<% ns, vix, Eix, rhoix, pix, Tix = mc.thermix(c['ns'], ndims) %>
+<% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='bc_rsolve_state' params='ul, ql, qhl, nl, ur, qr, qhr'>
     fpdtype_t nor = ${' + '.join(f'ul[{i + vix}]*nl[{i}]' for i in range(ndims))};
 
     // Species
-% for n in range(ns):
+% for n in range(mcf.ns):
     ur[${n}] = ul[${n}];
 % endfor
 
@@ -32,7 +32,7 @@
     // Ghost state r
     fpdtype_t ur[${nvars}];
     fpdtype_t qr[${nvars + 2}];
-    fpdtype_t qhr[${4 + ns}];
+    fpdtype_t qhr[${4 + mcf.ns}];
     ${pyfr.expand('bc_rsolve_state', 'ul', 'ql', 'qhl', 'nl', 'ur', 'qr', 'qhr')};
 
     // Perform the Riemann solve

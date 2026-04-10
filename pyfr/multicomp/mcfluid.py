@@ -1,86 +1,94 @@
-from pyfr.util import subclass_where
-from pyfr.multicomp import complete_species, find_species_input
-from pyfr.multicomp.eos import BaseEOS
-from pyfr.multicomp.transport import BaseTransport
-from pathlib import Path
-import yaml
+from functools import cache
+
 import numpy as np
 
-class MCFluid:
-    def __init__(self, cfg, justTherm=False):
+from pyfr.multicomp import RU
+from pyfr.multicomp.base import BaseEos
+from pyfr.multicomp.chem import Chemistry
+from pyfr.multicomp.cpg.transport import ConstantTransport
+from pyfr.multicomp.tpg.transport import KineticTheory
+from pyfr.multicomp.readers.cantera import read_cantera_yaml
+from pyfr.util import subclass_where
 
+
+class MCFluidBase:
+    Ru = RU
+
+    def __init__(self, cfg, *args, **kwargs):
         self.cfg = cfg
-        self.eos = cfg.get('multi-component','eos')
-        if justTherm:
-            self.trans = 'None'
-        else:
-            self.trans = cfg.get('multi-component','transport', 'None')
-            self.mixing_rule = cfg.get('multi-component','mixing-rule', 'Wilke')
+        self.eos = cfg.get('multi-component', 'eos')
+        self.mixing_rule = cfg.get('multi-component', 'mixing-rule', 'Wilke')
+        self.trans = 'none'
 
-        eos_data = subclass_where(BaseEOS, name=self.eos)(cfg)
-        if self.trans != 'None':
-            trans_data = subclass_where(BaseTransport, name=self.trans)(cfg)
+        filepath = cfg.get('multi-component', 'species')
+        species_sects, reaction_sects = read_cantera_yaml(filepath)
 
-        # Save the prims <-> cons functions
-        self.pri_to_con = eos_data.pri_to_con
-        self.con_to_pri = eos_data.con_to_pri
-        self.diff_con_to_pri = eos_data.diff_con_to_pri
-
-        # Merge the lists of required data
-        self.input_props = {k:None for k in eos_data.input_props}
-        if self.trans != 'None':
-            self.input_props |= {k:None for k in trans_data.input_props}
-
-        # Get our species names
-        file_or_list = cfg.get('multi-component', 'species')
-        userdata = find_species_input(file_or_list)
-        usersp = userdata['properties']
-
-        # HACK: Default to unity lewis
-        if self.trans == 'constant-props':
-            for key in usersp:
-                if 'Le' not in usersp[key].keys():
-                    usersp[key]['Le'] = 1.0
-        # HACK: Default to unity lewis
-
-        # Now load reference species
-        relpath = str(Path(__file__).parent)
-        with open(f"{relpath}/database/species_library.yaml", "r") as f:
-            refsp = yaml.load(f, Loader=yaml.SafeLoader)
-
-        # Now fill in all the property data
-        for key in self.input_props.keys():
-            self.input_props[key] = complete_species(key, usersp, refsp)
-
-        # Now we can compute/fill in constants
-        self.consts = {}
-        self.consts['Ru'] = 8314.46261815324
-        self.consts['avogadro'] = 6.02214076e+26
-        self.consts['kb'] = 1.380649e-23
-        self.consts['epsilon0'] = 8.854187812773345e-12
-
-        self.consts['ns'] = len(usersp)
-        self.consts['names'] = [key for key in usersp]
-
-        # User defined temperature ranges
-        self.consts['Tmin'] = self.cfg.getfloat("multi-component", "T-min", 300.0)
-        self.consts['Tmax'] = self.cfg.getfloat("multi-component", "T-max", 3500.0)
-
-
-        eos_data.compute_consts(self.input_props, self.consts)
-        if self.trans != 'None':
-            trans_data.compute_consts(self.input_props, self.consts)
-
-        # Finally, merge reactions data to the consts, make them numpy arrays
-        chem = cfg.getbool('multi-component','chemistry', False)
-        if chem:
-            for k,v in userdata['reactions'].items():
-                if not isinstance(v[0], str):
-                    self.consts[k] = np.array(v)
-                else:
-                    self.consts[k] = v
+        sp_cls = self.species_cls
+        self.species = [
+            sp_cls(i, name, spc_sect)
+            for i, (name, spc_sect) in enumerate(species_sects.items())
+        ]
+        self._name_to_idx = {sp.name: sp.index for sp in self.species}
+        self._reaction_sects = reaction_sects
 
     @staticmethod
     def get_species_names(cfg):
-        file_or_list = cfg.get('multi-component', 'species')
-        return list(find_species_input(file_or_list)['properties'].keys())
+        filepath = cfg.get('multi-component', 'species')
+        species_sects, _ = read_cantera_yaml(filepath)
+        return list(species_sects.keys())
+
+    @property
+    def ns(self):
+        return len(self.species)
+
+    @property
+    def sp_names(self):
+        return [sp.name for sp in self.species]
+
+    @property
+    def MWs(self):
+        return np.array([sp.MW for sp in self.species])
+
+    def mcix(self, ndims):
+        vix = self.ns
+        Eix = self.ns + ndims
+        rhoix = self.ns + ndims
+        pix = rhoix + 1
+        Tix = pix + 1
+        return vix, Eix, rhoix, pix, Tix
+
+    def sp_idx(self, name):
+        return self._name_to_idx[name]
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return self.species[self._name_to_idx[key]]
+        return self.species[key]
+
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        return self is other
+
+    def __reduce__(self):
+        return (int, (id(self),))
+
+
+@cache
+def get_mcfluid(cfg, needs_transport=False):
+    eos_name = cfg.get('multi-component', 'eos')
+    chemistry = cfg.getbool('multi-component', 'chemistry', False)
+
+    eos_cls = subclass_where(BaseEos, name=eos_name)
+    if needs_transport:
+        eos_cls = eos_cls.__subclasses__()[0]
+
+    bases = []
+    if chemistry:
+        bases.append(Chemistry)
+    bases.append(eos_cls)
+    bases.append(MCFluidBase)
+
+    cls = type('MCFluid', tuple(bases), {})
+    return cls(cfg)

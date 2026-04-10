@@ -3,47 +3,17 @@ import numpy as np
 from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
                                         BaseAdvectionDiffusionMPIInters)
-from pyfr.multicomp.mcfluid import MCFluid
+from pyfr.solvers.mceuler.inters import TplargsMixin as _MCEulerTplargsMixin
 
 
-class TplargsMixin:
+class TplargsMixin(_MCEulerTplargsMixin):
+    needs_transport = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
-        shock_capturing = self.cfg.get('solver', 'shock-capturing', 'none')
-        if shock_capturing == 'entropy-filter':
-            self.d_min = self.cfg.getfloat('solver-entropy-filter', 'd-min',
-                                           1e-6)
-            self.inte_min = self.cfg.getfloat('solver-entropy-filter', 'inte-min',
-                                           1e-6)
-        else:
-            self.d_min = self.cfg.getfloat('solver-interfaces', 'd-min',
-                                           5*self._be.fpdtype_eps)
-            self.inte_min = self.cfg.getfloat('solver-interfaces', 'inte-min',
-                                           5*self._be.fpdtype_eps)
-        mcfluid = MCFluid(self.cfg)
-        self.c |= mcfluid.consts
-
-        self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
-                             rsolver=rsolver,
-                             eos = mcfluid.eos, trans = mcfluid.trans,
-                             mixing_rule = mcfluid.mixing_rule,
-                             shock_capturing=shock_capturing, c=self.c,
-                             d_min=self.d_min, inte_min=self.inte_min)
-
-    def validate_species(self):
-        Y = []
-        for n in self.c['names']:
-            Y.append(float(self.c[n].replace('(','').replace(')','')))
-
-        test = sum(Y)
-        if test == 0.0:
-            self.c[self.c['names'][-1]] = '(1.)'
-        elif test > 1.0:
-            raise ValueError('Invalid BC species mass fraction specification.')
-        elif test < 1.0:
-            self.c[self.c['names'][-1]] = f'({1.0 - test})'
+        self._tplargs['shock_capturing'] = self.cfg.get(
+            'solver', 'shock-capturing', 'none'
+        )
 
 class MCNavierStokesIntInters(TplargsMixin, BaseAdvectionDiffusionIntInters):
     def __init__(self, *args, **kwargs):
@@ -136,10 +106,9 @@ class MCNavierStokesConstantMassFlowBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        bcvars = ['T', 'mdot-per-area']
-        bcvars += self.c['names']
-
-        default = {spn: 0 for spn in self.c['names']}
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'mdot-per-area'] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()
@@ -174,10 +143,10 @@ class MCNavierStokesSupInflowBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names']
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
-        default = {spn: 0 for spn in self.c['names']}
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()
 
@@ -193,9 +162,9 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
     def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
         super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
 
-        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2]
-        bcvars += self.c['names']
-        default = {spn: 0 for spn in self.c['names']}
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'p', 'u', 'v', 'w'][:self.ndims + 2] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
         self.validate_species()
