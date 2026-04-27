@@ -4,6 +4,11 @@ from pyfr.solvers.baseadvecdiff import (BaseAdvectionDiffusionBCInters,
                                         BaseAdvectionDiffusionIntInters,
                                         BaseAdvectionDiffusionMPIInters)
 from pyfr.solvers.mceuler.inters import TplargsMixin as _MCEulerTplargsMixin
+from pyfr.solvers.navstokes.inters import NSCBCMixin
+
+
+class MCNSCBCMixin(NSCBCMixin):
+    _nscbc_kern = 'pyfr.solvers.mcnavstokes.kernels.bccflux_nscbc'
 
 
 class TplargsMixin(_MCEulerTplargsMixin):
@@ -167,4 +172,83 @@ class MCNavierStokesCharRiemInvBCInters(MCNavierStokesBaseBCInters):
         default = {spn: 0 for spn in sp_names}
 
         self.c |= self._exp_opts(bcvars, lhs, default=default)
+        self.validate_species()
+
+
+class MCNSCBCSubOutFpBCInters(MCNSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-out-nscbc-fp'
+    decomp_type = 'normal'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+
+        for etype, fidx in self.ef_pairs:
+            lhs_efp = self._lhs_efp[etype][fidx]
+            self.c |= self._exp_opts_ele(
+                ['p'], lhs_efp,
+                self._external_args_efp[etype][fidx],
+                self._external_vals_efp[etype][fidx],
+            )
+        self.c['K_p'] = self.cfg.getfloat(cfgsect, 'K_p', default=0.25)
+
+
+class MCNSCBCSubInFtvyBCInters(MCNSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-in-nscbc-ftvy'
+    decomp_type = 'cartesian'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+
+        sp_names = self.mcfluid.sp_names
+        bcvars = ['T', 'u', 'v', 'w'][:self.ndims + 1] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
+
+        for etype, fidx in self.ef_pairs:
+            lhs_efp = self._lhs_efp[etype][fidx]
+            self.c |= self._exp_opts_ele(
+                bcvars, lhs_efp,
+                self._external_args_efp[etype][fidx],
+                self._external_vals_efp[etype][fidx],
+                default=default,
+            )
+
+        for i in ['T', 'u', 'v', 'w'][:self.ndims + 1]:
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
+        self.c['K_Y'] = self.cfg.getfloat(cfgsect, 'K_Y', default=0.25)
+        self.validate_species()
+
+
+class MCNSCBCSubInNRIBCInters(MCNSCBCMixin, MCNavierStokesBaseBCInters):
+
+    type = 'sub-in-nscbc-nri'
+    decomp_type = 'normal'
+
+    def __init__(self, be, lhs, elemap, cfgsect, cfg, bccomm):
+        super().__init__(be, lhs, elemap, cfgsect, cfg, bccomm)
+
+        sp_names = self.mcfluid.sp_names
+        force = ['u_a', 'du_a_dt', 'u_v', 'du_v_dt']
+
+        bcvars = ['T', 'un'] + list(sp_names)
+        default = {spn: 0 for spn in sp_names}
+
+        for etype, fidx in self.ef_pairs:
+            lhs_efp = self._lhs_efp[etype][fidx]
+            self.c |= self._exp_opts_ele(
+                bcvars, lhs_efp,
+                self._external_args_efp[etype][fidx],
+                self._external_vals_efp[etype][fidx],
+                default=default,
+            )
+            self.c |= self._exp_opts_ele(
+                force, lhs_efp,
+                self._external_args_efp[etype][fidx],
+                self._external_vals_efp[etype][fidx],
+                default={f: 0.0 for f in force},
+            )
+
+        for i in ['ac', 'ut']:
+            self.c[f'K_{i}'] = self.cfg.getfloat(cfgsect, f'K_{i}', default=0.25)
         self.validate_species()
