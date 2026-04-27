@@ -1,4 +1,5 @@
 import itertools as it
+import numpy as np
 import math
 
 from pyfr.nputil import npeval
@@ -112,5 +113,33 @@ class BaseAdvectionBCInters(BaseInters):
             value = self._const_mat(lhs, 'get_ploc_for_inters')
 
             self.set_external('ploc', spec, value=value)
+
+        return exprs
+
+    def _exp_opts_ele(self, opts, lhs, ex_args, ex_vals, default={}):
+        cfg, sect = self.cfg, self.cfgsect
+
+        subs = cfg.items('constants')
+        subs |= dict(x='ploc[fidx][0]', y='ploc[fidx][1]', z='ploc[fidx][2]')
+        subs |= dict(abs='fabs', pi=str(math.pi))
+
+        exprs = {}
+        for k in opts:
+            if k in default:
+                exprs[k] = cfg.getexpr(sect, k, default[k], subs=subs)
+            else:
+                exprs[k] = cfg.getexpr(sect, k, subs=subs)
+
+        if (any('ploc' in ex for ex in exprs.values()) and
+            'ploc' not in self._external_args):
+            etype, fidx, eidxs = next(lhs.items())
+            ele = self.elemap[etype]
+            fpts_idx = ele.basis.facefpts[fidx]
+            spec = f'in fpdtype_t[{len(fpts_idx)}][{self.ndims}]'
+            ploc = ele.plocfpts[np.ix_(fpts_idx, eidxs)]
+            value = self._be.const_matrix(ploc.transpose(0, 2, 1))
+
+            ex_args['ploc'] = spec
+            ex_vals['ploc'] = value
 
         return exprs
