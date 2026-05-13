@@ -49,8 +49,7 @@ class EntropyFilter:
         ))
 
         # Setup nodal/modal operator matrices
-        form = cfg.get('solver-entropy-filter', 'formulation', 'nonlinear')
-        invvdm, vdm_ef = self._build_operators(eles, form)
+        invvdm, vdm_ef = self._build_operators(eles)
 
         if eles.basis.fpts_in_upts:
             m0 = None
@@ -58,7 +57,7 @@ class EntropyFilter:
             m0 = be.const_matrix(eles.basis.m0)
 
         # Build template arguments
-        eftplargs = self._build_tplargs(eles, cfg, nfaces, form)
+        eftplargs = self._build_tplargs(eles, cfg, nfaces)
 
         # Register kernel factories on elements
         def local_entropy_kern(uin):
@@ -78,24 +77,19 @@ class EntropyFilter:
         eles.kernels['local_entropy'] = local_entropy_kern
         eles.kernels['entropy_filter'] = entropy_filter_kern
 
-    def _build_operators(self, eles, form):
+    def _build_operators(self, eles):
         be = self._be
 
-        if form == 'linearised':
-            return None, None
-        elif form == 'nonlinear':
-            invvdm = be.const_matrix(eles.basis.ubasis.invvdm.T)
-            vdm = eles.basis.ubasis.vdm.T
+        invvdm = be.const_matrix(eles.basis.ubasis.invvdm.T)
+        vdm = eles.basis.ubasis.vdm.T
 
-            if not eles.basis.fpts_in_upts:
-                vdmf = eles.basis.ubasis.vdm_at(eles.basis.fpts).T
-                vdm = np.vstack([vdm, vdmf])
+        if not eles.basis.fpts_in_upts:
+            vdmf = eles.basis.ubasis.vdm_at(eles.basis.fpts).T
+            vdm = np.vstack([vdm, vdmf])
 
-            return invvdm, be.const_matrix(vdm)
-        else:
-            raise ValueError('Invalid entropy filter formulation.')
+        return invvdm, be.const_matrix(vdm)
 
-    def _build_tplargs(self, eles, cfg, nfaces, form):
+    def _build_tplargs(self, eles, cfg, nfaces):
         fpts_in_upts = eles.basis.fpts_in_upts
         nefpts = eles.nupts if fpts_in_upts else eles.nupts + eles.nfpts
         ub = eles.basis.ubasis
@@ -112,7 +106,8 @@ class EntropyFilter:
             'e_tol': cfg.getfloat('solver-entropy-filter', 'e-tol', 1e-6),
             'f_tol': cfg.getfloat('solver-entropy-filter', 'f-tol', 1e-4),
             'niters': cfg.getfloat('solver-entropy-filter', 'niters', 2),
-            'linearise': form == 'linearised',
+            'cascade': cfg.get('solver-entropy-filter', 'cascade',
+                               'legacy_nonlinear'),
             'ubdegs': [int(max(dd)) for dd in ub.degrees],
         }
 
