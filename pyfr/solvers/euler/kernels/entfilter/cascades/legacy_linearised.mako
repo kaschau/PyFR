@@ -13,7 +13,9 @@
               vdm='in broadcast fpdtype_t[${str(nefpts)}][${str(nupts)}]'
               invvdm='in broadcast fpdtype_t[${str(nupts)}][${str(nupts)}]'
               m0='in broadcast fpdtype_t[${str(nfpts)}][${str(nupts)}]'
-              mean_wts='in fpdtype_t[${str(nupts)}]'>
+              mean_wts='in fpdtype_t[${str(nupts)}]'
+              smats_upts='in fpdtype_t[${str(nupts)}][${str(ndims*ndims)}]'
+              rcpdjac_upts='in fpdtype_t[${str(nupts)}]'>
     fpdtype_t dmin, pmin, emin;
     fpdtype_t f = 1.0;
 

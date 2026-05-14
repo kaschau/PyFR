@@ -1,6 +1,26 @@
 import numpy as np
 
+from pyfr.quadrules import get_quadrule
 from pyfr.solvers.base.elements import ExportableField
+
+
+# Reference-space parametric measure of each face kind.  Used to build the
+# divergence-theorem integration weight for shock-normal detectors.
+_FACE_REF_MEASURE = {
+    'line': 2.0,    # s in [-1, 1]
+    'tri':  2.0,    # PyFR standard tri area
+    'quad': 4.0,    # s, t in [-1, 1]
+}
+
+# Reference-space volume of each element type.
+_CELL_REF_VOLUME = {
+    'quad': 4.0,        # [-1, 1]^2
+    'hex':  8.0,        # [-1, 1]^3
+    'tri':  2.0,
+    'tet':  4.0/3.0,
+    'pri':  4.0,        # tri area * line length = 2 * 2
+    'pyr':  8.0/3.0,
+}
 
 
 class EntropyFilter:
@@ -48,6 +68,28 @@ class EntropyFilter:
             getter=lambda: ef_filter.get()[0]
         ))
 
+        # Per-cell shock-normal (reference-space) and its magnitude.  Written
+        # inside the kernel when a cell hits admissibility failure; zero in
+        # smooth cells.  Exported for visualisation/diagnostics.
+        shock_normal = be.matrix((eles.ndims, neles),
+                                  extent=nonce + 'shock_normal',
+                                  tags={'align'})
+        shock_normal_mag = be.matrix((1, neles),
+                                      extent=nonce + 'shock_normal_mag',
+                                      tags={'align'})
+
+        # shock_normal stores the *physical-space* unit vector for direct
+        # visualisation in ParaView; the cascade converts the building block's
+        # reference-space output via smats^T before writing to this matrix.
+        eles.export_fields.append(ExportableField(
+            name='shock-normal', shape=(eles.ndims,),
+            getter=lambda: shock_normal.get().T
+        ))
+        eles.export_fields.append(ExportableField(
+            name='shock-normal-mag', shape=(),
+            getter=lambda: shock_normal_mag.get()[0]
+        ))
+
         # Setup nodal/modal operator matrices
         invvdm, vdm_ef = self._build_operators(eles)
 
@@ -55,6 +97,42 @@ class EntropyFilter:
             m0 = None
         else:
             m0 = be.const_matrix(eles.basis.m0)
+
+        # Jacobian data at upts -- "perfect information" for cascade development.
+        # smats[i][j] = (J^-1 * det J)[i][j]; rcpdjac = 1/det J.  J^-1 itself is
+        # `smats * rcpdjac`; J^-T is `smats^T * rcpdjac`; physical volume integ-
+        # ration uses `det J = 1/rcpdjac`.  Per-element layout passed to the
+        # kernel is [nupts][ndims*ndims] for smats and [nupts] for rcpdjac;
+        # entry [q][i*ndims + j] is smats[i, j] at upt q.
+        ndims = eles.ndims
+        nupts = eles.nupts
+        neles = eles.neles
+        smats_np = eles.smat_at_np('upts').transpose(1, 0, 2, 3)
+        smats_np = smats_np.reshape(nupts*ndims*ndims, neles)
+        smats_upts = be.const_matrix(smats_np, tags={'align'})
+        rcpdjac_upts = eles.rcpdjac_at('upts')
+
+        # Reference-space gradient operator at upts (broadcast across elements).
+        # Layout (ndims*nupts, nupts): row d*nupts + q, col i gives
+        # d/d(xi_d) of nodal basis function i evaluated at upt q.  Applying to
+        # a per-cell solution vector u_upts produces a stacked vector
+        # [du/dxi_0 at all upts, du/dxi_1 at all upts, ...].
+        #
+        # Optionally fold in a modal projection that zeros out modes with
+        # degree > shock-dir-p before differentiating.  The high modes carry
+        # most of the polynomial Gibbs oscillation at a shock, so dropping
+        # them gives a steadier direction estimate.  Default is the full
+        # polynomial order (no projection).  Implemented as a precomputed
+        # operator m4 @ P where P is the nodal->modal->truncate->nodal map,
+        # so runtime cost is unchanged.
+        shock_dir_p = cfg.getint('solver-entropy-filter', 'shock-dir-p',
+                                 eles.basis.order)
+        ub = eles.basis.ubasis
+        sigma = np.array([1.0 if max(dd) <= shock_dir_p else 0.0
+                          for dd in ub.degrees])
+        proj = ub.vdm.T @ np.diag(sigma) @ ub.invvdm.T
+        grad_op_np = eles.basis.m4 @ proj
+        grad_op = be.const_matrix(grad_op_np, tags={'align'})
 
         # Build template arguments
         eftplargs = self._build_tplargs(eles, cfg, nfaces)
@@ -71,7 +149,11 @@ class EntropyFilter:
                 'entropyfilter', tplargs=eftplargs, dims=[eles.neles],
                 u=eles.scal_upts[uin], entmin_int=entmin, ef_filter=ef_filter,
                 vdm=vdm_ef, invvdm=invvdm, m0=m0,
-                mean_wts=eles.mean_wts
+                mean_wts=eles.mean_wts,
+                smats_upts=smats_upts, rcpdjac_upts=rcpdjac_upts,
+                grad_op=grad_op,
+                shock_normal=shock_normal,
+                shock_normal_mag=shock_normal_mag
             )
 
         eles.kernels['local_entropy'] = local_entropy_kern
@@ -94,6 +176,21 @@ class EntropyFilter:
         nefpts = eles.nupts if fpts_in_upts else eles.nupts + eles.nfpts
         ub = eles.basis.ubasis
 
+        # Reference-space face geometry for shock-normal detectors.
+        face_ref_normals = [tuple(map(float, fn))
+                            for _, _, fn in eles.basis.faces]
+        face_ref_lengths = [_FACE_REF_MEASURE[k]
+                            for k, _, _ in eles.basis.faces]
+        cell_ref_volume = _CELL_REF_VOLUME[eles.basis.name]
+
+        # Reference-space quadrature weights at upts (per-etype constants,
+        # baked at template time).  Used by volume-integrated detectors.
+        soln_pts_rule = cfg.get(f'solver-elements-{eles.basis.name}',
+                                'soln-pts')
+        upts_wts = list(map(float,
+                            get_quadrule(eles.basis.name, soln_pts_rule,
+                                         eles.nupts).wts))
+
         return {
             'ndims': eles.ndims, 'nupts': eles.nupts,
             'nfpts': eles.nfpts, 'nefpts': nefpts,
@@ -109,6 +206,22 @@ class EntropyFilter:
             'cascade': cfg.get('solver-entropy-filter', 'cascade',
                                'legacy_nonlinear'),
             'ubdegs': [int(max(dd)) for dd in ub.degrees],
+            # Reference-space face geometry for shock-normal detectors
+            'face_ref_normals': face_ref_normals,
+            'face_ref_lengths': face_ref_lengths,
+            'cell_ref_volume': cell_ref_volume,
+            'shock_normal_eps': 1e-14,
+            # Volume-grad detector
+            'upts_wts': upts_wts,
+            'vg_weight_power': cfg.getint('solver-entropy-filter',
+                                          'vg-weight-power', 1),
+            'vg_field': cfg.get('solver-entropy-filter', 'vg-field',
+                                'density'),
+            # Which shock-normal detector to compile in.  See the building
+            # blocks under entfilter/shock_normals/.
+            'shock_normal_detector': cfg.get('solver-entropy-filter',
+                                             'shock-normal',
+                                             'volume_grad_density'),
         }
 
     def _setup_interfaces(self, system, int_inters, mpi_inters, bc_inters):
