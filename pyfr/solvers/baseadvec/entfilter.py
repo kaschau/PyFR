@@ -217,6 +217,16 @@ class EntropyFilter:
                                           'vg-weight-power', 1),
             'vg_field': cfg.get('solver-entropy-filter', 'vg-field',
                                 'density'),
+            # Face-grad detector (local divergence theorem with surface
+            # quadrature over a chosen scalar field at all fpts).
+            'facefpts': [list(map(int, ff)) for ff in eles.basis.facefpts],
+            'fpts_wts': [float(w) for w in eles.basis.fpts_wts],
+            'fg_field': cfg.get('solver-entropy-filter', 'fg-field',
+                                'density'),
+            # Directional convex filter
+            'mode_ij': [tuple(int(d) for d in dd) for dd in ub.degrees],
+            'dir_eps': cfg.getfloat('solver-entropy-filter', 'dir-eps',
+                                    1e-3),
             # Which shock-normal detector to compile in.  See the building
             # blocks under entfilter/shock_normals/.
             'shock_normal_detector': cfg.get('solver-entropy-filter',

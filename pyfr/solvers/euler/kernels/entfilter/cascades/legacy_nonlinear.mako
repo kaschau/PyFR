@@ -83,6 +83,32 @@
         ${pyfr.expand('shock_normal_volume_grad_density',
                        'u', 'grad_op', 'smats_upts', 'rcpdjac_upts',
                        'n_phys', 'n_mag')};
+        % elif shock_normal_detector == 'face_grad':
+        {
+            // face_grad outputs reference-space; convert to physical via
+            // smats^T (using upt 0 -- constant per cell for linear elements).
+            fpdtype_t n_ref[${ndims}];
+            ${pyfr.expand('shock_normal_face_grad', 'u', 'm0',
+                           'n_ref', 'n_mag')};
+            if (n_mag > ${shock_normal_eps})
+            {
+                fpdtype_t n_phys_raw[${ndims}];
+                % for k in range(ndims):
+                n_phys_raw[${k}] = ${' + '.join(
+                    f'smats_upts[0][{i*ndims + k}]*n_ref[{i}]'
+                    for i in range(ndims))};
+                % endfor
+                fpdtype_t inv_mag = 1.0/sqrt(${' + '.join(
+                    f'n_phys_raw[{k}]*n_phys_raw[{k}]' for k in range(ndims))});
+                % for k in range(ndims):
+                n_phys[${k}] = n_phys_raw[${k}]*inv_mag;
+                % endfor
+            }
+        }
+        % elif shock_normal_detector == 'structure_tensor':
+        ${pyfr.expand('shock_normal_structure_tensor',
+                       'u', 'grad_op', 'smats_upts', 'rcpdjac_upts',
+                       'n_phys', 'n_mag')};
         % else:
         <% raise ValueError(f"Unknown shock-normal detector: {shock_normal_detector!r}") %>
         % endif
