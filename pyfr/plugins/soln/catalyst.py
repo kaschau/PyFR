@@ -217,7 +217,7 @@ class CatalystRenderer(InSituRenderer):
 
     def __init__(self, adapter, isrestart):
         # External buffers must outlive each catalyst_execute call
-        self._coord_bufs = []
+        self._coord_bufs = {}
         self._field_bufs = []
 
         super().__init__(adapter, isrestart)
@@ -263,9 +263,12 @@ class CatalystRenderer(InSituRenderer):
         self.mesh_n[f'{dom}/state/cycle'] = cycle
 
     def _emit_coords(self, mesh_n, dom, cs, xyz):
-        # AoS — keep buffer alive until the next catalyst_execute call
+        # AoS external reference.  Re-register every call (fresh buffer) so a
+        # moving mesh forces Catalyst to re-read the points — an in-place
+        # overwrite of the same external pointer is not picked up.  Keep one
+        # buffer per domain alive until the next catalyst_execute.
         aos = np.ascontiguousarray(np.asarray(xyz).T)
-        self._coord_bufs.append(aos)
+        self._coord_bufs[dom] = aos
         mesh_n.set_aos(f'{dom}/coordsets/{cs}/values', 'xyz', aos)
 
     def _emit_field(self, mesh_n, dom, fname, arr):

@@ -19,6 +19,7 @@ class NIRFPostProc(BasePostProcPlugin):
     systems = 'euler|navier-stokes'
     dimensions = '2|3'
     export_types = '.*'
+    transforms_geometry = True
 
     def _process(self, data):
         ndims = data.ndims

@@ -16,10 +16,15 @@ def split_samples(samples, nvars):
 
 
 class VolumePostProcData:
-    def __init__(self, cfg, pris, grad_pris=None):
+    def __init__(self, cfg, pris, grad_pris=None, *, ndims=None, ploc=None,
+                 soln=None):
         self.cfg = cfg
         self.pris = pris
         self.grad_pris = grad_pris
+        self.ploc = ploc
+        self.soln = soln
+        self.ndims = ndims if ndims is not None else (
+            len(ploc) if ploc is not None else None)
         self.fields = {}
 
     @property
@@ -32,8 +37,10 @@ class VolumePostProcData:
 
 
 class BoundaryPostProcData(VolumePostProcData):
-    def __init__(self, cfg, pris, spts, etype, fidx, svpts, grad_pris=None):
-        super().__init__(cfg, pris, grad_pris=grad_pris)
+    def __init__(self, cfg, pris, spts, etype, fidx, svpts, grad_pris=None, *,
+                 ndims=None, ploc=None, soln=None):
+        super().__init__(cfg, pris, grad_pris=grad_pris, ndims=ndims,
+                         ploc=ploc, soln=soln)
         self._spts = spts
         self._etype = etype
         self._fidx = fidx

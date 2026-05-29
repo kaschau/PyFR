@@ -19,6 +19,7 @@ class VolumeOutput:
         self.sname = sname
         self.rdata = renderer.rdata
         self.soln_ops = {}
+        self._xd = {}
         self._setup_clean(clean)
 
     def _setup_clean(self, clean):
@@ -66,6 +67,7 @@ class VolumeOutput:
         nsvpts, neles, _ = xd.shape
 
         self.soln_ops[etype] = soln_op
+        self._xd[etype] = xd
 
         snodes = get_vtk_shape(etype, renderer.divisor).subnodes
         conn = self._connectivity(etype, snodes, neles, nsvpts)
@@ -87,9 +89,19 @@ class VolumeOutput:
         else:
             return csolns, None
 
-    def run_postproc(self, runner, etype, psolns, pgrads):
-        adapter = VolumePostProcData(self.renderer.scfg, psolns, pgrads)
+    def run_postproc(self, runner, etype, psolns, pgrads, ploc=None, soln=None):
+        adapter = VolumePostProcData(self.renderer.scfg, psolns, pgrads,
+                                     ploc=ploc, soln=soln)
         return runner.run(adapter, public_only=True)
+
+    def transform_coords(self, key):
+        # Body-frame coords as a fresh writable (ndim, nsvpts, neles) array
+        # for a geometry-transforming postproc to mutate in place
+        return np.ascontiguousarray(self._xd[key].transpose(2, 0, 1))
+
+    def transformed_points(self, key, ploc):
+        # Mutated coords back into emit layout (handles clean/direct)
+        return self._points(key, ploc.transpose(1, 2, 0))
 
     def _emit(self, mesh_n, dom, fname, arr):
         # Delegates to the renderer so hosts (eg. Catalyst) can override
@@ -135,6 +147,7 @@ class BoundaryOutput(VolumeOutput):
     def __init__(self, renderer, sname, region, clean=False):
         self.renderer = renderer
         self.sname = sname
+        self._xd = {}
 
         # Accept bc/foo or foo to match mesh.bcon keys
         bcname = region.removeprefix('bc/')
@@ -187,6 +200,8 @@ class BoundaryOutput(VolumeOutput):
         xd = np.concatenate(xparts, axis=1)
         nsvpts, neles, _ = xd.shape
 
+        self._xd[itype] = xd
+
         snodes = get_vtk_shape(itype, renderer.divisor).subnodes
         conn = self._connectivity(itype, snodes, neles, nsvpts)
 
@@ -206,11 +221,13 @@ class BoundaryOutput(VolumeOutput):
         cgrads = np.concatenate(cgs, axis=3) if cgs else None
         return csolns, cgrads
 
-    def run_postproc(self, runner, itype, psolns, pgrads):
+    def run_postproc(self, runner, itype, psolns, pgrads, ploc=None, soln=None):
         scfg = self.renderer.scfg
         spts = self.renderer.mesh.spts
 
-        # Slice per-patch views, run postprocs, merge by field across patches
+        # Slice per-patch views, run postprocs, merge by field across patches.
+        # Slices are views, so a transform postproc mutating them updates the
+        # full psolns/ploc in place.
         merged = defaultdict(list)
         offset = 0
         for eidxs, etype, _, _, fidx, svpts in self.patches[itype]:
@@ -220,11 +237,13 @@ class BoundaryOutput(VolumeOutput):
                 ppgrads = None
             else:
                 ppgrads = [None if g is None else g[..., sl] for g in pgrads]
+            pploc = ploc[..., sl] if ploc is not None else None
             offset = sl.stop
 
             psp = spts[etype][:, eidxs]
             adapter = BoundaryPostProcData(scfg, ppris, psp, etype, fidx,
-                                           svpts, grad_pris=ppgrads)
+                                           svpts, grad_pris=ppgrads,
+                                           ploc=pploc, soln=soln)
             for fname, arr in runner.run(adapter, public_only=True).items():
                 merged[fname].append(arr)
 

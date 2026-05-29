@@ -9,6 +9,7 @@ class BasePostProcPlugin(BasePlugin):
     prefix = 'postproc'
     export_types = None
     needs_grads = False
+    transforms_geometry = False
     deps = []
     fields = {}
 
@@ -46,4 +47,10 @@ def get_pp_plugins(names, ndims, cfg, export_type):
         todo.extend(deps)
         added.add(name)
 
-    return [available[n](ndims, cfg, export_type) for n in ts.static_order()]
+    plugins = [available[n](ndims, cfg, export_type) for n in ts.static_order()]
+
+    # Geometry transforms (eg NIRF) run last so field producers see the
+    # untransformed (body-frame) solution; stable sort keeps dep order
+    plugins.sort(key=lambda p: p.transforms_geometry)
+
+    return plugins

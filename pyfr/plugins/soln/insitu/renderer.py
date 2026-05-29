@@ -17,6 +17,14 @@ from pyfr.writers.vtk.shapes import get_vtk_shape
 class InSituError(Exception): pass
 
 
+class _LiveSoln:
+    # Presents live plugin state to transform postprocs (eg NIRF) with the
+    # same .config/.state interface they get from an offline solution file
+    def __init__(self, config, state):
+        self.config = config
+        self.state = state
+
+
 class InSituRenderer:
     # Conduit blueprint element name mapping
     bp_emap = {'hex': 'hex', 'pri': 'wedge', 'pyr': 'pyramid', 'quad': 'quad',
@@ -257,6 +265,20 @@ class InSituRenderer:
             for fname in runner.fields(public_only=True):
                 self._register_user_field(sname, fname)
 
+        self._has_transform = any(r.transforms_geometry
+                                  for r in self._postproc_runners.values())
+
+    def _transform_soln(self, adapter):
+        # Collect live serialisable plugin state (eg NIRF's quat/omega/...)
+        # keyed by sprefix, matching the offline soln.state schema
+        state = {}
+        for p in adapter.intg.plugins:
+            if (sp := getattr(p, 'sprefix', None)) and \
+                    (ser := getattr(p, '_serialise_data', None)):
+                state[sp] = ser()
+
+        return _LiveSoln(self.scfg, state)
+
     def _init_gradients(self):
         # Determine what gradients, if any, are required
         g_pnames = set()
@@ -288,6 +310,9 @@ class InSituRenderer:
         soln = adapter.soln
         grad_soln = adapter.grad_soln if self._gradpinfo else None
 
+        # Live plugin state for transform postprocs (eg NIRF)
+        tsoln = self._transform_soln(adapter) if self._has_transform else None
+
         # out[sname] = {key: [(field, arr)]} for per-source publish
         out = defaultdict(dict)
 
@@ -301,7 +326,27 @@ class InSituRenderer:
             # Adapter chooses conservative->primitive vs name-mapped (tavg)
             psolns, pgrads = adapter.psolns_pgrads(csolns, cgrads)
 
-            # Prepare the substitutions dictionary
+            items = []
+
+            # Postproc runs before field expressions: field producers populate
+            # their fields on the body-frame solution, then any geometry
+            # transform (NIRF) mutates psolns + the coords in place.
+            if runner := self._postproc_runners.get(sname):
+                xform = runner.transforms_geometry
+                ploc = source.transform_coords(key) if xform else None
+
+                pp_fields = source.run_postproc(runner, key, psolns, pgrads,
+                                                ploc=ploc, soln=tsoln)
+                for field, arr in pp_fields.items():
+                    items.append((self._field_name(sname, field),
+                                  np.atleast_3d(arr)))
+
+                # Re-emit the moved coordinates for this domain
+                if xform:
+                    pts = source.transformed_points(key, ploc)
+                    self._emit_coords(self.mesh_n, dom, f'{sname}_coords', pts)
+
+            # Field expressions use the (possibly transformed) primitives
             subs = dict(zip(pnames, psolns), t=tcurr)
 
             # Prepare any required gradients; None slots are skipped
@@ -312,19 +357,9 @@ class InSituRenderer:
                     for dim, grad in zip('xyz', pgrads[pidx]):
                         subs[f'grad_{pname}_{dim}'] = grad
 
-            items = []
-
-            # Field expressions
             for field, comps in self._exprs:
                 arr = np.stack([npeval(c, subs) for c in comps], axis=-1)
                 items.append((self._field_name(sname, field), arr))
-
-            # Postproc plugins for this source/key
-            if runner := self._postproc_runners.get(sname):
-                pp_fields = source.run_postproc(runner, key, psolns, pgrads)
-                for field, arr in pp_fields.items():
-                    items.append((self._field_name(sname, field),
-                                  np.atleast_3d(arr)))
 
             out[sname][key] = items
 

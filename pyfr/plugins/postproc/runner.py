@@ -27,22 +27,30 @@ class PostProcRunner:
         return {n: a for n, a in adapter.fields.items()
                 if not (public_only and n.startswith('_'))}
 
-    def run_samples(self, cfg, samples, *, boundary=None, public_only=False):
+    def run_samples(self, cfg, samples, *, boundary=None, ploc=None, soln=None,
+                    public_only=False):
         from pyfr.solvers.base import BaseSystem
         sname = cfg.get('solver', 'system')
         elementscls = subclass_where(BaseSystem, name=sname).elementscls
         nvars = len(elementscls.privars(self.ndims, cfg))
         pris, grad_pris = split_samples(samples, nvars)
         if boundary is None:
-            adapter = VolumePostProcData(cfg, pris, grad_pris)
+            adapter = VolumePostProcData(cfg, pris, grad_pris, ndims=self.ndims,
+                                         ploc=ploc, soln=soln)
         else:
-            adapter = BoundaryPostProcData(cfg, pris, *boundary, grad_pris)
+            adapter = BoundaryPostProcData(cfg, pris, *boundary, grad_pris,
+                                           ndims=self.ndims, ploc=ploc,
+                                           soln=soln)
 
         return self.run(adapter, public_only=public_only)
 
     @property
     def needs_grads(self):
         return any(p.needs_grads for p in self.plugins)
+
+    @property
+    def transforms_geometry(self):
+        return any(p.transforms_geometry for p in self.plugins)
 
     def __bool__(self):
         return bool(self.plugins)
