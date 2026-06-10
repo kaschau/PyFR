@@ -99,7 +99,7 @@ class InSituRenderer:
         self._init_gradients()
 
         # Generate a Conduit node for the mesh
-        self.mesh_n = ConduitNode(self.conduit)
+        self.mesh_n = self._make_mesh_node()
 
         # One Conduit domain per (source, etype/itype) pair
         self.domains = [(sname, et)
@@ -117,6 +117,9 @@ class InSituRenderer:
 
     def _load_conduit(self):
         return ConduitWrappers()
+
+    def _make_mesh_node(self):
+        return ConduitNode(self.conduit)
 
     def _init_host_publish(self):
         # Override to wire in scenes/pipelines/etc.
