@@ -256,6 +256,33 @@ def main():
                        help='backend to use')
         p.add_argument('-P', '--pname', help='partitioning to use')
 
+    # ParaView command
+    ap_paraview = sp.add_parser('paraview', help='paraview --help')
+    ap_paraview = ap_paraview.add_subparsers()
+
+    # Install the ParaView reader plugin
+    ap_paraview_install = ap_paraview.add_parser(
+        'install', help='paraview install --help'
+    )
+    ap_paraview_install.add_argument(
+        '--paraview', help='path to a ParaView installation or pvpython'
+    )
+    ap_paraview_install.add_argument(
+        '--dev', action='store_true',
+        help='symlink the plugin to the source tree rather than copying '
+             'it; source edits then apply on the next ParaView launch'
+    )
+    ap_paraview_install.set_defaults(process=process_paraview_install)
+
+    # Report the status of the ParaView reader plugin
+    ap_paraview_status = ap_paraview.add_parser(
+        'status', help='paraview status --help'
+    )
+    ap_paraview_status.add_argument(
+        '--paraview', help='path to a ParaView installation or pvpython'
+    )
+    ap_paraview_status.set_defaults(process=process_paraview_status)
+
     # Plugin commands
     for scls in subclasses(BaseCLIPlugin, just_leaf=True):
         scls.add_cli(sp.add_parser(scls.name, help=f'{scls.name} --help'))
@@ -268,6 +295,18 @@ def main():
         args.process(args)
     else:
         ap.print_help()
+
+
+def process_paraview_install(args):
+    from pyfr.pvplugin.install import process_install
+
+    process_install(args)
+
+
+def process_paraview_status(args):
+    from pyfr.pvplugin.install import process_status
+
+    process_status(args)
 
 
 def process_import(args):
