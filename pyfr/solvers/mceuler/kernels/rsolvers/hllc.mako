@@ -1,4 +1,5 @@
 <%namespace module='pyfr.backends.base.makoutil' name='pyfr'/>
+${pyfr.eos_check('hllc', fluid, 'mc-cpg', 'mc-tpg')}\
 <%include file='pyfr.solvers.mceuler.kernels.flux'/>
 
 <%pyfr:macro name='rsolve' params='ul, ur, n, nf'>

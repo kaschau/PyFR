@@ -4,12 +4,6 @@ from pyfr.solvers.baseadvec import (BaseAdvectionIntInters,
                                     BaseAdvectionMPIInters,
                                     BaseAdvectionBCInters)
 
-# Fluids supported by each Riemann solver as currently implemented
-RSOLVER_EOS = {
-    'rusanov': ('mc-cpg', 'mc-tpg'),
-    'hllc': ('mc-cpg', 'mc-tpg')
-}
-
 
 class TplargsMixin:
     def __init__(self, *args, **kwargs):
@@ -17,10 +11,6 @@ class TplargsMixin:
 
         rsolver = self.cfg.get('solver-interfaces', 'riemann-solver')
         self.fluid = get_fluid(self.cfg, self.ndims)
-
-        if self.fluid.name not in RSOLVER_EOS.get(rsolver, ()):
-            raise ValueError(f'Riemann solver {rsolver!r} does not support '
-                             f'eos {self.fluid.name!r}')
 
         self._tplargs = dict(ndims=self.ndims, nvars=self.nvars,
                              ns=self.fluid.ns, rsolver=rsolver, c=self.c,
