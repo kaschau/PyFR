@@ -1,5 +1,6 @@
 from pyfr.fluids.base import BaseFluid
 from pyfr.fluids.cpg import CPGFluid
+from pyfr.fluids.mc import MCCPGFluid, MCTPGFluid
 from pyfr.util import subclass_where
 
 
