@@ -107,6 +107,8 @@ class ThreeBodyReaction(Reaction):
     def __init__(self, index, rxn_sect):
         super().__init__(index, rxn_sect)
         self.efficiencies = dict(rxn_sect.get('efficiencies', {}))
+        self.default_efficiency = float(
+            rxn_sect.get('default-efficiency', 1.0))
 
     def ctbc_expr(self, vrho='rho', vY='Y'):
         terms = [f'({eff/self.MWs[n]})*{vY}[{n}]'
@@ -116,12 +118,13 @@ class ThreeBodyReaction(Reaction):
     @clean_csigns
     def rate_block(self, vlogT='logT', vTinv='Tinv', vlog_cs='log_cs',
                    vgbs='gbs', vrho='rho', vY='Y', vomega='omega',
-                   vprefRuT='log_prefRuT', vprefRuTinv='log_prefRuTinv'):
+                   vprefRuT='log_prefRuT', vprefRuTinv='log_prefRuTinv',
+                   vsmall='1e-300'):
         lines = [f'// R{self.index}: {self.equation}']
         lines.append('{')
         lines.append(f'  fpdtype_t log_k_f = {self.log_kf_expr(vlogT, vTinv)};')
         lines.append(f'  fpdtype_t cTBC = {self.ctbc_expr(vrho, vY)};')
-        lines.append('  log_k_f += log(cTBC);')
+        lines.append(f'  log_k_f += log(fmax({vsmall}, cTBC));')
         lines.append(f'  fpdtype_t log_rp = log_k_f + {self.fwd_rate_expr(vlog_cs)};')
         lines.append('  fpdtype_t rp = exp(log_rp);')
         if self.reversible:
@@ -147,12 +150,13 @@ class FalloffReaction(ThreeBodyReaction):
     @clean_csigns
     def rate_block(self, vlogT='logT', vTinv='Tinv', vlog_cs='log_cs',
                    vgbs='gbs', vrho='rho', vY='Y', vomega='omega',
-                   vprefRuT='log_prefRuT', vprefRuTinv='log_prefRuTinv'):
+                   vprefRuT='log_prefRuT', vprefRuTinv='log_prefRuTinv',
+                   vsmall='1e-300'):
         lines = [f'// R{self.index}: {self.equation} (Lindemann)']
         lines.append('{')
         lines.append(f'  fpdtype_t log_k_f = {self.log_kf_expr(vlogT, vTinv)};')
         lines.append(f'  fpdtype_t cTBC = {self.ctbc_expr(vrho, vY)};')
-        lines.append(f'  fpdtype_t log_Pr = log(cTBC) + {self.log_pr_expr(vlogT, vTinv)};')
+        lines.append(f'  fpdtype_t log_Pr = log(fmax({vsmall}, cTBC)) + {self.log_pr_expr(vlogT, vTinv)};')
         lines.append('  fpdtype_t log_pmod = -log1p(exp(-log_Pr));')
         lines.append('  log_k_f += log_pmod;')
         lines.append(f'  fpdtype_t log_rp = log_k_f + {self.fwd_rate_expr(vlog_cs)};')
@@ -242,13 +246,13 @@ class TroeReaction(FalloffReaction):
     def rate_block(self, vlogT='logT', vTinv='Tinv', vlog_cs='log_cs',
                    vgbs='gbs', vrho='rho', vY='Y', vomega='omega',
                    vprefRuT='log_prefRuT', vprefRuTinv='log_prefRuTinv',
-                   vT='T'):
+                   vT='T', vsmall='1e-300'):
         ln10 = math.log(10.0)
         lines = [f'// R{self.index}: {self.equation} (Troe)']
         lines.append('{')
         lines.append(f'  fpdtype_t log_k_f = {self.log_kf_expr(vlogT, vTinv)};')
         lines.append(f'  fpdtype_t cTBC = {self.ctbc_expr(vrho, vY)};')
-        lines.append(f'  fpdtype_t log_Pr = log(cTBC) + {self.log_pr_expr(vlogT, vTinv)};')
+        lines.append(f'  fpdtype_t log_Pr = log(fmax({vsmall}, cTBC)) + {self.log_pr_expr(vlogT, vTinv)};')
         lines.append(f'  {self._log10_fcent_block(vT, vTinv)}')
         lines.append(f'  fpdtype_t C = -0.4 - 0.67*log10Fcent;')
         lines.append(f'  fpdtype_t N = 0.75 - 1.27*log10Fcent;')

@@ -51,6 +51,7 @@ class Chemistry:
         mat = np.ones((self.nr, self.ns))
         for rxn in self.reactions:
             if hasattr(rxn, 'efficiencies'):
+                mat[rxn.index, :] = getattr(rxn, 'default_efficiency', 1.0)
                 for name, eff in rxn.efficiencies.items():
                     mat[rxn.index, self.sp_idx(name)] = eff
         return mat

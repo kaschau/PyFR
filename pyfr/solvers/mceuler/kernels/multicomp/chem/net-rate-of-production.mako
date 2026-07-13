@@ -33,17 +33,17 @@
 
   // Three-body reactions
   % for rxn in mcf.reactions_by_type('three-body'):
-  ${rxn.rate_block()}
+  ${rxn.rate_block(vsmall=fpdtype_min)}
   % endfor
 
   // Lindemann falloff reactions
   % for rxn in mcf.reactions_by_type('falloff-lindemann'):
-  ${rxn.rate_block()}
+  ${rxn.rate_block(vsmall=fpdtype_min)}
   % endfor
 
   // Troe falloff reactions
   % for rxn in mcf.reactions_by_type('falloff-troe'):
-  ${rxn.rate_block()}
+  ${rxn.rate_block(vsmall=fpdtype_min)}
   % endfor
 
   // Convert to mass production rates
