@@ -56,6 +56,12 @@ def _compute_MW(composition):
 def _parse_equation(equation):
     equation = equation.split('#')[0].strip()
 
+    # Explicit falloff colliders: (+M) or (+SPECIES)
+    colliders = {c.strip() for c in re.findall(r'\(\s*\+([^)]+)\)', equation)}
+    if len(colliders) > 1:
+        raise ValueError(f"Inconsistent falloff colliders in '{equation}'")
+    collider = colliders.pop() if colliders else None
+
     if '<=>' in equation:
         lhs, rhs = equation.split('<=>')
         reversible = True
@@ -65,19 +71,30 @@ def _parse_equation(equation):
     else:
         raise ValueError(f"Cannot parse equation: '{equation}'")
 
-    reactants = _parse_side(lhs.strip())
-    products = _parse_side(rhs.strip())
+    reactants, lhs_M = _parse_side(lhs.strip())
+    products, rhs_M = _parse_side(rhs.strip())
 
-    return reactants, products, reversible
+    if lhs_M != rhs_M:
+        raise ValueError(f"Third body M must appear on both sides: "
+                         f"'{equation}'")
+
+    return reactants, products, reversible, lhs_M, collider
 
 
 def _parse_side(side):
     species = {}
-    side = side.replace('(+M)', '').replace('(+ M)', '').strip()
+    has_M = False
+    side = re.sub(r'\(\s*\+[^)]+\)', '', side).strip()
 
     for term in side.split('+'):
         term = term.strip()
-        if not term or term == 'M':
+        if not term:
+            continue
+        if term == 'M':
+            if has_M:
+                raise ValueError('Multiple generic third-body colliders '
+                                 "'M' are not supported")
+            has_M = True
             continue
 
         m = re.match(r'^(\d+\.?\d*)\s+(.+)$', term)
@@ -90,7 +107,7 @@ def _parse_side(side):
 
         species[name] = species.get(name, 0.0) + coeff
 
-    return species
+    return species, has_M
 
 
 def _parse_rate(rate_dict):
@@ -111,16 +128,81 @@ def _convert_rate(rate, ea_factor, order, length_fac, quantity_fac):
 
 def _parse_reaction(rxn_raw, ea_factor, length_fac, quantity_fac):
     equation = rxn_raw['equation']
-    reactants, products, reversible = _parse_equation(equation)
+    reactants, products, reversible, has_M, collider = \
+        _parse_equation(equation)
     rtype_raw = rxn_raw.get('type', None)
+
+    effs = {k: float(v) for k, v in rxn_raw.get('efficiencies', {}).items()}
+    default_eff = float(rxn_raw.get('default-efficiency', 1.0))
+
+    # Cantera type aliases
+    if rtype_raw == 'Arrhenius':
+        rtype_raw = 'elementary'
+    elif rtype_raw == 'three-body-Arrhenius':
+        rtype_raw = 'three-body'
+    elif rtype_raw in ('Lindemann', 'Troe'):
+        rtype_raw = 'falloff'
 
     has_troe = 'Troe' in rxn_raw
     if rtype_raw == 'falloff':
         rtype = 'falloff-troe' if has_troe else 'falloff-lindemann'
-    elif rtype_raw == 'three-body':
+        if collider is None:
+            raise ValueError(f"Falloff reaction requires a (+M) or "
+                             f"(+species) collider: '{equation}'")
+        if collider != 'M':
+            # Explicit collider: zero default efficiency and unit collider
+            # efficiency unless overridden (Cantera ThirdBody rules)
+            if 'default-efficiency' in rxn_raw and default_eff != 0.0:
+                raise ValueError(f"Invalid default efficiency for explicit "
+                                 f"collider (+{collider}): '{equation}'")
+            if effs and (len(effs) != 1 or collider not in effs):
+                raise ValueError(f"Incompatible third-body collider "
+                                 f"definitions: '{equation}'")
+            default_eff = 0.0
+            effs = effs or {collider: 1.0}
+    elif rtype_raw == 'three-body' or (rtype_raw is None and has_M):
+        # Cantera auto-detects three-body reactions from a bare M term;
+        # an explicit 'elementary' type suppresses the detection (and M
+        # is then an undeclared species, handled below)
         rtype = 'three-body'
-    else:
+        if collider is not None:
+            raise ValueError(f"'(+{collider})' collider requires "
+                             f"type: falloff: '{equation}'")
+        if not has_M:
+            # Explicit-species collider identified by a single-species
+            # efficiencies entry; one unit of the collider is removed
+            # from each side of the stoichiometry (Cantera rules)
+            if len(effs) != 1:
+                raise ValueError(f"Third-body definition requires a "
+                                 f"single-species efficiency: '{equation}'")
+            (sp,) = effs
+            for side in (reactants, products):
+                if side.get(sp, 0) < 1:
+                    raise ValueError(f"Third-body collider '{sp}' must "
+                                     f"appear on both sides: '{equation}'")
+                if side[sp] == 1:
+                    del side[sp]
+                else:
+                    side[sp] -= 1
+            default_eff = 0.0
+    elif rtype_raw in (None, 'elementary'):
         rtype = 'elementary'
+        if has_M:
+            # Cantera: explicit 'elementary' suppresses third-body
+            # detection and M becomes an undeclared species
+            raise ValueError(f"Reaction with explicit elementary type "
+                             f"contains undeclared species 'M': "
+                             f"'{equation}'")
+        if collider is not None:
+            raise ValueError(f"'(+{collider})' collider requires "
+                             f"type: falloff: '{equation}'")
+        if 'efficiencies' in rxn_raw or 'default-efficiency' in rxn_raw:
+            raise ValueError(f"Reaction specifies efficiency parameters but "
+                             f"does not involve third-body colliders: "
+                             f"'{equation}'")
+    else:
+        raise ValueError(f"Unsupported reaction type '{rtype_raw}': "
+                         f"'{equation}'")
 
     # Reactant order determines A unit conversion; when explicit orders
     # are given, Cantera uses those instead of stoichiometric coefficients
@@ -157,10 +239,9 @@ def _parse_reaction(rxn_raw, ea_factor, length_fac, quantity_fac):
         _convert_rate(rate, ea_factor, order, length_fac, quantity_fac)
         rxn_sect['rate'] = rate
 
-    if 'efficiencies' in rxn_raw:
-        rxn_sect['efficiencies'] = {
-            k: float(v) for k, v in rxn_raw['efficiencies'].items()
-        }
+    if rtype != 'elementary':
+        rxn_sect['efficiencies'] = effs
+        rxn_sect['default-efficiency'] = default_eff
 
     if has_troe:
         troe = rxn_raw['Troe']

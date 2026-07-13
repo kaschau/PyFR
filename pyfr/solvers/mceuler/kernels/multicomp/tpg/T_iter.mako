@@ -15,12 +15,19 @@
     fpdtype_t hs = ${mcf[n].h_expr('T')};
     cp += cps * q[${n}];
     h += hs * q[${n}];
-    % if i == mcf.T_iter_count - 1:
-    qh[${4 + n}] = hs;
-    % endif
   }
   % endfor
   T -= (e - (h - Rmix * T)) / (-cp + Rmix);
+}
+% endfor
+    // Evaluate the thermodynamic state at the final temperature
+    cp = 0.0;
+% for n in range(mcf.ns):
+{
+    fpdtype_t cps = ${mcf[n].cp_expr('T')};
+    fpdtype_t hs = ${mcf[n].h_expr('T')};
+    cp += cps * q[${n}];
+    qh[${4 + n}] = hs;
 }
 % endfor
 </%pyfr:macro>
@@ -46,14 +53,21 @@
     cp += cps * q[${n}];
     h += hs * q[${n}];
     cpp += cpps * q[${n}];
-    % if i == mcf.T_iter_count - 1:
-    qh[${4 + n}] = hs;
-    % endif
   }
   % endfor
   fpdtype_t f = e - (h - Rmix * T);
   fpdtype_t fp = -cp + Rmix;
   T -= (f*fp) / (fp*fp - 0.5*f*(-cpp));
+}
+% endfor
+    // Evaluate the thermodynamic state at the final temperature
+    cp = 0.0;
+% for n in range(mcf.ns):
+{
+    fpdtype_t cps = ${mcf[n].cp_expr('T')};
+    fpdtype_t hs = ${mcf[n].h_expr('T')};
+    cp += cps * q[${n}];
+    qh[${4 + n}] = hs;
 }
 % endfor
 </%pyfr:macro>
