@@ -51,7 +51,7 @@
     // Species sub-step (clamp + normalize)
     fpdtype_t Y_sum = 0.0;
     % for n in range(mcf.ns):
-<%  nu_sum = mcf.nu_b[n,:] - mcf.nu_f[n,:] %>\
+<%  nu_sum = mcf.nu_b[:,n] - mcf.nu_f[:,n] %>\
       % if max(abs(nu_sum)) > 0.0:
       q[${n}] = fmin(1.0, fmax(0.0, q[${n}] + tmpSrc[${n}] * rhoinv * ${tSub}));
       % endif
