@@ -408,12 +408,33 @@ class ImplicitPIController(ThroughputLimitMixin, PIControllerMixin,
         expa = self._pi_alpha / self.stepper_order
         expb = self._pi_beta / self.stepper_order
 
+        nfailures = 0
+
         while self.tcurr < t and self.tcurr < self.tend:
             # Decide on the time step
             dt = self._clamp_dt(min(self.dt, self.dtmax), t)
 
-            # Take the step
-            (icurr, iprev, ierr), wtime = self._timed_step(self.tcurr, dt)
+            try:
+                # Take the step
+                (icurr, iprev, ierr), wtime = self._timed_step(self.tcurr,
+                                                               dt)
+            except NonlinearDivergenceError:
+                # Treat a diverged solve as a rejected step: force a
+                # preconditioner rebuild, cut dt, and retry
+                self._invalidate_precond()
+
+                nfailures += 1
+                if nfailures > 8:
+                    raise NonlinearDivergenceError(
+                        f'Failed {nfailures} times consecutively at '
+                        f'dt={dt:.2e}'
+                    )
+
+                self.dt = 0.5*dt
+                self._reject_step(dt, self.idxcurr, 0.0)
+                continue
+
+            nfailures = 0
 
             # Estimate the error
             err = self._errest(icurr, ierr)

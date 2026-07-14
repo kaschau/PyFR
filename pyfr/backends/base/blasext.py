@@ -6,7 +6,8 @@ from pyfr.util import first
 
 
 class BaseBlasExtKernels:
-    def axnpby(self, *arr, in_scale=(), in_scale_idxs=(), out_scale=()):
+    def axnpby(self, *arr, in_scale=(), in_scale_idxs=(), out_scale=(),
+               overwrite=False):
         if any(arr[0].traits != x.traits for x in arr[1:]):
             raise ValueError('Incompatible matrix types')
 
@@ -14,7 +15,8 @@ class BaseBlasExtKernels:
         ncola = arr[0].ioshape[-2]
 
         tplargs = dict(ncola=ncola, nv=nv, in_scale_idxs=in_scale_idxs,
-                       in_scale=in_scale, out_scale=out_scale)
+                       in_scale=in_scale, out_scale=out_scale,
+                       overwrite=overwrite)
 
         return self._axnpby(arr, tplargs)
 

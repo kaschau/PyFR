@@ -424,21 +424,25 @@ class BaseIntegrator(metaclass=RegisterMeta):
 
     @kernel_getter
     def _get_add_kerns(self, emats, *rs, in_scale=(), in_scale_idxs=(),
-                       out_scale=()):
+                       out_scale=(), overwrite=False):
         return self.backend.kernel('axnpby', *[emats[r] for r in rs],
                                    in_scale=in_scale, out_scale=out_scale,
-                                   in_scale_idxs=in_scale_idxs)
+                                   in_scale_idxs=in_scale_idxs,
+                                   overwrite=overwrite)
 
     def _addv(self, consts, regidxs, in_scale=(), in_scale_idxs=(),
               out_scale=()):
         if len(regidxs) != len(set(regidxs)):
             raise ValueError('Duplicate register indices')
 
-        # Get a suitable set of axnpby kernels
+        # Get a suitable set of axnpby kernels; a zero self-coefficient
+        # selects an overwrite variant which never reads the destination
+        # (0*NaN would otherwise repropagate stale non-finite data)
         in_s, out_s = tuple(in_scale), tuple(out_scale)
         axnpby = self._get_add_kerns(*regidxs, in_scale=in_s,
                                      in_scale_idxs=in_scale_idxs,
-                                     out_scale=out_s)
+                                     out_scale=out_s,
+                                     overwrite=consts[0] == 0)
 
         # Bind the arguments
         for k in axnpby:

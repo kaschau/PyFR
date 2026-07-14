@@ -32,7 +32,7 @@ void axnpby(int ib, const struct kargs *restrict args, int _disp_mask)
             {
                 ixdtype_t base = _y*BLK_SZ*${ncola} + ib*BLK_SZ*${ncola}*nrow;
             % for k in range(ncola):
-                x0[base + X_IDX(${k}, ${ncola})] = ${pyfr.axnpby_expr(k, f'base + X_IDX({k}, {ncola})', 0, nv=nv, in_scale_idxs=in_scale_idxs, out_scale=out_scale)};
+                x0[base + X_IDX(${k}, ${ncola})] = ${pyfr.axnpby_expr(k, f'base + X_IDX({k}, {ncola})', 1 if overwrite else 0, nv=nv, in_scale_idxs=in_scale_idxs, out_scale=out_scale)};
             % endfor
             }
         }
@@ -41,6 +41,6 @@ void axnpby(int ib, const struct kargs *restrict args, int _disp_mask)
 % else:
     #pragma omp simd
     for (ixdtype_t i = ib*nrow*BLK_SZ*${ncola}; i < (ib + 1)*nrow*BLK_SZ*${ncola}; i++)
-        x0[i] = ${pyfr.dot('a{l}', 'x{l}[i]', l=nv)};
+        x0[i] = ${pyfr.dot('a{l}', 'x{l}[i]', l=(1, nv) if overwrite else nv)};
 % endif
 }

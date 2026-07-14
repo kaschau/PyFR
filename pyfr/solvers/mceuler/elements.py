@@ -93,6 +93,16 @@ class BaseMCFluidElements:
 
         if self.cfg.getbool('multi-component', 'chemistry', default=False):
             sub_steps = self.cfg.get('multi-component', 'sub-steps', default=0)
+
+            # Sub-stepped chemistry integrates over a compile-time dt and
+            # is path dependent; only the instantaneous source is
+            # consistent with the implicit residual and its Jacobians
+            formulation = self.cfg.get('solver-time-integrator',
+                                       'formulation', 'std')
+            if formulation == 'implicit' and str(sub_steps) != '0':
+                raise ValueError('Implicit time stepping requires '
+                                 '[multi-component] sub-steps = 0')
+
             chem_tplargs = {
                 'ndims': self.ndims,
                 'nvars': self.nvars,
