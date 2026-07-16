@@ -87,6 +87,66 @@ inline void atomic_sum_fpdtype(${aspace} fpdtype_t* addr, fpdtype_t val)
 // FP-precise block support
 #define PYFR_FP_PRECISE_BEGIN _Pragma("clang fp reassociate(off) contract(off)")
 
+// expm1/log1p shims (absent from MSL); branch-free ports of ARM
+// optimized-routines math/aarch64/advsimd/v_{expm1f,log1pf}_inline.h
+// (MIT OR Apache-2.0 WITH LLVM-exception).  In lieu of the caller-side
+// special-case handling upstream requires: expm1 clamps to [-87, 88]
+// and log1p requires x > -1.  The pragma protects the ln2 hi/lo split
+// from fast-math reassociation.
+inline fpdtype_t expm1(fpdtype_t x)
+{
+    x = clamp(x, fpdtype_t(-87), fpdtype_t(88));
+
+    // Reduce argument: f in [-ln2/2, ln2/2], i is exact
+    fpdtype_t j = rint(x*fpdtype_t(0x1.715476p+0));
+    int i = int(j);
+    fpdtype_t f;
+    {
+        PYFR_FP_PRECISE_BEGIN
+        f = fma(-j, fpdtype_t(0x1.62e4p-1), x);
+        f = fma(-j, fpdtype_t(0x1.7f7d1cp-20), f);
+    }
+
+    // expm1(f) ~= f + f^2*P(f)
+    fpdtype_t f2 = f*f, f4 = f2*f2;
+    fpdtype_t p01 = fma(f, fpdtype_t(0x1.5554aep-3), fpdtype_t(0x1.fffffep-2));
+    fpdtype_t p23 = fma(f, fpdtype_t(0x1.12287cp-7), fpdtype_t(0x1.555736p-5));
+    fpdtype_t p = fma(f2, p23, p01);
+    p = fma(f4, fpdtype_t(0x1.6b55a2p-10), p);
+    p = fma(f2, p, f);
+
+    // t = 2^i; expm1(x) ~= p*t + (t - 1)
+    fpdtype_t t = as_type<fpdtype_t>((i << 23) + 0x3f800000);
+    return fma(p, t, t - fpdtype_t(1));
+}
+
+inline fpdtype_t log1p(fpdtype_t x)
+{
+    // x + 1 = t*2^k with t = m + 1, m in [-0.25, 0.5]
+    fpdtype_t m = x + fpdtype_t(1);
+    uint ku = (as_type<uint>(m) - 0x3f400000u) & 0xff800000u;
+    fpdtype_t s = as_type<fpdtype_t>(0x40800000u - ku);
+    fpdtype_t ms = as_type<fpdtype_t>(as_type<uint>(x) - ku);
+    ms = ms + fma(fpdtype_t(0.25), s, fpdtype_t(-1));
+
+    // log(1 + ms) on [-0.25, 0.5], pairwise Horner
+    fpdtype_t q = fma(ms, fpdtype_t(0x1.5555aap-2), fpdtype_t(-0.5));
+    fpdtype_t m2 = ms*ms;
+    fpdtype_t p67 = fma(ms, fpdtype_t(-0x1.6f0d5ep-5), fpdtype_t(0x1.abcb6p-4));
+    fpdtype_t p45 = fma(ms, fpdtype_t(-0x1.0da91p-3), fpdtype_t(0x1.28a1f4p-3));
+    fpdtype_t p23 = fma(ms, fpdtype_t(-0x1.54ef78p-3), fpdtype_t(0x1.99675cp-3));
+    fpdtype_t p = fma(m2, p67, p45);
+    p = fma(m2, p, p23);
+    p = fma(ms, p, fpdtype_t(-0x1.000038p-2));
+    p = m2*p;
+    p = fma(m2, p, ms);
+    p = fma(m2, q, p);
+
+    // + k*ln2
+    fpdtype_t sb = fpdtype_t(as_type<int>(ku))*fpdtype_t(0x1.0p-23);
+    return fma(sb, fpdtype_t(0x1.62e43p-1), p);
+}
+
 <%def name="_kdecl(name, bounds)">kernel void ${name}</%def>
 <%def name="_karg(intent, t, n)">\
 % if intent == 'in':
