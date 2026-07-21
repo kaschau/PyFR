@@ -48,13 +48,28 @@ class TPGSpecies(BaseSpecies):
         self.dcp_expr = self._dcp_fast
         self.gbs_expr = self._gbs_fast
 
+    def gbs_eval(self, T):
+        """Numeric G/(Ru T) over an array of temperatures (raw basis)."""
+        from pyfr.multicomp.tpg.fitting import (
+            eval_nasa7_h, eval_nasa7_s, eval_nasa9_h, eval_nasa9_s,
+            eval_over_ranges)
+
+        if self._raw_model == 'nasa7':
+            h_fn, s_fn = eval_nasa7_h, eval_nasa7_s
+        else:
+            h_fn, s_fn = eval_nasa9_h, eval_nasa9_s
+        h = eval_over_ranges(T, self._raw_ranges, self._raw_coeffs, h_fn)
+        s = eval_over_ranges(T, self._raw_ranges, self._raw_coeffs, s_fn)
+        return h/T - s
+
     def _multirange(self, var, fn):
         exprs = [fn(var, c) for c in self.thermo_coeffs]
         if len(exprs) == 1:
             return exprs[0]
         result = exprs[-1]
         for i in range(len(exprs) - 2, -1, -1):
-            result = f'({var} < {self.thermo_ranges[i+1]}) ? {exprs[i]} : {result}'
+            result = (f'(({var} < {self.thermo_ranges[i+1]}) '
+                      f'? {exprs[i]} : {result})')
         return result
 
     def _s(self, coeffs, scale=True):
