@@ -10,10 +10,9 @@
   fpdtype_t qh[${4 + mcf.ns}];
   ${pyfr.expand('stateFrom-cons', 'u', 'q', 'qh')};
 
-  fpdtype_t rho = q[${rhoix}];
   fpdtype_t T = q[${Tix}];
 
-  ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'src')};
+  ${pyfr.expand('net_rate_of_production', 'u', 'T', 'src')};
 
   % for i in range(ndims):
     src[${i + vix}] = 0.0;

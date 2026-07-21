@@ -53,6 +53,15 @@ def _compute_MW(composition):
     )
 
 
+def _getbool(sect, key, default=False):
+    # The loader strips YAML bool resolution (to protect species named
+    # NO/OFF/...), so flags arrive as strings
+    v = sect.get(key, default)
+    if isinstance(v, str):
+        return v.strip().lower() in ('true', 'yes', 'on')
+    return bool(v)
+
+
 def _parse_equation(equation):
     equation = equation.split('#')[0].strip()
 
@@ -204,12 +213,27 @@ def _parse_reaction(rxn_raw, ea_factor, length_fac, quantity_fac):
         raise ValueError(f"Unsupported reaction type '{rtype_raw}': "
                          f"'{equation}'")
 
-    # Reactant order determines A unit conversion; when explicit orders
-    # are given, Cantera uses those instead of stoichiometric coefficients
+    # Reaction orders; Cantera validation rules
     orders = rxn_raw.get('orders', {})
-    order = sum(
-        float(orders[sp]) if sp in orders else coeff
-        for sp, coeff in reactants.items()
+    ovals = {sp: float(v) for sp, v in orders.items()}
+    if ovals:
+        if reversible:
+            raise ValueError(f"Reaction orders may only be given for "
+                             f"irreversible reactions: '{equation}'")
+        if (any(sp not in reactants for sp in ovals)
+                and not _getbool(rxn_raw, 'nonreactant-orders')):
+            raise ValueError(f"Reaction order specified for non-reactant "
+                             f"species: '{equation}'")
+        if (any(v < 0 for v in ovals.values())
+                and not _getbool(rxn_raw, 'negative-orders')):
+            raise ValueError(f"Negative reaction order specified: "
+                             f"'{equation}'")
+
+    # Rate-constant units: user orders consume their own concentration
+    # powers (nonreactant orders included); other reactants use their
+    # stoichiometric coefficients
+    order = sum(ovals.values()) + sum(
+        coeff for sp, coeff in reactants.items() if sp not in ovals
     )
     # Three-body and falloff: +1 for the third body
     if rtype == 'three-body':
@@ -218,7 +242,7 @@ def _parse_reaction(rxn_raw, ea_factor, length_fac, quantity_fac):
     rxn_sect = {
         'equation': equation,
         'reversible': reversible,
-        'duplicate': rxn_raw.get('duplicate', False),
+        'duplicate': _getbool(rxn_raw, 'duplicate'),
         'reactants': reactants,
         'products': products,
         'rtype': rtype,

@@ -23,7 +23,11 @@
   fpdtype_t tRemaining = 1.0;
   for (int iter = 0; iter < ${max_subs} && tRemaining > ${fpdtype_eps}; iter++){
 
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'tmpSrc')};
+    fpdtype_t ud[${mcf.ns}];
+    % for n in range(mcf.ns):
+    ud[${n}] = rho*q[${n}];
+    % endfor
+    ${pyfr.expand('net_rate_of_production', 'ud', 'T', 'tmpSrc')};
 
     // Adaptive sub-step size
     fpdtype_t tSubRatio = tRemaining;

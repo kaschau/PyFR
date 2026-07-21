@@ -22,7 +22,11 @@
   % endfor
 
   for(int nSub = 0; nSub < ${sub_steps}; nSub++){
-    ${pyfr.expand('net_rate_of_production', 'q', 'T', 'rho', 'tmpSrc')};
+    fpdtype_t ud[${mcf.ns}];
+    % for n in range(mcf.ns):
+    ud[${n}] = rho*q[${n}];
+    % endfor
+    ${pyfr.expand('net_rate_of_production', 'ud', 'T', 'tmpSrc')};
 
     // Compute cp
     fpdtype_t cp = 0.0;
