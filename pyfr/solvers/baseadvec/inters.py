@@ -129,8 +129,9 @@ class BaseAdvectionBCInters(BaseInters):
         exprs = {k: v for k, v in self.c.items() if isinstance(v, str)}
 
         coords = {c: f'ploc[{i}]' for i, c in enumerate('xyz')}
+        subs = self.cfg.items('constants') | dict(pi=str(math.pi))
 
-        if rexprs := rewrite_exprs(exprs, rules, coords):
+        if rexprs := rewrite_exprs(exprs, rules, coords, subs):
             self._set_exprs(rexprs)
 
             for name, (spec, value) in externs.items():

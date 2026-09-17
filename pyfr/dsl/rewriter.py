@@ -48,9 +48,10 @@ def rename_vars(ast, renames):
     return rename(ast)
 
 
-def rewrite_exprs(exprs, rules, coords={}):
+def rewrite_exprs(exprs, rules, coords={}, subs={}):
     coords = {c: parse_expr(v) for c, v in coords.items()}
-    rules = {k: rename_vars(parse_expr(v), coords) for k, v in rules.items()}
+    rsubs = coords | {k: parse_expr(v) for k, v in subs.items()}
+    rules = {k: rename_vars(parse_expr(v), rsubs) for k, v in rules.items()}
     exprs = {k: parse_expr(v) for k, v in exprs.items()}
 
     csubs = [(coords[c], r) for c, r in rules.items() if c in coords]
