@@ -1,6 +1,7 @@
 import itertools as it
 import math
 
+from pyfr.dsl.rewriter import rewrite_exprs
 from pyfr.exprs import npeval
 from pyfr.solvers.base import BaseInters
 
@@ -110,11 +111,13 @@ class BaseAdvectionBCInters(BaseInters):
             else:
                 exprs[k] = cfg.getexpr(sect, k, subs=subs)
 
-        self._ploc_extern(exprs)
+        self._set_exprs(exprs)
 
         return exprs
 
-    def _ploc_extern(self, exprs):
+    def _set_exprs(self, exprs):
+        self.c |= exprs
+
         if (any('ploc' in ex for ex in exprs.values()) and
             'ploc' not in self._external_args):
             spec = f'in fpdtype_t[{self.ndims}]'
@@ -122,12 +125,13 @@ class BaseAdvectionBCInters(BaseInters):
 
             self.set_external('ploc', spec, value=value)
 
-    def rewrite_exprs(self, fn):
-        # Rewrite expression-valued constants
+    def rewrite_exprs(self, rules, externs={}):
         exprs = {k: v for k, v in self.c.items() if isinstance(v, str)}
-        exprs = fn(exprs)
 
-        self.c |= exprs
-        self._ploc_extern(exprs)
+        coords = {c: f'ploc[{i}]' for i, c in enumerate('xyz')}
 
-        return exprs
+        if rexprs := rewrite_exprs(exprs, rules, coords):
+            self._set_exprs(rexprs)
+
+            for name, (spec, value) in externs.items():
+                self.set_external(name, spec, value=value)
