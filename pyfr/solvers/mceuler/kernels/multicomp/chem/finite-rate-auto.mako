@@ -79,13 +79,13 @@
   % endfor
     src[${Eix}] = 0.0;
 
-#ifdef DEBUG
+% if mcf.debug:
     printf("*********************************\n");
     printf("CHEMICAL SOURCE TERMS (auto)\n");
   % for n in range(mcf.ns):
     printf("chem&omega_${mcf.sp_names[n]} = %e\n", src[${n}]);
   % endfor
     printf("*********************************\n");
-#endif
+% endif
 
 </%pyfr:macro>

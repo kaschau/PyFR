@@ -46,7 +46,7 @@
     qh[2] = sqrt(qh[0] * R * T);
     qh[3] = rho*e;
 
-#ifdef DEBUG
+% if mcf.debug:
   printf("*********************************\n");
   printf("TPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
@@ -72,5 +72,5 @@
   printf("therm&h_${mcf.sp_names[n]} = %e\n", qh[${4 + n}]);
 % endfor
   printf("*********************************\n");
-#endif
+% endif
 </%pyfr:macro>

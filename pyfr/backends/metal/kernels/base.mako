@@ -85,6 +85,7 @@ inline void atomic_sum_fpdtype(${aspace} fpdtype_t* addr, fpdtype_t val)
     }
 </%def>
 
+// HACK
 // expm1/log1p shims (absent from MSL); branch-free ports of ARM
 // optimized-routines math/aarch64/advsimd/v_{expm1f,log1pf}_inline.h
 // (MIT OR Apache-2.0 WITH LLVM-exception).  In lieu of the caller-side

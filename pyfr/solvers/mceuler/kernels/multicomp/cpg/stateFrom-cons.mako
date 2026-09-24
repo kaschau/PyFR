@@ -4,14 +4,13 @@
 <% vix, Eix, rhoix, pix, Tix = mcf.mcix(ndims) %>
 
 <%pyfr:macro name='stateFrom-cons' params='u, q, qh'>
-    ## q is an array of length nvars + 2
-    ## storing all primitive s
-    ## 0:ns-1,    ns:ns+ndims, ns+ndims+1, ns+ndims+2, nvars + 2
-    ## Y0...Ynsp, u,v(,w),  rho          , p,          T
+    ## q is the primitive state, length nvars + 2; indices from mcf.mcix
+    ## 0:ns,       ns:ns+ndims, ns+ndims, ns+ndims+1, ns+ndims+2
+    ## Y0..Yns-1,  u,v(,w),     rho,      p,          T
 
-    ## qh stores mixture thermodynamic properties
-    ## 0,  1,     2, 3, 4..4 + ns
-    ## cp, gamma, c, e, hi1..hins
+    ## qh is the mixture properties, length 4 + ns
+    ## 0,     1,  2, 3,     4 + n
+    ## gamma, cp, c, rho*e, h_n
 
     // Compute rho
     fpdtype_t rho = ${" + ".join([f"u[{n}]" for n in range(mcf.ns)])};
@@ -57,7 +56,7 @@
     qh[${4 + n}] = q[${Tix}]*${mcf[n].cp0};
 % endfor
 
-#ifdef DEBUG
+% if mcf.debug:
   printf("*********************************\n");
   printf("CPG THERMODYNAMIC PROPERTIES\n");
   printf("INPUT STATE\n");
@@ -90,5 +89,5 @@
   printf("therm&h_${mcf.sp_names[n]} = %e\n", qh[${4 + n}]);
 % endfor
   printf("*********************************\n");
-#endif
+% endif
 </%pyfr:macro>

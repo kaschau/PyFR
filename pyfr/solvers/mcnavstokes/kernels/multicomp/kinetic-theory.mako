@@ -127,7 +127,7 @@
   }
 
 
-#ifdef DEBUG
+% if mcf.debug:
   printf("*********************************\n");
   printf("TRANSPORT PROPERTIES\n");
   printf("INPUT STATE\n");
@@ -147,5 +147,5 @@
 % endfor
   printf("*********************************\n");
 
-#endif
+% endif
 </%pyfr:macro>

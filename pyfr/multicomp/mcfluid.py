@@ -20,6 +20,10 @@ class MCFluidBase:
         self.mixing_rule = cfg.get('multi-component', 'mixing-rule', 'Wilke')
         self.trans = 'none'
 
+        # Per-point printf of state and properties; Metal has no printf
+        # HACK
+        self.debug = cfg.getbool('multi-component', 'debug', False)
+
         filepath = cfg.get('multi-component', 'species')
         species_sects, reaction_sects = read_cantera_yaml(filepath)
 

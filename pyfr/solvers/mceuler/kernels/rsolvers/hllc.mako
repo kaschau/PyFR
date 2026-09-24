@@ -41,7 +41,7 @@
                  + sqrtrr*(pl + ul[${Eix}]))
                 / (sqrtrl*rr + sqrtrr*rl);
 
-    fpdtype_t inv_rar = 1 / (sqrtrl + sqrtrl);
+    fpdtype_t inv_rar = 1 / (sqrtrl + sqrtrr);
 % for i in range(ndims):
     va[${i}] = (vl[${i}]*sqrtrl + vr[${i}]*sqrtrr) * inv_rar;
 % endfor
